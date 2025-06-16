@@ -26,6 +26,18 @@ router.get('/:report_id', /* authenticateToken, */ async (req, res) => {
   }
 });
 
+router.get('/forpatient/:patient_id', /* authenticateToken, */ async (req, res) => {
+  try {
+    const report = await prisma.medical_reports.findUnique({
+      where: { report_id: Number(req.params.patient_id) },
+    });
+    if (!report) return res.status(404).json({ error: 'Not found' });
+    res.json(report);
+  } catch {
+    res.status(500).json({ error: 'Failed to fetch medical report' });
+  }
+});
+
 router.post('/', /* authenticateToken, */ async (req, res) => {
   try {
     const { patient_id, record_url } = req.body;
