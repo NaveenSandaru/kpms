@@ -28,12 +28,12 @@ router.get('/:report_id', /* authenticateToken, */ async (req, res) => {
 
 router.get('/forpatient/:patient_id', /* authenticateToken, */ async (req, res) => {
   try {
-    const report = await prisma.medical_reports.findUnique({
-      where: { report_id: req.params.patient_id },
+    const reports = await prisma.medical_reports.findMany({
+      where: { patient_id: req.params.patient_id },
     });
-    if (!report) return res.status(404).json({ error: 'Not found' });
-    res.json(report);
-  } catch {
+    if (!reports) return res.status(404).json({ error: 'Not found' });
+    res.json(reports);
+  } catch (err) {
     res.status(500).json({ error: 'Failed to fetch medical report' });
   }
 });
