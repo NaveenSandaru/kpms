@@ -9,7 +9,7 @@ import adminRouter from './routes/admin-routes.js';
 import appointmentHistoryRouter from './routes/appointments-history-routes.js';
 import appointmentsRouter from './routes/appointments-routes.js';
 import blockedDatesRouter from './routes/blocked-dates-routes.js';
-import dentistSecurityQuestionsRouter from './routes/dentist-security-questions-routes.js';
+import dentistSecurityQuestionsRouter from './routes/dentist-security-questions-answers-routes.js';
 import dentistsRouter from './routes/dentists-routes.js';
 import emailVerificationRouter from './routes/email-verification-routes.js';
 import emergencyContactsRouter from './routes/emergency-contacts-routes.js';
