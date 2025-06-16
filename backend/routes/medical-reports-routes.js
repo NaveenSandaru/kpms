@@ -29,7 +29,7 @@ router.get('/:report_id', /* authenticateToken, */ async (req, res) => {
 router.get('/forpatient/:patient_id', /* authenticateToken, */ async (req, res) => {
   try {
     const report = await prisma.medical_reports.findUnique({
-      where: { report_id: Number(req.params.patient_id) },
+      where: { report_id: req.params.patient_id },
     });
     if (!report) return res.status(404).json({ error: 'Not found' });
     res.json(report);
