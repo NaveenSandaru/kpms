@@ -42,7 +42,7 @@ app.use('/admins', adminRouter);
 app.use('/appointment-history', appointmentHistoryRouter);
 app.use('/appointments', appointmentsRouter);
 app.use('/blocked-dates', blockedDatesRouter);
-app.use('/dentist-security-questions', dentistSecurityQuestionsRouter);
+app.use('/dentist-security-questions-answers', dentistSecurityQuestionsRouter);
 app.use('/dentists', dentistsRouter);
 app.use('/email-verification', emailVerificationRouter);
 app.use('/emergency-contacts', emergencyContactsRouter);
