@@ -1,0 +1,93 @@
+import express from 'express';
+import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcrypt';
+// import { authenticateToken } from '../middleware/authentication.js';
+
+const prisma = new PrismaClient();
+const router = express.Router();
+const SALT_ROUNDS = 10;
+
+router.get('/', /* authenticateToken, */ async (req, res) => {
+  try {
+    const receptionists = await prisma.receptionists.findMany();
+    res.json(receptionists);
+  } catch {
+    res.status(500).json({ error: 'Failed to fetch receptionists' });
+  }
+});
+
+router.get('/:receptionist_id', /* authenticateToken, */ async (req, res) => {
+  try {
+    const receptionist = await prisma.receptionists.findUnique({
+      where: { receptionist_id: req.params.receptionist_id },
+    });
+    if (!receptionist) return res.status(404).json({ error: 'Receptionist not found' });
+    res.json(receptionist);
+  } catch {
+    res.status(500).json({ error: 'Failed to fetch receptionist' });
+  }
+});
+
+router.post('/', /* authenticateToken, */ async (req, res) => {
+  try {
+    const { receptionist_id, password, name, email, phone_number } = req.body;
+
+    // Check duplicate receptionist_id or email
+    const existingId = await prisma.receptionists.findUnique({ where: { receptionist_id } });
+    if (existingId) return res.status(409).json({ error: 'Receptionist ID already exists' });
+
+    const existingEmail = await prisma.receptionists.findUnique({ where: { email } });
+    if (existingEmail) return res.status(409).json({ error: 'Email already in use' });
+
+    const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+
+    const created = await prisma.receptionists.create({
+      data: { receptionist_id, password: hashedPassword, name, email, phone_number },
+    });
+    res.status(201).json(created);
+  } catch {
+    res.status(500).json({ error: 'Failed to create receptionist' });
+  }
+});
+
+router.put('/:receptionist_id', /* authenticateToken, */ async (req, res) => {
+  try {
+    const { receptionist_id } = req.params;
+    const { password, name, email, phone_number } = req.body;
+
+    // If updating email, ensure uniqueness
+    if (email) {
+      const existingEmail = await prisma.receptionists.findUnique({ where: { email } });
+      if (existingEmail && existingEmail.receptionist_id !== receptionist_id) {
+        return res.status(409).json({ error: 'Email already in use' });
+      }
+    }
+
+    let dataToUpdate = { name, email, phone_number };
+
+    if (password) {
+      dataToUpdate.password = await bcrypt.hash(password, SALT_ROUNDS);
+    }
+
+    const updated = await prisma.receptionists.update({
+      where: { receptionist_id },
+      data: dataToUpdate,
+    });
+    res.json(updated);
+  } catch {
+    res.status(500).json({ error: 'Failed to update receptionist' });
+  }
+});
+
+router.delete('/:receptionist_id', /* authenticateToken, */ async (req, res) => {
+  try {
+    await prisma.receptionists.delete({
+      where: { receptionist_id: req.params.receptionist_id },
+    });
+    res.json({ message: 'Receptionist deleted' });
+  } catch {
+    res.status(500).json({ error: 'Failed to delete receptionist' });
+  }
+});
+
+export default router;
