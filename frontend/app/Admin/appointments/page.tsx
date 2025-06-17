@@ -2,6 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { Search, Plus, Calendar, Clock, User, Stethoscope, FileText, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import axios from 'axios';
 
 // Types based on the database schema
 interface Appointment {
@@ -14,7 +15,7 @@ interface Appointment {
   fee: number;
   note: string;
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
-  payment_status: 'pending' | 'paid' | 'partial' | 'refunded';
+  payment_status: 'not-paid' | 'paid';
 }
 
 interface Patient {
@@ -54,7 +55,7 @@ const mockAppointments: Appointment[] = [
     fee: 150.00,
     note: 'Regular checkup',
     status: 'pending',
-    payment_status: 'pending'
+    payment_status: 'not-paid'
   },
   {
     appointment_id: 2,
@@ -83,8 +84,32 @@ const mockAppointments: Appointment[] = [
 ];
 
 const AppointmentsDashboard = () => {
+
+  const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [isLoading, setIsLoading] = useState(false);
+  const [appointments, setAppointments] = useState<Appointment[]>();
+
+  const fetchAppointments = async () => {
+    setIsLoading(true);
+    try{
+      const response = await axios.get(
+        `${backendURL}/appointments`
+      );
+      if(response.status == 500){
+        throw new Error("Internal Server Error");
+      }
+      setAppointments(response.data);
+    }
+    catch(err: any){
+      window.alert(err.message);
+    }
+    finally{
+      setIsLoading(false);
+    }
+  }
 
   // Helper functions to get patient and dentist names
   const getPatientName = (patientId: string) => {
@@ -140,9 +165,7 @@ const AppointmentsDashboard = () => {
   const getPaymentStatusColor = (status: string) => {
     switch (status) {
       case 'paid': return 'bg-green-100 text-green-800';
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'partial': return 'bg-orange-100 text-orange-800';
-      case 'refunded': return 'bg-red-100 text-red-800';
+      case 'not-paid': return 'bg-yellow-100 text-yellow-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };

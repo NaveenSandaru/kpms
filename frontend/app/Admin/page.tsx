@@ -1,8 +1,8 @@
 "use client";
 import React, { useState, useEffect, useRef, useContext } from 'react';
 import { Calendar, Users, UserCheck, CreditCard, TrendingUp, Activity, MoreHorizontal } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/Components/ui/card';
-import { Badge } from '@/Components/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import * as Chart from 'chart.js';
 import { AuthContext } from '@/context/auth-context';
 import axios from 'axios';

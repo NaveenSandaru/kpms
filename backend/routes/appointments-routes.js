@@ -7,12 +7,33 @@ const router = express.Router();
 
 router.get('/', /* authenticateToken, */ async (req, res) => {
   try {
-    const appointments = await prisma.appointments.findMany();
+    const appointments = await prisma.appointments.findMany({
+      include: {
+        patient: {
+          select: {
+            patient_id: true,
+            name: true,
+            email: true,
+            profile_picture: true
+          }
+        },
+        dentist: {
+          select: {
+            dentist_id: true,
+            name: true,
+            email: true,
+            profile_picture: true
+          }
+        }
+      }
+    });
     res.json(appointments);
-  } catch {
+  } catch (error) {
+    console.error('Error fetching appointments:', error);
     res.status(500).json({ error: 'Failed to fetch appointments' });
   }
 });
+
 
 router.get('/count', /* authenticateToken, */ async (req, res) => {
   try {
