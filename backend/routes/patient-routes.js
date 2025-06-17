@@ -16,6 +16,15 @@ router.get('/', /* authenticateToken, */ async (req, res) => {
   }
 });
 
+router.get('/count', /* authenticateToken, */ async (req, res) => {
+  try {
+    const count = await prisma.patients.count();
+    res.json(count);
+  } catch {
+    res.status(500).json({ error: 'Failed to fetch patients' });
+  }
+});
+
 router.get('/:patient_id', /* authenticateToken, */ async (req, res) => {
   try {
     const patient = await prisma.patients.findUnique({

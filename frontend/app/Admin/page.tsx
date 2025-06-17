@@ -1,9 +1,11 @@
 "use client";
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import { Calendar, Users, UserCheck, CreditCard, TrendingUp, Activity, MoreHorizontal } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Badge } from '@/Components/ui/badge';
 import * as Chart from 'chart.js';
+import { AuthContext } from '@/context/auth-context';
+import axios from 'axios';
 
 // Register Chart.js components - including DoughnutController
 Chart.Chart.register(
@@ -57,43 +59,140 @@ interface PaymentStatus {
 }
 
 const DentalDashboard: React.FC = () => {
-  // Refs for chart canvases
-  const pieChartRef = useRef<HTMLCanvasElement>(null);
-  const lineChartRef = useRef<HTMLCanvasElement>(null);
-  const barChartRef = useRef<HTMLCanvasElement>(null);
-  
-  // Chart instances
-  const pieChartInstance = useRef<Chart.Chart | null>(null);
-  const lineChartInstance = useRef<Chart.Chart | null>(null);
-  const barChartInstance = useRef<Chart.Chart | null>(null);
+  const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
-  // State with proper TypeScript typing
+  const { accessToken, isLoggedIn, isLoadingAuth, user } = useContext(AuthContext);
+  const [loadingMainCounts, setLoadingMainCounts] = useState(false);
+  const [loadingAppointmentCounts, setLoadingAppointmentCounts] = useState(false);
+  const [loadingPaymentTrends, setLoadingPaymentTrends] = useState(false);
+
   const [dashboardData, setDashboardData] = useState<DashboardMetrics>({
-    totalDentists: 15,
-    totalPatients: 245,
-    totalReceptionists: 8,
-    totalAppointments: 156,
-    monthlyRevenue: 125400,
-    pendingAppointments: 23
+    totalDentists: 0,
+    totalPatients: 0,
+    totalReceptionists: 0,
+    totalAppointments: 0,
+    monthlyRevenue: 0,
+    pendingAppointments: 0
   });
+  const [appointmentStatus, setAppointmentStatus] = useState<AppointmentStatus[]>([
+    { name: 'Completed', value: 0, color: '#10B981' },
+    { name: 'Pending', value: 0, color: '#F59E0B' },
+    { name: 'Confirmed', value: 0, color: '#3B82F6' }
+  ]);
 
-  // Payment analysis data (right side)
-  const paymentTrends: PaymentTrend[] = [
+  const [paymentTrends, setPaymentTrends] = useState<PaymentTrend[]>([
     { month: 'Jan', revenue: 95000, appointments: 145 },
     { month: 'Feb', revenue: 108000, appointments: 160 },
     { month: 'Mar', revenue: 118000, appointments: 175 },
     { month: 'Apr', revenue: 112000, appointments: 168 },
     { month: 'May', revenue: 125400, appointments: 185 },
     { month: 'Jun', revenue: 132000, appointments: 195 }
-  ];
+  ])
 
-  // Appointment status distribution (left side)
-  const appointmentStatus: AppointmentStatus[] = [
-    { name: 'Completed', value: 78, color: '#10B981' },
-    { name: 'Scheduled', value: 45, color: '#3B82F6' },
-    { name: 'Cancelled', value: 12, color: '#EF4444' },
-    { name: 'No Show', value: 8, color: '#F59E0B' }
-  ];
+  const fetchMainCounts = async () => {
+    setLoadingMainCounts(true);
+    try {
+      const dentistcount = await axios.get(
+        `${backendURL}/dentists/count`
+      );
+      const patientcount = await axios.get(
+        `${backendURL}/patients/count`
+      );
+      const receptionistscount = await axios.get(
+        `${backendURL}/patients/count`
+      );
+      const appointmentscount = await axios.get(
+        `${backendURL}/appointments/count`
+      );
+      const monthlyincome = await axios.get(
+        `${backendURL}/payment-history/income/this-month`
+      );
+      const pendingappointmentscount = await axios.get(
+        `${backendURL}/appointments/pending-count`
+      )
+      if (dentistcount.status == 500 || patientcount.status == 500 || receptionistscount.status == 500 || appointmentscount.status == 500 || monthlyincome.status == 500 || pendingappointmentscount.status == 500) { throw new Error("Internal Server Error"); }
+      setDashboardData({
+        totalDentists: dentistcount.data,
+        totalPatients: patientcount.data,
+        totalReceptionists: receptionistscount.data,
+        totalAppointments: appointmentscount.data,
+        monthlyRevenue: monthlyincome.data.income,
+        pendingAppointments: pendingappointmentscount.data
+      });
+    }
+    catch (err: any) {
+      window.alert(err.message);
+    }
+    finally {
+      setLoadingMainCounts(false);
+    }
+  }
+
+  const fetchAppointmentCounts = async () => {
+    setLoadingAppointmentCounts(true);
+    try {
+      const [pendingRes, completedRes, confirmedRes] = await Promise.all([
+        axios.get(`${backendURL}/appointments/pending-count`),
+        axios.get(`${backendURL}/appointments/completed-count`),
+        axios.get(`${backendURL}/appointments/confirmed-count`)
+      ]);
+
+      if (
+        pendingRes.status === 500 ||
+        completedRes.status === 500 ||
+        confirmedRes.status === 500
+      ) {
+        throw new Error("Internal Server Error");
+      }
+
+      setAppointmentStatus([
+        { name: 'Completed', value: completedRes.data, color: '#10B981' },
+        { name: 'Pending', value: pendingRes.data, color: '#F59E0B' },
+        { name: 'Confirmed', value: confirmedRes.data, color: '#3B82F6' }
+      ]);
+    } catch (err: any) {
+      window.alert(err.message);
+    } finally {
+      setLoadingAppointmentCounts(false);
+    }
+  };
+
+  const fetchPaymentTrends = async () => {
+    setLoadingPaymentTrends(true);
+    try{
+      const paymenttrends = await axios.get(
+        `${backendURL}/payment-history/trends`
+      );
+      if(paymenttrends.status == 500){
+        throw new Error("internal Server Error");
+      }
+      setPaymentTrends(paymenttrends.data);
+    }
+    catch(err: any){
+      window.alert(err.message);
+    }
+    finally{
+      setLoadingPaymentTrends(false);
+    }
+  }
+
+  useEffect(() => {
+    fetchMainCounts();
+    fetchAppointmentCounts();
+    fetchPaymentTrends();
+  }, [])
+
+  // Refs for chart canvases
+  const pieChartRef = useRef<HTMLCanvasElement>(null);
+  const lineChartRef = useRef<HTMLCanvasElement>(null);
+  const barChartRef = useRef<HTMLCanvasElement>(null);
+
+  // Chart instances
+  const pieChartInstance = useRef<Chart.Chart | null>(null);
+  const lineChartInstance = useRef<Chart.Chart | null>(null);
+  const barChartInstance = useRef<Chart.Chart | null>(null);
+
+
 
   // Service type popularity
   const serviceTypes: ServiceType[] = [
@@ -143,12 +242,12 @@ const DentalDashboard: React.FC = () => {
       icon: CreditCard,
       color: 'text-green-600'
     },
-   /* {
-      title: 'Pending',
-      value: dashboardData.pendingAppointments,
-      icon: TrendingUp,
-      color: 'text-yellow-500'
-    }*/
+    /* {
+       title: 'Pending',
+       value: dashboardData.pendingAppointments,
+       icon: TrendingUp,
+       color: 'text-yellow-500'
+     }*/
   ];
 
   // Initialize charts
@@ -158,7 +257,7 @@ const DentalDashboard: React.FC = () => {
       if (pieChartInstance.current) {
         pieChartInstance.current.destroy();
       }
-      
+
       const ctx = pieChartRef.current.getContext('2d');
       if (ctx) {
         pieChartInstance.current = new Chart.Chart(ctx, {
@@ -189,7 +288,7 @@ const DentalDashboard: React.FC = () => {
                 borderWidth: 1,
                 cornerRadius: 8,
                 callbacks: {
-                  label: function(context) {
+                  label: function (context) {
                     return `${context.label}: ${context.parsed} appointments`;
                   }
                 }
@@ -209,7 +308,7 @@ const DentalDashboard: React.FC = () => {
       if (lineChartInstance.current) {
         lineChartInstance.current.destroy();
       }
-      
+
       const ctx = lineChartRef.current.getContext('2d');
       if (ctx) {
         lineChartInstance.current = new Chart.Chart(ctx, {
@@ -246,7 +345,7 @@ const DentalDashboard: React.FC = () => {
                 borderWidth: 1,
                 cornerRadius: 8,
                 callbacks: {
-                  label: function(context) {
+                  label: function (context) {
                     return `Revenue: $${context.parsed.y.toLocaleString()}`;
                   }
                 }
@@ -257,7 +356,7 @@ const DentalDashboard: React.FC = () => {
                 grid: {
                   color: '#f0f0f0',
                 },
-                border:{
+                border: {
                   display: false,
                 },
                 ticks: {
@@ -269,13 +368,13 @@ const DentalDashboard: React.FC = () => {
                 grid: {
                   color: '#f0f0f0',
                 },
-                border:{
+                border: {
                   display: false,
                 },
                 ticks: {
                   color: '#666666',
                   font: { size: 12 },
-                  callback: function(value) {
+                  callback: function (value) {
                     return '$' + (Number(value) / 1000).toFixed(0) + 'k';
                   }
                 }
@@ -295,7 +394,7 @@ const DentalDashboard: React.FC = () => {
       if (barChartInstance.current) {
         barChartInstance.current.destroy();
       }
-      
+
       const ctx = barChartRef.current.getContext('2d');
       if (ctx) {
         barChartInstance.current = new Chart.Chart(ctx, {
@@ -327,7 +426,7 @@ const DentalDashboard: React.FC = () => {
                 borderWidth: 1,
                 cornerRadius: 8,
                 callbacks: {
-                  afterLabel: function(context) {
+                  afterLabel: function (context) {
                     const serviceIndex = context.dataIndex;
                     const revenue = serviceTypes[serviceIndex].revenue;
                     return `Revenue: $${revenue.toLocaleString()}`;
@@ -340,7 +439,7 @@ const DentalDashboard: React.FC = () => {
                 grid: {
                   color: '#f0f0f0',
                 },
-                border:{
+                border: {
                   display: false,
                 },
                 ticks: {
@@ -391,7 +490,7 @@ const DentalDashboard: React.FC = () => {
               Welcome back! Here's what's happening with your appointment system.
             </p>
           </div>
-          
+
         </div>
 
         {/* Key Metrics */}
@@ -444,8 +543,8 @@ const DentalDashboard: React.FC = () => {
               <div className="grid grid-cols-2 gap-4">
                 {appointmentStatus.map((status, index) => (
                   <div key={index} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                    <div 
-                      className="w-3 h-3 rounded-full" 
+                    <div
+                      className="w-3 h-3 rounded-full"
                       style={{ backgroundColor: status.color }}
                     />
                     <div>
@@ -494,8 +593,8 @@ const DentalDashboard: React.FC = () => {
                     <p className="text-2xl font-bold text-gray-900 mt-1">
                       {status.count}
                     </p>
-                    <Badge 
-                      variant="secondary" 
+                    <Badge
+                      variant="secondary"
                       className="mt-2 text-xs"
                     >
                       {status.percentage}%
@@ -507,7 +606,7 @@ const DentalDashboard: React.FC = () => {
           </Card>
         </div>
 
-        
+
       </div>
     </div>
   );

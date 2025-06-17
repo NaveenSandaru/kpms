@@ -16,6 +16,15 @@ router.get('/', /* authenticateToken, */ async (req, res) => {
   }
 });
 
+router.get('/count', /* authenticateToken, */ async (req, res) => {
+  try {
+    const count = await prisma.receptionists.count();
+    res.json(count);
+  } catch {
+    res.status(500).json({ error: 'Failed to fetch receptionists' });
+  }
+});
+
 router.get('/:receptionist_id', /* authenticateToken, */ async (req, res) => {
   try {
     const receptionist = await prisma.receptionists.findUnique({

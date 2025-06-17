@@ -14,6 +14,42 @@ router.get('/', /* authenticateToken, */ async (req, res) => {
   }
 });
 
+router.get('/count', /* authenticateToken, */ async (req, res) => {
+  try {
+    const count = await prisma.appointments.count();
+    res.json(count);
+  } catch {
+    res.status(500).json({ error: 'Failed to fetch appointments' });
+  }
+});
+
+router.get('/pending-count', /* authenticateToken, */ async (req, res) => {
+  try {
+    const count = await prisma.appointments.count({where:{status:"pending"}});
+    res.json(count);
+  } catch {
+    res.status(500).json({ error: 'Failed to fetch appointments' });
+  }
+});
+
+router.get('/completed-count', /* authenticateToken, */ async (req, res) => {
+  try {
+    const count = await prisma.appointments.count({where:{status:"completed"}});
+    res.json(count);
+  } catch {
+    res.status(500).json({ error: 'Failed to fetch appointments' });
+  }
+});
+
+router.get('/confirmed-count', /* authenticateToken, */ async (req, res) => {
+  try {
+    const count = await prisma.appointments.count({where:{status:"confirmed"}});
+    res.json(count);
+  } catch {
+    res.status(500).json({ error: 'Failed to fetch appointments' });
+  }
+});
+
 router.get('/:appointment_id', /* authenticateToken, */ async (req, res) => {
   try {
     const appointment = await prisma.appointments.findUnique({

@@ -5,8 +5,6 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 const router = express.Router();
 
-// appointment_id is PK and FK
-
 router.get('/', /* authenticateToken, */ async (req, res) => {
   try {
     const payments = await prisma.payment_history.findMany();
@@ -15,6 +13,98 @@ router.get('/', /* authenticateToken, */ async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch payment histories' });
   }
 });
+
+router.get('/trends', /* authenticateToken, */ async (req, res) => {
+  
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  
+  try {
+    const now = new Date();
+    const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+
+    // Get payment records with their appointment data
+    const payments = await prisma.payment_history.findMany({
+      where: {
+        payment_date: {
+          gte: sixMonthsAgo.toISOString().split('T')[0], // assumes payment_date is in YYYY-MM-DD format
+        },
+      },
+      include: {
+        appointment: {
+          select: {
+            date: true,
+            fee: true,
+          },
+        },
+      },
+    });
+
+    // Prepare monthly summary
+    const trendsMap = {};
+
+    for (let i = 0; i < 6; i++) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${date.getFullYear()}-${date.getMonth()}`;
+      trendsMap[key] = {
+        month: monthNames[date.getMonth()],
+        revenue: 0,
+        appointments: 0,
+      };
+    }
+
+    // Aggregate fees and counts
+    payments.forEach(p => {
+      if (p.appointment && p.appointment.date) {
+        const date = new Date(p.appointment.date);
+        const key = `${date.getFullYear()}-${date.getMonth()}`;
+        if (trendsMap[key]) {
+          trendsMap[key].revenue += parseFloat(p.appointment.fee || 0);
+          trendsMap[key].appointments += 1;
+        }
+      }
+    });
+
+    // Return data sorted by month (oldest to newest)
+    const trendData = Object.values(trendsMap).reverse();
+
+    res.json(trendData);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to fetch payment trends' });
+  }
+});
+
+router.get('/income/this-month', /* authenticateToken, */ async (req, res) => {
+  try {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+    const result = await prisma.payment_history.findMany({
+      where: {
+        payment_date: {
+          gte: startOfMonth.toISOString().split('T')[0],
+          lte: endOfMonth.toISOString().split('T')[0],
+        },
+      },
+      include: {
+        appointment: {
+          select: { fee: true },
+        },
+      },
+    });
+
+    const totalIncome = result.reduce((sum, record) => {
+      const fee = parseFloat(record.appointment?.fee ?? 0);
+      return sum + fee;
+    }, 0);
+
+    res.json({ income: totalIncome });
+  } catch {
+    res.status(500).json({ error: 'Failed to calculate monthly income' });
+  }
+});
+
 
 router.get('/:appointment_id', /* authenticateToken, */ async (req, res) => {
   try {
