@@ -1,9 +1,8 @@
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
 import { Calendar, Users, UserCheck, CreditCard, TrendingUp, Activity, MoreHorizontal } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/Components/ui/card';
+import { Badge } from '@/Components/ui/badge';
 import * as Chart from 'chart.js';
 
 // Register Chart.js components - including DoughnutController
@@ -257,7 +256,9 @@ const DentalDashboard: React.FC = () => {
               x: {
                 grid: {
                   color: '#f0f0f0',
-                  drawBorder: false
+                },
+                border:{
+                  display: false,
                 },
                 ticks: {
                   color: '#666666',
@@ -267,7 +268,9 @@ const DentalDashboard: React.FC = () => {
               y: {
                 grid: {
                   color: '#f0f0f0',
-                  drawBorder: false
+                },
+                border:{
+                  display: false,
                 },
                 ticks: {
                   color: '#666666',
@@ -336,7 +339,9 @@ const DentalDashboard: React.FC = () => {
               x: {
                 grid: {
                   color: '#f0f0f0',
-                  drawBorder: false
+                },
+                border:{
+                  display: false,
                 },
                 ticks: {
                   color: '#666666',
@@ -346,7 +351,9 @@ const DentalDashboard: React.FC = () => {
               y: {
                 grid: {
                   color: '#f0f0f0',
-                  drawBorder: false
+                },
+                border: {
+                  display: false,
                 },
                 ticks: {
                   color: '#666666',
