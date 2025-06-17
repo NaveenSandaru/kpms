@@ -1,8 +1,8 @@
 "use client";
 import React, { useState, useEffect, useRef, useContext } from 'react';
 import { Calendar, Users, UserCheck, CreditCard, TrendingUp, Activity, MoreHorizontal } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/Components/ui/card';
+import { Badge } from '@/Components/ui/badge';
 import * as Chart from 'chart.js';
 import { AuthContext } from '@/context/auth-context';
 import axios from 'axios';
@@ -134,7 +134,8 @@ const DentalDashboard: React.FC = () => {
       const [pendingRes, completedRes, confirmedRes] = await Promise.all([
         axios.get(`${backendURL}/appointments/pending-count`),
         axios.get(`${backendURL}/appointments/completed-count`),
-        axios.get(`${backendURL}/appointments/confirmed-count`)
+        axios.get(`${backendURL}/appointments/confirmed-count`),
+        
       ]);
 
       if (
@@ -148,7 +149,8 @@ const DentalDashboard: React.FC = () => {
       setAppointmentStatus([
         { name: 'Completed', value: completedRes.data, color: '#10B981' },
         { name: 'Pending', value: pendingRes.data, color: '#F59E0B' },
-        { name: 'Confirmed', value: confirmedRes.data, color: '#3B82F6' }
+        { name: 'Confirmed', value: confirmedRes.data, color: '#3B82F6' },
+      
       ]);
     } catch (err: any) {
       window.alert(err.message);
@@ -192,8 +194,6 @@ const DentalDashboard: React.FC = () => {
   const lineChartInstance = useRef<Chart.Chart | null>(null);
   const barChartInstance = useRef<Chart.Chart | null>(null);
 
-
-
   // Service type popularity
   const serviceTypes: ServiceType[] = [
     { service: 'Cleaning', count: 45, revenue: 22500 },
@@ -201,13 +201,6 @@ const DentalDashboard: React.FC = () => {
     { service: 'Extraction', count: 25, revenue: 37500 },
     { service: 'Root Canal', count: 15, revenue: 45000 },
     { service: 'Crown', count: 12, revenue: 48000 }
-  ];
-
-  // Payment status data
-  const paymentStatus: PaymentStatus[] = [
-    { status: 'Paid', count: 142, percentage: 85 },
-    { status: 'Pending', count: 18, percentage: 11 },
-    { status: 'Overdue', count: 7, percentage: 4 }
   ];
 
   // Metric cards data
@@ -242,17 +235,10 @@ const DentalDashboard: React.FC = () => {
       icon: CreditCard,
       color: 'text-green-600'
     },
-    /* {
-       title: 'Pending',
-       value: dashboardData.pendingAppointments,
-       icon: TrendingUp,
-       color: 'text-yellow-500'
-     }*/
   ];
 
-  // Initialize charts
-  useEffect(() => {
-    // Pie Chart
+  // Create/Update Pie Chart
+  const updatePieChart = () => {
     if (pieChartRef.current) {
       if (pieChartInstance.current) {
         pieChartInstance.current.destroy();
@@ -302,8 +288,10 @@ const DentalDashboard: React.FC = () => {
         });
       }
     }
+  };
 
-    // Line Chart
+  // Create/Update Line Chart
+  const updateLineChart = () => {
     if (lineChartRef.current) {
       if (lineChartInstance.current) {
         lineChartInstance.current.destroy();
@@ -388,8 +376,10 @@ const DentalDashboard: React.FC = () => {
         });
       }
     }
+  };
 
-    // Bar Chart
+  // Create/Update Bar Chart
+  const updateBarChart = () => {
     if (barChartRef.current) {
       if (barChartInstance.current) {
         barChartInstance.current.destroy();
@@ -468,8 +458,29 @@ const DentalDashboard: React.FC = () => {
         });
       }
     }
+  };
 
-    // Cleanup function
+  // Update pie chart when appointment status data changes
+  useEffect(() => {
+    if (!loadingAppointmentCounts) {
+      updatePieChart();
+    }
+  }, [appointmentStatus, loadingAppointmentCounts]);
+
+  // Update line chart when payment trends data changes
+  useEffect(() => {
+    if (!loadingPaymentTrends) {
+      updateLineChart();
+    }
+  }, [paymentTrends, loadingPaymentTrends]);
+
+  // Initialize bar chart (since serviceTypes is static)
+  useEffect(() => {
+    updateBarChart();
+  }, []);
+
+  // Cleanup function
+  useEffect(() => {
     return () => {
       if (pieChartInstance.current) pieChartInstance.current.destroy();
       if (lineChartInstance.current) lineChartInstance.current.destroy();
@@ -490,7 +501,6 @@ const DentalDashboard: React.FC = () => {
               Welcome back! Here's what's happening with your appointment system.
             </p>
           </div>
-
         </div>
 
         {/* Key Metrics */}
@@ -530,14 +540,18 @@ const DentalDashboard: React.FC = () => {
                 <div className="flex items-center space-x-2">
                   <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
                   <Badge variant="secondary" className="text-xs">
-                    Live Data
+                    {loadingAppointmentCounts ? 'Loading...' : 'Live Data'}
                   </Badge>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
               <div className="h-80 mb-6 flex items-center justify-center">
-                <canvas ref={pieChartRef} className="max-w-full max-h-full"></canvas>
+                {loadingAppointmentCounts ? (
+                  <div className="text-gray-500">Loading chart...</div>
+                ) : (
+                  <canvas ref={pieChartRef} className="max-w-full max-h-full"></canvas>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -574,39 +588,24 @@ const DentalDashboard: React.FC = () => {
                 <div className="flex items-center space-x-2">
                   <TrendingUp className="w-4 h-4 text-green-500" />
                   <Badge variant="default" className="bg-green-100 text-green-800 text-xs">
-                    +12% vs last month
+                    {loadingPaymentTrends ? 'Loading...' : '+12% vs last month'}
                   </Badge>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="h-80 mb-6">
-                <canvas ref={lineChartRef} className="w-full h-full"></canvas>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                {paymentStatus.map((status, index) => (
-                  <div key={index} className="text-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                    <p className="text-sm font-medium text-gray-600">
-                      {status.status}
-                    </p>
-                    <p className="text-2xl font-bold text-gray-900 mt-1">
-                      {status.count}
-                    </p>
-                    <Badge
-                      variant="secondary"
-                      className="mt-2 text-xs"
-                    >
-                      {status.percentage}%
-                    </Badge>
+              <div className="h-110">
+                {loadingPaymentTrends ? (
+                  <div className="flex items-center justify-center h-full text-gray-500">
+                    Loading chart...
                   </div>
-                ))}
+                ) : (
+                  <canvas ref={lineChartRef} className="w-full h-full"></canvas>
+                )}
               </div>
             </CardContent>
           </Card>
         </div>
-
-
       </div>
     </div>
   );
