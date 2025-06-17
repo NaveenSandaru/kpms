@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useMemo } from 'react';
 import { Search, Plus, Calendar, Clock, User, Stethoscope, FileText, DollarSign } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 // Types based on the database schema
 interface Appointment {
@@ -147,19 +148,19 @@ const AppointmentsDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8 overflow-auto">
+    <div className="min-h-screen bg-gray-50 p-6 overflow-auto">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold mt-7 text-gray-900">Appointments</h1>
+              <h1 className="text-3xl font-bold mt-7 md:mt-0 text-gray-900">Appointments</h1>
               <p className="text-gray-600 mt-1">View Appointments database entries</p>
             </div>
-            <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors w-fit">
+            <Button className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors w-auto">
               <Plus size={20} />
               Add Appointment
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -173,13 +174,13 @@ const AppointmentsDashboard = () => {
                 placeholder="Search appointments..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg   focus:border-transparent"
               />
             </div>
             <select
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-4 py-2 border border-gray-300 rounded-lg  focus:border-gray-500 text-gray-600"
             >
               <option value="all">All Status</option>
               <option value="pending">Pending</option>
@@ -214,42 +215,44 @@ const AppointmentsDashboard = () => {
                           <User size={16} className="text-blue-600" />
                         </div>
                         <div>
-                          <div className="font-medium text-gray-900">{getPatientName(appointment.patient_id)}</div>
+                          <div className="text-sm font-medium text-gray-900">{getPatientName(appointment.patient_id)}</div>
                           <div className="text-sm text-gray-500">{getPatientEmail(appointment.patient_id)}</div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-2 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
                           <Stethoscope size={16} className="text-green-600" />
                         </div>
                         <div>
-                          <div className="font-medium text-gray-900">{getDentistName(appointment.dentist_id)}</div>
+                          <div className="text-sm font-medium text-gray-900">{getDentistName(appointment.dentist_id)}</div>
                           <div className="text-sm text-gray-500">{getDentistEmail(appointment.dentist_id)}</div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2 text-gray-900">
+                    <td className="px-4 py-4">
+                      <div className=" text-sm flex  items-center gap-2 text-gray-900">
                         <Calendar size={16} className="text-gray-400" />
                         <span className="font-medium">{appointment.date}</span>
                       </div>
                       <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
                         <Clock size={14} className="text-gray-400" />
-                        <span>{appointment.time_from} - {appointment.time_to}</span>
+                        <span>{appointment.time_from}</span>
+                        <span>-</span>
+                        <span>{appointment.time_to}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
                         <FileText size={16} className="text-gray-400" />
-                        <span className="text-gray-900">{appointment.note}</span>
+                        <span className="text-sm text-gray-900">{appointment.note}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
                         <DollarSign size={16} className="text-gray-400" />
-                        <span className="font-semibold text-gray-900">${appointment.fee.toFixed(2)}</span>
+                        <span className="text-sm font-semibold text-gray-900">${appointment.fee.toFixed(2)}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -258,7 +261,7 @@ const AppointmentsDashboard = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${getPaymentStatusColor(appointment.payment_status)}`}>
+                      <span className={`inline-flex px-3 py-1  rounded-full text-xs font-medium ${getPaymentStatusColor(appointment.payment_status)}`}>
                         {appointment.payment_status}
                       </span>
                     </td>
@@ -322,12 +325,11 @@ const AppointmentsDashboard = () => {
                   </div>
                 </div>
 
-                {/* Status Badges */}
-                <div className="flex flex-col gap-2">
-                  <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(appointment.status)} text-center`}>
+                <div className="flex flex-col gap-2 items-start sm:items-end">
+                  <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(appointment.status)} w-fit`}>
                     {appointment.status}
                   </span>
-                  <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${getPaymentStatusColor(appointment.payment_status)} text-center`}>
+                  <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getPaymentStatusColor(appointment.payment_status)} w-fit`}>
                     {appointment.payment_status}
                   </span>
                 </div>
@@ -346,10 +348,10 @@ const AppointmentsDashboard = () => {
                 ? 'Try adjusting your search or filter criteria.' 
                 : 'Get started by adding your first appointment.'}
             </p>
-            <button className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg flex items-center gap-2 transition-colors mx-auto">
+            <Button className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg flex items-center gap-2 transition-colors mx-auto">
               <Plus size={20} />
               Add Appointment
-            </button>
+            </Button>
           </div>
         )}
       </div>
