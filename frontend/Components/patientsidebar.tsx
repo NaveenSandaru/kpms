@@ -27,17 +27,17 @@ import { Button } from "@/components/ui/button";
 const items = [
    {
     title: "Dashboard",
-    url: "/Patient",
+    url: "/patient",
     icon: LayoutGrid,
   },
   {
     title: "Appointments",
-    url: "/Patient/appointments",
+    url: "/patient/appointments",
     icon: Calendar,
   },
   {
     title: "Billing & Payments",
-    url: "/Patient/billing",
+    url: "/patient/billing",
     icon: UserCheck,
   },
 ];

@@ -36,28 +36,28 @@ import { Button } from "@/components/ui/button";
 const items = [
   {
     title: "Dashboard",
-    url: "/Admin",
+    url: "/admin",
     icon: LayoutGrid,
   },
   {
     title: "Appointments",
-    url: "/Admin/appointments",
+    url: "/admin/appointments",
     icon: Calendar,
   },
   {
     title: "Users",
-    url: "/Admin/users",
+    url: "/admin/users",
     icon: UserCheck,
   },
 
   {
     title: "Patients",
-    url: "/Admin/patients",
+    url: "/admin/patients",
     icon: User2,
   },
   {
     title: "Payments",
-    url: "/Admin/payments",
+    url: "/admin/payments",
     icon: KanbanSquare,
   },
 ];

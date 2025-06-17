@@ -1,4 +1,5 @@
 "use client"
+
 import AdminSidebar from "@/Components/adminsidebar"
 import { SidebarProvider } from "@/Components/ui/sidebar"
 import { usePathname } from "next/navigation"
@@ -10,7 +11,7 @@ export default function AdminLayout({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
-  const isRootPage = pathname === "/admin"
+  const isRootPage = pathname === "/"
   
   if (isRootPage) {
     return (
@@ -23,7 +24,7 @@ export default function AdminLayout({
   return ( 
     <SidebarProvider>
       <div className="flex h-screen w-full">
-        <AdminSidebar/>
+        <AdminSidebar />
         <div className="flex-1 flex flex-col overflow-hidden bg-gray-100">
           {children}
         </div>

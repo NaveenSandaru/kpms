@@ -27,32 +27,32 @@ import { Button } from "@/components/ui/button";
 const items = [
   {
     title: "Dashboard",
-    url: "/Receptionist",
+    url: "/receptionist",
     icon: LayoutGrid,
   },
   {
     title: "Appointments",
-    url: "/Receptionist/appointments",
+    url: "/receptionist/appointments",
     icon: Calendar,
   },
   {
     title: "Pending Appointments",
-    url: "/Receptionist/pendingappointments",
+    url: "/receptionist/pendingappointments",
     icon: UserCheck,
   },
   {
     title: "Dentists",
-    url: "/Receptionist/dentists", 
+    url: "/receptionist/dentists", 
     icon: Users,
   },
   {
     title: "Patients",
-    url: "/Receptionist/patients",
+    url: "/receptionist/patients",
     icon: User2,
   },
   {
     title: "Payments",
-    url: "/Receptionist/payments",
+    url: "/receptionist/payments",
     icon: KanbanSquare,
   },
 ];
