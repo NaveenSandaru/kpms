@@ -225,13 +225,13 @@ const AdminSidebar = () => {
                   href={item.url}
                   className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-all duration-200 ${
                     isActive
-                      ? "bg-blue-100 text-blue-700 border border-blue-200 shadow-sm"
+                      ? "bg-emerald-100 text-emerald-700 border border-emerald-200 shadow-sm"
                       : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
                   }`}
                 >
                   <item.icon
                     className={`w-4 h-4 flex-shrink-0 ${
-                      isActive ? "text-blue-600" : "text-gray-500"
+                      isActive ? "text-emerald-600" : "text-emerald-500"
                     }`}
                   />
                   <span className="font-medium text-sm truncate">
@@ -247,7 +247,7 @@ const AdminSidebar = () => {
         <div className="p-3 border-t border-gray-100">
           <Button
             type="submit"
-            className="w-full bg-red-600 text-white hover:bg-red-700 transition-colors duration-200 flex items-center justify-center gap-2 py-2 text-sm"
+            className="w-full bg-emerald-600 text-white hover:bg-emerald-500 transition-colors duration-200 flex items-center justify-center gap-2 py-2 text-sm"
             onClick={handleLogout}
             disabled={isLoading}
           >
