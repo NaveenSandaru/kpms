@@ -70,7 +70,7 @@ const DoctorSidebar = () => {
         url: `/doctor/${doctorId}/schedule`,
         icon: Calendar,
       },
-      {
+      /*{
         title: "Treatment Plans",
         url: `/doctor/${doctorId}/treatment-plans`,
         icon: UserCheck,
@@ -79,7 +79,7 @@ const DoctorSidebar = () => {
         title: "Reports",
         url: `/doctor/${doctorId}/reports`,
         icon: BarChart3,
-      },
+      },*/
     ];
   }, [doctorId]);
 
@@ -170,7 +170,7 @@ const DoctorSidebar = () => {
         <SidebarContent className="p-4">
           <SidebarGroup>
             <SidebarGroupContent>
-              <SidebarMenu className="space-y-2">
+              <SidebarMenu className="space-y-5">
                 {items.map((item) => {
                   const isActive = pathname === item.url;
                   return (
