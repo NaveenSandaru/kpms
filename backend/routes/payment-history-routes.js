@@ -7,7 +7,7 @@ const router = express.Router();
 
 router.get('/', /* authenticateToken, */ async (req, res) => {
   try {
-    const payments = await prisma.payment_history.findMany();
+    const payments = await prisma.payment_history.findMany({});
     res.json(payments);
   } catch {
     res.status(500).json({ error: 'Failed to fetch payment histories' });
