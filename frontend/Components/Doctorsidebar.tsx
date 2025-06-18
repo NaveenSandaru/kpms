@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useState, useContext, useEffect } from "react";
+import { useState, useContext, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { BarChart3, LogOut, Settings, User2, Menu, X } from "lucide-react";
 //import { AuthContext } from "@/context/auth-context";
@@ -33,41 +33,55 @@ import {
 import { Button } from "@/components/ui/button";
 //import axios from "axios";
 
-const items = [
-  {
-    title: "Dashboard",
-    url: "/admin",
-    icon: LayoutGrid,
-  },
-  {
-    title: "Appointments",
-    url: "/admin/appointments",
-    icon: Calendar,
-  },
-  {
-    title: "Users",
-    url: "/admin/users",
-    icon: UserCheck,
-  },
-
-  {
-    title: "Patients",
-    url: "/admin/patients",
-    icon: User2,
-  },
-  {
-    title: "Payments",
-    url: "/admin/payments",
-    icon: KanbanSquare,
-  },
-];
-
-const AdminSidebar = () => {
+const DoctorSidebar = () => {
   //const {setUser, setAccessToken} = useContext(AuthContext);
   const router = useRouter();
+  const pathname = usePathname();
   const [isLoading, setIsLoading] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const pathname = usePathname();
+
+  // Extract doctorID from pathname
+  const doctorId = useMemo(() => {
+    const pathSegments = pathname.split('/');
+    const doctorIndex = pathSegments.findIndex(segment => segment === 'doctor');
+    if (doctorIndex !== -1 && pathSegments[doctorIndex + 1]) {
+      return pathSegments[doctorIndex + 1];
+    }
+    return null;
+  }, [pathname]);
+
+  // Generate dynamic menu items based on doctorId
+  const items = useMemo(() => {
+    if (!doctorId) return [];
+    
+    return [
+      {
+        title: "Dashboard",
+        url: `/doctor/${doctorId}`,
+        icon: LayoutGrid,
+      },
+      {
+        title: "Patient Records",
+        url: `/doctor/${doctorId}/patient-records`,
+        icon: ClipboardList,
+      },
+      {
+        title: "Schedule",
+        url: `/doctor/${doctorId}/schedule`,
+        icon: Calendar,
+      },
+      {
+        title: "Treatment Plans",
+        url: `/doctor/${doctorId}/treatment-plans`,
+        icon: UserCheck,
+      },
+      {
+        title: "Reports",
+        url: `/doctor/${doctorId}/reports`,
+        icon: BarChart3,
+      },
+    ];
+  }, [doctorId]);
 
   // Close mobile menu when route changes
   useEffect(() => {
@@ -103,6 +117,11 @@ const AdminSidebar = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
+  // Don't render if no doctorId is found
+  if (!doctorId) {
+    return null;
+  }
+
   return (
     <>
       {/* Mobile hamburger menu button */}
@@ -122,7 +141,7 @@ const AdminSidebar = () => {
       {/* Mobile overlay */}
       {isMobileMenuOpen && (
         <div
-          className="fixed inset-0 backdrop-blur-sm  bg-opacity-80 z-30 md:hidden"
+          className="fixed inset-0 backdrop-blur-sm bg-opacity-80 z-30 md:hidden"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
@@ -141,7 +160,10 @@ const AdminSidebar = () => {
             />*/}
           </div>
           <p className="text-sm text-gray-600 text-center mt-1">
-            Adnim Dashboard
+            Doctor Dashboard
+          </p>
+          <p className="text-xs text-gray-500 text-center mt-1">
+            ID: {doctorId}
           </p>
         </SidebarHeader>
 
@@ -210,7 +232,10 @@ const AdminSidebar = () => {
             />*/}
           </div>
           <p className="text-xs text-gray-600 text-center mt-1">
-            Admin Dashboard
+            Doctor Dashboard
+          </p>
+          <p className="text-xs text-gray-500 text-center">
+            ID: {doctorId}
           </p>
         </div>
 
@@ -260,4 +285,4 @@ const AdminSidebar = () => {
   );
 };
 
-export default AdminSidebar;
+export default DoctorSidebar;
