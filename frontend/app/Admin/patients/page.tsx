@@ -1,35 +1,55 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Plus, Edit, Trash2, X, Phone, Mail, MapPin, User, Calendar, Droplets } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/Components/ui/select';
+import { Textarea } from '@/Components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import axios from 'axios';
+import { profile } from 'console';
+
+type Patient = {
+  patient_id: string;
+  hospital_patient_id: string;
+  name: string;
+  email: string;
+  phone_number: string;
+  address: string;
+  NIC: string;
+  blood_group: string;
+  date_of_birth: string;
+  gender: string;
+  password: string;
+  profile_picture: string;
+};
 
 const PatientManagement = () => {
-  const [patients, setPatients] = useState([
+
+  const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
+
+  const [loadingPatient, setLoadingPatient] = useState(false);
+  const [patients, setPatients] = useState<Patient[]>([
     {
-      patient_id: 'P001',
-      hospital_patient_id: 'H001',
-      name: 'John Doe',
-      email: 'abc@gmail.com',
-      phone_number: '+94771234567',
-      address: 'No. 12, ABC road, Colombo',
-      NIC: '123456789V',
-      blood_group: 'O+',
-      date_of_birth: '1990-01-15',
-      gender: 'Male',
+      hospital_patient_id: '',
+      patient_id: '',
       password: '',
+      name: '',
       profile_picture: '',
-      emergency_contact_id: null
+      email: '',
+      phone_number: '',
+      address: '',
+      NIC: '',
+      blood_group: '',
+      date_of_birth: '',
+      gender: '',
     }
   ]);
 
   const [showOverlay, setShowOverlay] = useState(false);
-  const [editingPatient, setEditingPatient] = useState(null);
-  const [formData, setFormData] = useState({
+  const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
+  const [formData, setFormData] = useState<Patient>({
     hospital_patient_id: '',
     patient_id: '',
     password: '',
@@ -42,7 +62,6 @@ const PatientManagement = () => {
     blood_group: '',
     date_of_birth: '',
     gender: '',
-    emergency_contact_id: ''
   });
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -64,7 +83,6 @@ const PatientManagement = () => {
       blood_group: '',
       date_of_birth: '',
       gender: '',
-      emergency_contact_id: ''
     });
   };
 
@@ -74,7 +92,7 @@ const PatientManagement = () => {
     setShowOverlay(true);
   };
 
-  const handleEditPatient = (patient) => {
+  const handleEditPatient = (patient: Patient) => {
     setEditingPatient(patient);
     setFormData({ ...patient });
     setShowOverlay(true);
@@ -86,7 +104,9 @@ const PatientManagement = () => {
     resetForm();
   };
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
@@ -94,18 +114,51 @@ const PatientManagement = () => {
     }));
   };
 
-  const handleSubmit = () => {
+
+  const handleSubmit = async () => {
     // Basic validation
-    if (!formData.name || !formData.email || !formData.password) {
+    if (!formData.name || !formData.email) {
       alert('Please fill in all required fields');
       return;
     }
-    
+
     if (editingPatient) {
+      try{
+        const response = await axios.put(
+          `${backendURL}/patients/${editingPatient.patient_id}`,
+          {
+            name: formData.name,
+            profile_picture: formData.profile_picture,
+            email: formData.email,
+            phone_number: formData.phone_number,
+            address: formData.address,
+            nic: formData.NIC,
+            blood_group: formData.blood_group,
+            date_of_birth: formData.date_of_birth,
+            gender: formData.gender
+          },
+          {
+            withCredentials: true,
+            headers: {
+              "Content-type":"application/json"
+            }
+          }
+        );
+        if(response.status != 202){
+          throw new Error("Error updating patient");
+        }
+        window.alert("Patient updated succesfully");
+      }
+      catch(err: any){
+        window.alert(err.message);
+      }
+      finally{
+
+      }
       // Update existing patient
-      setPatients(prev => 
-        prev.map(patient => 
-          patient.patient_id === editingPatient.patient_id 
+      setPatients(prev =>
+        prev?.map(patient =>
+          patient.patient_id === editingPatient.patient_id
             ? { ...formData }
             : patient
         )
@@ -113,14 +166,64 @@ const PatientManagement = () => {
     } else {
       // Add new patient
       const newPatientId = `P${String(patients.length + 1).padStart(3, '0')}`;
-      setPatients(prev => [...prev, { ...formData, patient_id: newPatientId }]);
+      try {
+        const response = await axios.post(
+          `${backendURL}/patients`, {
+          hospital_patient_id: formData.hospital_patient_id,
+          patient_id: newPatientId,
+          password: Math.floor(100000 + Math.random() * 900000).toString(),
+          name: formData.name,
+          profile_picture: formData.profile_picture,
+          email: formData.email,
+          phone_number: formData.phone_number,
+          address: formData.address,
+          nic: formData.NIC,
+          blood_group: formData.blood_group,
+          date_of_birth: formData.date_of_birth,
+          gender: formData.gender,
+        },
+        {
+          withCredentials: true,
+          headers:{
+            "Content-type":"application/json"
+          }
+        }
+        );
+        if(response.status != 201){
+          throw new Error("Error Creating Patient");
+        }
+        else{
+          window.alert("Patient Created Succesfully");
+          setPatients(prev => [...prev, { ...formData, patient_id: newPatientId }]);
+        }
+      }
+      catch (err: any) {
+        window.alert(err.message);
+      }
+      finally {
+
+      }
     }
-    
+
     handleCloseOverlay();
   };
 
-  const handleDeletePatient = (patientId) => {
-    setPatients(prev => prev.filter(patient => patient.patient_id !== patientId));
+  const handleDeletePatient = async (patientId: string) => {
+    try {
+      const response = await axios.delete(
+        `${backendURL}/patients/${patientId}`
+      );
+      if (response.status == 500) {
+        throw new Error("Internal Server Error");
+      }
+      setPatients(prev => prev.filter(patient => patient.patient_id !== patientId));
+    }
+    catch (err: any) {
+      window.alert(err.message);
+    }
+    finally {
+
+    }
   };
 
   const filteredPatients = patients.filter(patient =>
@@ -130,9 +233,33 @@ const PatientManagement = () => {
     patient.patient_id.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const getInitials = (name) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+  const getInitials = (name: string) => {
+    return name.split(' ').map((n: string) => n[0]).join('').toUpperCase();
   };
+
+  const fetchPatients = async () => {
+    setLoadingPatient(true);
+    try {
+      const response = await axios.get(
+        `${backendURL}/patients`
+      );
+      if (response.status == 500) {
+        throw new Error("Internal Server Error");
+      }
+      setPatients(response.data);
+    }
+    catch (err: any) {
+      window.alert(err.message);
+    }
+    finally {
+      setLoadingPatient(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPatients();
+  }, []);
+
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -175,14 +302,22 @@ const PatientManagement = () => {
               <div>Action</div>
             </div>
           </div>
-          
+
           <div className="divide-y divide-gray-200">
             {filteredPatients.map((patient) => (
               <div key={patient.patient_id} className="px-6 py-4 hover:bg-gray-50">
                 <div className="grid grid-cols-6 gap-4 items-center">
                   <div className="flex items-center justify-center">
-                    <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center text-gray-700 font-medium">
-                      {getInitials(patient.name)}
+                    <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-300 flex items-center justify-center text-gray-700 font-medium">
+                      {patient.profile_picture ? (
+                        <img
+                          src={`${backendURL}/${patient.profile_picture}`}
+                          alt={patient.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        getInitials(patient.name)
+                      )}
                     </div>
                   </div>
                   <div className="text-sm text-gray-900">{patient.patient_id}</div>
@@ -201,7 +336,7 @@ const PatientManagement = () => {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleDeletePatient(patient.patient_id)}
+                      onClick={() => { window.alert(patient.patient_id); handleDeletePatient(patient.patient_id) }}
                       className="p-1 h-8 w-8 hover:text-red-600"
                     >
                       <Trash2 size={16} />
@@ -246,7 +381,7 @@ const PatientManagement = () => {
                   </Button>
                 </div>
               </div>
-              
+
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <Mail size={16} />
@@ -288,7 +423,7 @@ const PatientManagement = () => {
                   {editingPatient ? 'Edit Patient' : 'Add New Patient'}
                 </DialogTitle>
               </DialogHeader>
-              
+
               <div className="space-y-4 pt-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -301,7 +436,7 @@ const PatientManagement = () => {
                       className="w-full"
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="patient_id" className="text-sm font-medium">Patient ID</Label>
                     <Input
@@ -309,7 +444,7 @@ const PatientManagement = () => {
                       name="patient_id"
                       value={formData.patient_id}
                       onChange={handleInputChange}
-                      disabled={editingPatient}
+                      disabled={editingPatient ? true : false}
                       className="w-full"
                     />
                   </div>
@@ -340,7 +475,7 @@ const PatientManagement = () => {
                       className="w-full"
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="phone_number" className="text-sm font-medium">Phone Number</Label>
                     <Input
@@ -377,7 +512,7 @@ const PatientManagement = () => {
                       className="w-full"
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="blood_group" className="text-sm font-medium">Blood Group</Label>
                     <Select
@@ -408,7 +543,7 @@ const PatientManagement = () => {
                       className="w-full"
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="gender" className="text-sm font-medium">Gender</Label>
                     <Select
@@ -447,18 +582,6 @@ const PatientManagement = () => {
                     type="url"
                     name="profile_picture"
                     value={formData.profile_picture}
-                    onChange={handleInputChange}
-                    className="w-full"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="emergency_contact_id" className="text-sm font-medium">Emergency Contact ID</Label>
-                  <Input
-                    id="emergency_contact_id"
-                    type="number"
-                    name="emergency_contact_id"
-                    value={formData.emergency_contact_id}
                     onChange={handleInputChange}
                     className="w-full"
                   />

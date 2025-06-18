@@ -53,6 +53,8 @@ router.post('/', /* authenticateToken, */ async (req, res) => {
       gender,
     } = req.body;
 
+    console.log(req.body);
+
     // Check if patient_id or email or nic already exists
     const existingById = await prisma.patients.findUnique({ where: { patient_id } });
     if (existingById) return res.status(409).json({ error: 'Patient ID already exists' });
@@ -84,7 +86,8 @@ router.post('/', /* authenticateToken, */ async (req, res) => {
     });
 
     res.status(201).json(created);
-  } catch {
+  } catch(err) {
+    console.log(err);
     res.status(500).json({ error: 'Failed to create patient' });
   }
 });
@@ -105,7 +108,6 @@ router.put('/:patient_id', /* authenticateToken, */ async (req, res) => {
       gender,
     } = req.body;
 
-    // If email or nic is being updated, check for uniqueness
     if (email) {
       const existingByEmail = await prisma.patients.findFirst({
         where: { email, patient_id: { not: patient_id } },
@@ -140,8 +142,9 @@ router.put('/:patient_id', /* authenticateToken, */ async (req, res) => {
       data: dataToUpdate,
     });
 
-    res.json(updated);
-  } catch {
+    res.status(202).json(updated);
+  } catch (err) {
+    console.log(err);
     res.status(500).json({ error: 'Failed to update patient' });
   }
 });
@@ -150,7 +153,8 @@ router.delete('/:patient_id', /* authenticateToken, */ async (req, res) => {
   try {
     await prisma.patients.delete({ where: { patient_id: req.params.patient_id } });
     res.json({ message: 'Deleted' });
-  } catch {
+  } catch(error) {
+    console.log(error);
     res.status(500).json({ error: 'Failed to delete patient' });
   }
 });
