@@ -177,16 +177,16 @@ const AppointmentsDashboard = () => {
                 )}
               </p>
             </div>
-            <div className="flex gap-2">
+            
               
               <Button 
-                className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+                className="bg-emerald-500 hover:bg-emerald-600 text-white w-auto rounded-lg flex items-center gap-2 transition-colors"
                 disabled={isLoading}
               >
                 <Plus size={20} />
                 Add Appointment
               </Button>
-            </div>
+            
           </div>
         </div>
 
