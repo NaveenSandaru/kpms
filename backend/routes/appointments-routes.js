@@ -1,5 +1,6 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
+import { DateTime } from 'luxon';
 // import { authenticateToken } from '../middleware/authentication.js';
 
 const prisma = new PrismaClient();
@@ -34,6 +35,149 @@ router.get('/', /* authenticateToken, */ async (req, res) => {
   }
 });
 
+router.get('/:dentist_id', /* authenticateToken, */ async (req, res) => {
+  try {
+    const appointments = await prisma.appointments.findMany({
+      where:{dentist_id: req.params.dentist_id},
+      include: {
+        patient: {
+          select: {
+            patient_id: true,
+            name: true,
+            email: true,
+            profile_picture: true
+          }
+        },
+        dentist: {
+          select: {
+            dentist_id: true,
+            name: true,
+            email: true,
+            profile_picture: true
+          }
+        }
+      }
+    });
+    res.json(appointments);
+  } catch (error) {
+    console.error('Error fetching appointments:', error);
+    res.status(500).json({ error: 'Failed to fetch appointments' });
+  }
+});
+
+router.get('/:patient_id', /* authenticateToken, */ async (req, res) => {
+  try {
+    const appointments = await prisma.appointments.findMany({
+      where:{patient_id: req.params.patient_id},
+      include: {
+        patient: {
+          select: {
+            patient_id: true,
+            name: true,
+            email: true,
+            profile_picture: true
+          }
+        },
+        dentist: {
+          select: {
+            dentist_id: true,
+            name: true,
+            email: true,
+            profile_picture: true
+          }
+        }
+      }
+    });
+    res.json(appointments);
+  } catch (error) {
+    console.error('Error fetching appointments:', error);
+    res.status(500).json({ error: 'Failed to fetch appointments' });
+  }
+});
+
+router.get('/today/:dentist_id', /* authenticateToken, */ async (req, res) => {
+  try {
+    const colomboNow = DateTime.now().setZone('Asia/Colombo');
+
+    const startOfToday = colomboNow.startOf('day').toJSDate();
+    const startOfTomorrow = colomboNow.plus({ days: 1 }).startOf('day').toJSDate();
+
+    const appointments = await prisma.appointments.findMany({
+      where: {
+        dentist_id: req.params.dentist_id,
+        date: {
+          gte: startOfToday,
+          lt: startOfTomorrow
+        }
+      },
+      include: {
+        patient: {
+          select: {
+            patient_id: true,
+            name: true,
+            email: true,
+            profile_picture: true
+          }
+        },
+        dentist: {
+          select: {
+            dentist_id: true,
+            name: true,
+            email: true,
+            profile_picture: true
+          }
+        }
+      }
+    });
+
+    res.json(appointments);
+  } catch (error) {
+    console.error("Error fetching today's appointments:", error);
+    res.status(500).json({ error: "Failed to fetch today's appointments" });
+  }
+});
+
+router.get('/today/:patient_id', /* authenticateToken, */ async (req, res) => {
+  try {
+    const colomboNow = DateTime.now().setZone('Asia/Colombo');
+
+    const startOfToday = colomboNow.startOf('day').toJSDate();
+    const startOfTomorrow = colomboNow.plus({ days: 1 }).startOf('day').toJSDate();
+
+    const appointments = await prisma.appointments.findMany({
+      where: {
+        patient_id: req.params.patient_id,
+        date: {
+          gte: startOfToday,
+          lt: startOfTomorrow
+        }
+      },
+      include: {
+        patient: {
+          select: {
+            patient_id: true,
+            name: true,
+            email: true,
+            profile_picture: true
+          }
+        },
+        dentist: {
+          select: {
+            dentist_id: true,
+            name: true,
+            email: true,
+            profile_picture: true
+          }
+        }
+      }
+    });
+
+    res.json(appointments);
+  } catch (error) {
+    console.error("Error fetching today's appointments:", error);
+    res.status(500).json({ error: "Failed to fetch today's appointments" });
+  }
+});
 
 router.get('/count', /* authenticateToken, */ async (req, res) => {
   try {
