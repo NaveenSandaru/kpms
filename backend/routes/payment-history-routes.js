@@ -7,17 +7,45 @@ const router = express.Router();
 
 router.get('/', /* authenticateToken, */ async (req, res) => {
   try {
-    const payments = await prisma.payment_history.findMany({});
+    const payments = await prisma.payment_history.findMany({
+      include: {
+        appointment: {
+          include: {
+            patient: {
+              select: {
+                patient_id: true,
+                name: true,
+                email: true,
+                phone_number: true,
+                profile_picture: true
+              }
+            },
+            dentist: {
+              select: {
+                dentist_id: true,
+                name: true,
+                email: true,
+                phone_number: true,
+                profile_picture: true
+              }
+            }
+          }
+        }
+      }
+    });
+
     res.json(payments);
-  } catch {
+  } catch (error) {
+    console.error(error);
     res.status(500).json({ error: 'Failed to fetch payment histories' });
   }
 });
 
+
 router.get('/trends', /* authenticateToken, */ async (req, res) => {
-  
+
   const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  
+
   try {
     const now = new Date();
     const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);

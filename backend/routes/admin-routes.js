@@ -2,6 +2,7 @@ import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
 // import { authenticateToken } from '../middleware/authentication.js';
+import { sendAccountCreationInvite } from '../utils/mailer.js';
 
 const prisma = new PrismaClient();
 const router = express.Router();
@@ -76,6 +77,26 @@ router.delete('/:admin_id', /* authenticateToken, */ async (req, res) => {
     res.json({ message: 'Deleted' });
   } catch {
     res.status(500).json({ error: 'Failed to delete admin' });
+  }
+});
+
+router.post('/sendDentistInvite', /* authenticateToken, */ async (req, res) => {
+  try{
+    sendAccountCreationInvite(req.body.email, "Dentist", "http://localhost:3000");
+  }
+  catch(err){
+    console.log(err);
+    res.status(500).json({error: "Failed Sending Invite"});
+  }
+});
+
+router.post('/invite', /* authenticateToken, */ async (req, res) => {
+  try{
+    sendAccountCreationInvite(req.body.email, req.body.role, "http://localhost:3000");
+  }
+  catch(err){
+    console.log(err);
+    res.status(500).json({error: "Failed Sending Invite"});
   }
 });
 

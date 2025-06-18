@@ -156,8 +156,5 @@ const sendAppointmentCancelation = async (email, date, start_time, provider) => 
       throw new Error(`Failed to send account creation invite: ${error.message}`);
     }
   };
-  
-  
-
 
 export {sendVerificationCode, sendAppointmentConfirmation, sendAppointmentCancelation, sendAccountCreationInvite};

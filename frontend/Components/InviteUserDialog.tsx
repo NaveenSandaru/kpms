@@ -5,10 +5,11 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from "@/components/ui/dialog";
+} from "@/Components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
+import { Label } from "@/Components/ui/label";
+import axios from "axios";
 
 interface Props {
   open: boolean;
@@ -16,8 +17,39 @@ interface Props {
 }
 
 export default function InviteUserDialog({ open, onClose }: Props) {
+
+  const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
+
   const [role, setRole] = useState<"Dentist" | "Receptionist">("Dentist");
   const [email, setEmail] = useState("");
+  const [sendingEmail, setSendingEmail] = useState(false);
+
+  const sendEmail = async (role: string, email: string) => {
+    setSendingEmail(true);
+    try {
+      const response = await axios.post(
+        `${backendURL}/admins/invite`, {
+        role: role,
+        email: email
+      },
+        {
+          withCredentials: true,
+          headers: {
+            "Content-type": "application/json"
+          }
+        }
+      );
+      if (response.status == 500) {
+        throw new Error("Error sending invite");
+      }
+    }
+    catch (err: any) {
+      window.alert(err.message);
+    }
+    finally {
+      setSendingEmail(false);
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -63,8 +95,8 @@ export default function InviteUserDialog({ open, onClose }: Props) {
         </div>
 
         <DialogFooter className="mt-4">
-          
-          <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => console.log({ role, email })}>Invite</Button>
+
+          <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() =>sendEmail(role, email)}>Invite</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

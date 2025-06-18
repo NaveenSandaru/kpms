@@ -1,11 +1,12 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { DialogTrigger } from "@/components/ui/dialog";
+import { DialogTrigger } from "@/Components/ui/dialog";
 import { Eye, Trash2, Search, Plus, User, Phone, Mail, UserCheck } from "lucide-react";
 import ViewUserDialog from "@/Components/ViewUserDialog";
 import InviteUserDialog from "@/Components/InviteUserDialog";
+import axios from "axios";
 
 type Role = "Dentist" | "Receptionist";
 
@@ -42,12 +43,54 @@ const mockUsers: User[] = [
 ];
 
 export default function UserTable() {
+
+  const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
+
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [users, setUsers] = useState<User[]>();
+
+  const fetchUsers = async () => {
+    setLoadingUsers(true);
+    try {
+      const [dentistsRes, receptionistsRes] = await Promise.all([
+        axios.get(`${backendURL}/dentists`),
+        axios.get(`${backendURL}/receptionists`)
+      ]);
+
+      if (dentistsRes.status === 500 || receptionistsRes.status === 500) {
+        throw new Error("Internal Server Error");
+      }
+
+      const dentistUsers: User[] = dentistsRes.data.map((dentist: any) => ({
+        id: dentist.dentist_id,
+        name: dentist.name,
+        email: dentist.email,
+        phone: dentist.phone_number || '',
+        role: "Dentist"
+      }));
+
+      const receptionistUsers: User[] = receptionistsRes.data.map((receptionist: any) => ({
+        id: receptionist.receptionist_id,
+        name: receptionist.name,
+        email: receptionist.email,
+        phone: receptionist.phone_number || '',
+        role: "Receptionist"
+      }));
+
+      const allUsers: User[] = [...dentistUsers, ...receptionistUsers];
+      setUsers(allUsers);
+    } catch (err: any) {
+      window.alert(err.message);
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
 
   // Filter users based on search term
-  const filteredUsers = mockUsers.filter(user =>
+  const filteredUsers = users?.filter(user =>
     user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.phone.includes(searchTerm) ||
@@ -70,6 +113,10 @@ export default function UserTable() {
     }
   };
 
+  useEffect(()=>{
+    fetchUsers();
+  },[]);
+
   return (
     <div className="min-h-screen bg-gray-50 p-6 overflow-auto">
       <div className="max-w-7xl mx-auto">
@@ -80,7 +127,7 @@ export default function UserTable() {
               <h1 className="text-3xl font-bold mt-7 md:mt-0 text-gray-900">Users</h1>
               <p className="text-gray-600 mt-1">View dentists database entries</p>
             </div>
-            <Button 
+            <Button
               onClick={() => setInviteDialogOpen(true)}
               className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors w-auto"
             >
@@ -93,15 +140,15 @@ export default function UserTable() {
         {/* Search Bar */}
         <div className="bg-white rounded-lg shadow-sm border p-4 mb-6">
           <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                        <input
-                          type="text"
-                          placeholder="Search appointments..."
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
-                          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg   focus:border-transparent"
-                        />
-                      </div>
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+            <input
+              type="text"
+              placeholder="Search appointments..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg   focus:border-transparent"
+            />
+          </div>
         </div>
 
         {/* Desktop Table View */}
@@ -117,7 +164,7 @@ export default function UserTable() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {filteredUsers.map((user) => (
+                {filteredUsers?.map((user) => (
                   <tr key={user.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
@@ -174,7 +221,7 @@ export default function UserTable() {
 
         {/* Mobile/Tablet Card View */}
         <div className="lg:hidden space-y-4">
-          {filteredUsers.map((user) => (
+          {filteredUsers?.map((user) => (
             <div key={user.id} className="bg-white rounded-lg shadow-sm border p-4">
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                 <div className="flex-1 space-y-3">
@@ -230,16 +277,16 @@ export default function UserTable() {
         </div>
 
         {/* Empty State */}
-        {filteredUsers.length === 0 && (
+        {filteredUsers?.length === 0 && (
           <div className="bg-white rounded-lg shadow-sm border p-12 text-center">
             <User size={48} className="text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">No users found</h3>
             <p className="text-gray-500 mb-6">
-              {searchTerm 
-                ? 'Try adjusting your search criteria.' 
+              {searchTerm
+                ? 'Try adjusting your search criteria.'
                 : 'Get started by adding your first user.'}
             </p>
-            <Button 
+            <Button
               onClick={() => setInviteDialogOpen(true)}
               className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg flex items-center gap-2 transition-colors mx-auto"
             >
@@ -249,11 +296,9 @@ export default function UserTable() {
           </div>
         )}
 
-        
-  
         <ViewUserDialog user={selectedUser} onClose={() => setSelectedUser(null)} />
         <InviteUserDialog open={inviteDialogOpen} onClose={() => setInviteDialogOpen(false)} />
-        
+
       </div>
     </div>
   );

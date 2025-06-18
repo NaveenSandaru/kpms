@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/Components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/Components/ui/card";
 import { 
   User, 
   Mail, 
@@ -20,9 +20,9 @@ interface User {
   name: string;
   email: string;
   phone_number?: string;
+  id: string
   
   // Dentist-specific fields
-  dentist_id?: string;
   profile_picture?: string;
   language?: string;
   service_types?: string;
@@ -33,11 +33,9 @@ interface User {
   appointment_duration?: string;
   appointment_fee?: number;
   
-  // Receptionist-specific fields
-  receptionist_id?: string;
   
   // Role identifier
-  role: 'dentist' | 'receptionist';
+  role: 'Dentist' | 'Receptionist';
 }
 
 interface Props {
@@ -48,7 +46,7 @@ interface Props {
 export default function ViewUserDialog({ user, onClose }: Props) {
   if (!user) return null;
 
-  const isDentist = user.role === 'dentist';
+  const isDentist = user.role === 'Dentist';
   const userInitials = user.name
     .split(' ')
     .map(n => n[0])
@@ -106,7 +104,7 @@ export default function ViewUserDialog({ user, onClose }: Props) {
                     </Badge>
                   </div>
                   <p className="text-sm text-gray-600 mt-2">
-                    ID: {isDentist ? user.dentist_id : user.receptionist_id}
+                    ID: {user.id}
                   </p>
                 </div>
               </div>

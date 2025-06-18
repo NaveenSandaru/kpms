@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import axios from 'axios';
 
 // Types based on the database schema
 interface Patient {
@@ -120,18 +121,68 @@ const mockPayments: PaymentRecord[] = [
 ];
 
 const PaymentsInterface: React.FC = () => {
+
+  const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
+
   const [searchTerm, setSearchTerm] = useState('');
   const [payments, setPayments] = useState<PaymentRecord[]>(mockPayments);
   const [filteredPayments, setFilteredPayments] = useState<PaymentRecord[]>(mockPayments);
+  const [loadingPayments, setLoadingPayments] = useState(false);
+
+  const fetchPayments = async () => {
+    setLoadingPayments(true);
+    try {
+      const response = await axios.get(`${backendURL}/payment-history`);
+
+      if (response.status === 500) {
+        throw new Error("Internal Server Error");
+      }
+
+      // Transform raw response to match PaymentRecord[]
+      const formatted: PaymentRecord[] = response.data.map((item: any) => ({
+        payment: {
+          appointment_id: item.appointment_id,
+          payment_date: item.payment_date,
+          payment_time: item.payment_time,
+          reference_number: item.reference_number
+        },
+        appointment: {
+          appointment_id: item.appointment.appointment_id,
+          patient_id: item.appointment.patient_id,
+          dentist_id: item.appointment.dentist_id,
+          date: item.appointment.date,
+          time_from: item.appointment.time_from,
+          time_to: item.appointment.time_to,
+          fee: parseFloat(item.appointment.fee ?? 0),
+          status: item.appointment.status,
+          payment_status: item.appointment.payment_status
+        },
+        patient: item.appointment.patient,
+        dentist: item.appointment.dentist
+      }));
+
+      setPayments(formatted);
+      setFilteredPayments(formatted);
+    } catch (err: any) {
+      window.alert(err.message);
+    } finally {
+      setLoadingPayments(false);
+    }
+  };
+
 
   useEffect(() => {
-    const filtered = payments.filter(payment => 
+    const filtered = payments.filter(payment =>
       payment.patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       payment.dentist.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       payment.payment.reference_number.includes(searchTerm)
     );
     setFilteredPayments(filtered);
   }, [searchTerm, payments]);
+
+  useEffect(()=>{
+    fetchPayments();
+  },[]);
 
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('en-US', {
@@ -165,92 +216,92 @@ const PaymentsInterface: React.FC = () => {
         {/* Search Bar */}
         <div className="mb-6">
           <div className="relative flex-1">
-                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                          <input
-                            type="text"
-                            placeholder="Search appointments..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
-                          />
-                        </div>
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+            <input
+              type="text"
+              placeholder="Search appointments..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
+            />
+          </div>
         </div>
 
         {/* Desktop Table View */}
         <div className="hidden lg:block bg-white rounded-lg shadow-sm border overflow-hidden">
+          <div className="overflow-x-auto">
             <div className="overflow-x-auto">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-green-50 border-b">
-                    <tr>
-                      <th className="text-left px-6 py-4 font-medium text-gray-700">Patient</th>
-                      <th className="text-left px-6 py-4 font-medium text-gray-700">Dentist</th>
-                      <th className="text-left px-6 py-4 font-medium text-gray-700">Fee</th>
-                      <th className="text-left px-6 py-4 font-medium text-gray-700">Date & Time</th>
-                      <th className="text-left px-6 py-4 font-medium text-gray-700">Reference no</th>
+              <table className="w-full">
+                <thead className="bg-green-50 border-b">
+                  <tr>
+                    <th className="text-left px-6 py-4 font-medium text-gray-700">Patient</th>
+                    <th className="text-left px-6 py-4 font-medium text-gray-700">Dentist</th>
+                    <th className="text-left px-6 py-4 font-medium text-gray-700">Fee</th>
+                    <th className="text-left px-6 py-4 font-medium text-gray-700">Date & Time</th>
+                    <th className="text-left px-6 py-4 font-medium text-gray-700">Reference no</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredPayments.map((payment) => (
+                    <tr key={payment.appointment.appointment_id} className="border-b hover:bg-gray-50">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center space-x-3">
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage src={payment.patient.profile_picture} />
+                            <AvatarFallback className="bg-blue-100 text-blue-600">
+                              {getInitials(payment.patient.name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="font-medium text-gray-900">{payment.patient.name}</div>
+                            <div className="text-sm text-gray-500">{payment.patient.email}</div>
+                            <div className="text-sm text-gray-500">{payment.patient.phone_number}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center space-x-3">
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage src={payment.dentist.profile_picture} />
+                            <AvatarFallback className="bg-green-100 text-green-600">
+                              {getInitials(payment.dentist.name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="font-medium text-gray-900">{payment.dentist.name}</div>
+                            <div className="text-sm text-gray-500">{payment.dentist.email}</div>
+                            <div className="text-sm text-gray-500">{payment.dentist.phone_number}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center space-x-1">
+                          <DollarSign className="h-4 w-4 text-green-600" />
+                          <span className="font-semibold text-gray-900">${payment.appointment.fee}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="space-y-1">
+                          <div className="text-sm font-medium text-gray-900">
+                            {formatDate(payment.payment.payment_date)}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {formatTime(payment.payment.payment_time)}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <Badge variant="outline" className="font-mono text-xs">
+                          {payment.payment.reference_number}
+                        </Badge>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {filteredPayments.map((payment) => (
-                      <tr key={payment.appointment.appointment_id} className="border-b hover:bg-gray-50">
-                        <td className="px-6 py-4">
-                          <div className="flex items-center space-x-3">
-                            <Avatar className="h-10 w-10">
-                              <AvatarImage src={payment.patient.profile_picture} />
-                              <AvatarFallback className="bg-blue-100 text-blue-600">
-                                {getInitials(payment.patient.name)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <div className="font-medium text-gray-900">{payment.patient.name}</div>
-                              <div className="text-sm text-gray-500">{payment.patient.email}</div>
-                              <div className="text-sm text-gray-500">{payment.patient.phone_number}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center space-x-3">
-                            <Avatar className="h-10 w-10">
-                              <AvatarImage src={payment.dentist.profile_picture} />
-                              <AvatarFallback className="bg-green-100 text-green-600">
-                                {getInitials(payment.dentist.name)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <div className="font-medium text-gray-900">{payment.dentist.name}</div>
-                              <div className="text-sm text-gray-500">{payment.dentist.email}</div>
-                              <div className="text-sm text-gray-500">{payment.dentist.phone_number}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center space-x-1">
-                            <DollarSign className="h-4 w-4 text-green-600" />
-                            <span className="font-semibold text-gray-900">${payment.appointment.fee}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="space-y-1">
-                            <div className="text-sm font-medium text-gray-900">
-                              {formatDate(payment.payment.payment_date)}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {formatTime(payment.payment.payment_time)}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <Badge variant="outline" className="font-mono text-xs">
-                            {payment.payment.reference_number}
-                          </Badge>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+              </table>
             </div>
-            
+          </div>
+
         </div>
 
         {/* Mobile Card View */}
@@ -290,7 +341,7 @@ const PaymentsInterface: React.FC = () => {
                     <div className="text-sm text-gray-500">{payment.dentist.email}</div>
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex items-center space-x-2">
                     <Calendar className="h-4 w-4 text-gray-400" />
@@ -303,13 +354,13 @@ const PaymentsInterface: React.FC = () => {
                     <Clock className="h-4 w-4 text-gray-400" />
                     <div>
                       <div className="text-sm font-medium">
-                        {formatTime(payment.payment.payment_time)} 
+                        {formatTime(payment.payment.payment_time)}
                       </div>
                       <div className="text-xs text-gray-500">Time</div>
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="pt-2 border-t">
                   <div className="text-xs text-gray-500 mb-1">Reference Number</div>
                   <Badge variant="outline" className="font-mono text-xs">
