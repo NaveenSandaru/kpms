@@ -1,12 +1,14 @@
 "use client"
 
+import DoctorHeader from "@/Components/Doctorheader"
+import DoctorSidebar from "@/Components/Doctorsidebar"
 import PatientHeader from "@/Components/patientHeader"
-import PatientSidebar from "@/Components/patientsidebar"
+
 import { SidebarProvider } from "@/Components/ui/sidebar"
 import { usePathname } from "next/navigation"
 import type React from "react"
 
-export default function AdminLayout({
+export default function DoctorLayout({
   children,
 }: {
   children: React.ReactNode
@@ -25,9 +27,9 @@ export default function AdminLayout({
  return (
     <SidebarProvider>
       <div className="flex h-screen w-full">
-        <PatientSidebar />
+        <DoctorSidebar />
         <div className="flex-1 flex flex-col overflow-hidden bg-gray-100">
-          <PatientHeader/> {/* <- Add the Header component here */}
+        <DoctorHeader/> {/* <- Add the Header component here */}
           <main className="flex-1 overflow-auto">
             {children}
           </main>
