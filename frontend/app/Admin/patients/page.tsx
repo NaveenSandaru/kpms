@@ -562,8 +562,8 @@ const PatientManagement = () => {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="password" className="text-sm font-medium">Password *</Label>
+               {/* <div className="space-y-2">
+                  <Label htmlFor="password" className="text-sm font-medium">Password </Label>
                   <Input
                     id="password"
                     type="password"
@@ -585,7 +585,7 @@ const PatientManagement = () => {
                     onChange={handleInputChange}
                     className="w-full"
                   />
-                </div>
+                </div>*/}
 
                 <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4">
                   <Button

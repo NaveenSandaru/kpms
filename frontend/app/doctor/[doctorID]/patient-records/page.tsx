@@ -350,7 +350,7 @@ export default function DentistDashboard({ params }: DashboardProps) {
                   <FileText className="h-5 w-5" />
                   Medical Reports
                 </h3>
-                <Button size="sm">
+                <Button className='bg-emerald-500 hover:bg-emerald-600' size="sm">
                   <Upload className="h-4 w-4 mr-2" />
                   Upload Report
                 </Button>
@@ -369,7 +369,7 @@ export default function DentistDashboard({ params }: DashboardProps) {
                             <p className="text-sm text-gray-500">Uploaded: {report.upload_date}</p>
                           </div>
                         </div>
-                        <Button variant="outline" size="sm" asChild>
+                        <Button className=' hover:bg-emerald-100' variant="outline" size="sm" asChild>
                           <a href={report.record_URL} target="_blank" rel="noopener noreferrer">
                             <Download className="h-4 w-4 mr-2" />
                             View
@@ -384,7 +384,7 @@ export default function DentistDashboard({ params }: DashboardProps) {
                     <CardContent className="p-8 text-center">
                       <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                       <p className="text-gray-500 mb-4">No medical reports available</p>
-                      <Button variant="outline" size="sm">
+                      <Button className='bg-emerald-500 hover:bg-emerald-600' variant="outline" size="sm">
                         <Upload className="h-4 w-4 mr-2" />
                         Upload First Report
                       </Button>
@@ -397,7 +397,7 @@ export default function DentistDashboard({ params }: DashboardProps) {
             <TabsContent value="notes" className="space-y-4 mt-0">
               <div className="flex justify-between items-center">
                 <h3 className="text-lg font-semibold">SOAP Notes</h3>
-                <Button size="sm">
+                <Button className='bg-emerald-500 hover:bg-emerald-600' size="sm">
                   <FileText className="h-4 w-4 mr-2" />
                   Add Note
                 </Button>
