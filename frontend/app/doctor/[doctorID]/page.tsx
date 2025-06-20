@@ -196,7 +196,7 @@ const DentalDashboard = () => {
 
   // Handle status change
   const handleStatusChange = (appointmentId: any, newStatus: any) => {
-    setAppointments(prevAppointments =>
+    setTodaysAppointments(prevAppointments =>
       prevAppointments.map(appointment =>
         appointment.appointment_id === appointmentId
           ? { ...appointment, status: newStatus }

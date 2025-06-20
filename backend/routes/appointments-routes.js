@@ -102,7 +102,7 @@ router.get('/today/fordentist/:dentist_id', async (req, res) => {
     const appointments = await prisma.appointments.findMany({
       where: {
         dentist_id: req.params.dentist_id,
-        date: colomboToday,
+        date: new Date(colomboToday)
       },
       include: {
         patient: {
@@ -211,7 +211,7 @@ router.get('/today', /* authenticateToken, */ async (req, res) => {
     const colomboNow = DateTime.now().setZone('Asia/Colombo');
     const appointments = await prisma.appointments.findMany({
       where: {
-        date: colomboNow
+        date: new Date(colomboNow)
       },
       include: {
         patient: {
