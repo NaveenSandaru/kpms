@@ -77,11 +77,11 @@ const ReceptionistHeader = () => {
           specialty: 'Physician',
         };
 
-        setDoctorInfo(receptionist);
+        setReceptionistInfo(receptionist);
       } catch (error) {
         console.error('Error fetching doctor info:', error);
         // Fallback doctor info
-        setDoctorInfo({
+        setReceptionistInfo({
           id: receptionistId,
           name: `Dr. User ${receptionistId}`,
           specialty: 'Physician',
