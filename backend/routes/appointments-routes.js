@@ -219,7 +219,8 @@ router.get('/today', /* authenticateToken, */ async (req, res) => {
             patient_id: true,
             name: true,
             email: true,
-            profile_picture: true
+            profile_picture: true,
+            phone_number: true
           }
         },
         dentist: {
@@ -227,7 +228,8 @@ router.get('/today', /* authenticateToken, */ async (req, res) => {
             dentist_id: true,
             name: true,
             email: true,
-            profile_picture: true
+            profile_picture: true,
+            phone_number: true
           }
         }
       }
@@ -293,7 +295,8 @@ router.get('/pending', /* authenticateToken, */ async (req, res) => {
             patient_id: true,
             name: true,
             email: true,
-            profile_picture: true
+            profile_picture: true,
+            phone_number: true
           }
         },
         dentist: {
@@ -301,7 +304,43 @@ router.get('/pending', /* authenticateToken, */ async (req, res) => {
             dentist_id: true,
             name: true,
             email: true,
-            profile_picture: true
+            profile_picture: true,
+            phone_number: true
+          }
+        }
+      }
+    });
+
+    res.json(appointments);
+  } catch (error) {
+    console.error("Error fetching today's appointments:", error);
+    res.status(500).json({ error: "Failed to fetch today's appointments" });
+  }
+});
+
+router.get('/checkedin', /* authenticateToken, */ async (req, res) => {
+  try {
+    const appointments = await prisma.appointments.findMany({
+      where: {
+        status: "checkedin"
+      },
+      include: {
+        patient: {
+          select: {
+            patient_id: true,
+            name: true,
+            email: true,
+            profile_picture: true,
+            phone_number: true
+          }
+        },
+        dentist: {
+          select: {
+            dentist_id: true,
+            name: true,
+            email: true,
+            profile_picture: true,
+            phone_number: true
           }
         }
       }
