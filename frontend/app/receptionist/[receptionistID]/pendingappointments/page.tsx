@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Search, Phone, Mail, Calendar, Clock, User } from 'lucide-react'
+import axios from 'axios';
 
 interface Patient {
   patient_id: string
@@ -126,6 +127,22 @@ export default function AppointmentsPage() {
   const [filteredAppointments, setFilteredAppointments] = useState<Appointment[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [receptionistId, setReceptionistId] = useState<string>('123')
+   const [loading, setLoading] = useState(true);
+
+  const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
+
+   const fetchPendingAppointments = async () => {
+      try {
+        const response = await axios.get(`${backendURL}/appointments/pending`);
+        console.log("Fetched dentists:", response.data);
+        setAppointments(response.data);
+        setFilteredAppointments(response.data);
+      } catch (error) {
+        console.error('Error fetching dentists:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
   // Get receptionist ID from auth token (defaulting to 123)
   useEffect(() => {
@@ -135,8 +152,8 @@ export default function AppointmentsPage() {
 
   // Load appointments
   useEffect(() => {
-    setAppointments(mockAppointments)
-  }, [receptionistId])
+    fetchPendingAppointments()
+  }, [])
 
   // Filter appointments based on search
   useEffect(() => {
@@ -239,7 +256,7 @@ export default function AppointmentsPage() {
                     </td>
                     <td className="py-4 px-6">
                       <div className="text-sm text-gray-600 max-w-xs">
-                        {appointment.note}
+                        {appointment.note || 'No note'}
                       </div>
                     </td>
                     <td className="py-4 px-6">

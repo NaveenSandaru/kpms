@@ -252,7 +252,8 @@ router.get('/pending', /* authenticateToken, */ async (req, res) => {
             patient_id: true,
             name: true,
             email: true,
-            profile_picture: true
+            profile_picture: true,
+            phone_number: true
           }
         },
         dentist: {
@@ -260,7 +261,8 @@ router.get('/pending', /* authenticateToken, */ async (req, res) => {
             dentist_id: true,
             name: true,
             email: true,
-            profile_picture: true
+            profile_picture: true,
+            phone_number: true
           }
         }
       }
