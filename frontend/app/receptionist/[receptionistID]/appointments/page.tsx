@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Search, Plus, Phone, Mail, Calendar, Clock, User, DollarSign, FileText } from 'lucide-react'
+import { Search, Plus, Phone, Mail, Calendar, Clock, User, DollarSign, FileText, CheckCircle } from 'lucide-react'
+import axios from 'axios';
 
 interface Patient {
   patient_id: string
@@ -124,7 +125,12 @@ const mockAppointments: Appointment[] = [
 
 export default function AppointmentsPage() {
   const params = useParams()
-  const [appointments, setAppointments] = useState<Appointment[]>([])
+const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([])
+const [allAppointments, setAllAppointments] = useState<Appointment[]>([])
+const [checkedInAppointments, setCheckedInAppointments] = useState<Appointment[]>([])
+
+
+ 
   const [filteredAppointments, setFilteredAppointments] = useState<Appointment[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [activeTab, setActiveTab] = useState('today')
@@ -140,42 +146,71 @@ export default function AppointmentsPage() {
   }, [params])
 
   // Load appointments
-  useEffect(() => {
-    // In a real app, this would be an API call
-    // For now, we'll use mock data
-    setAppointments(mockAppointments)
-  }, [receptionistId])
+useEffect(() => {
+  const fetchAppointments = async () => {
+    try {
+      const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
+
+      const [todayRes, allRes, checkedInRes] = await Promise.all([
+        axios.get(`${backendURL}/appointments/today`),
+        axios.get(`${backendURL}/appointments`),
+        axios.get(`${backendURL}/appointments/checkedin`)
+      ]);
+
+      const todayData = todayRes.data;
+      const allData = allRes.data;
+      const checkedInData = checkedInRes.data;
+
+      setTodayAppointments(todayData);
+      setCheckedInAppointments(checkedInData);
+
+      const now = new Date();
+
+      const upcomingAppointments = allData.filter((appointment: Appointment) => {
+        const appointmentDateTime = new Date(`${appointment.date}T${appointment.time_from}`);
+        return appointmentDateTime > now;
+      });
+
+      setAllAppointments(upcomingAppointments);
+    } catch (error) {
+      console.error("Failed to fetch appointments:", error);
+    }
+  };
+
+  fetchAppointments();
+}, []);
+
+
 
   // Filter appointments based on search and tab
   useEffect(() => {
-    let filtered = appointments
+  let source: Appointment[] = []
 
-    // Filter by search term
-    if (searchTerm) {
-      filtered = filtered.filter(appointment => 
-        appointment.patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        appointment.dentist.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        appointment.note.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    }
+  switch (activeTab) {
+    case 'today':
+      source = todayAppointments
+      break
+    case 'upcoming':
+      source = allAppointments
+      break
+    case 'checked-in':
+      source = checkedInAppointments
+      break
+    default:
+      source = []
+  }
 
-    // Filter by tab
-    const today = new Date().toISOString().split('T')[0]
-    
-    switch (activeTab) {
-      case 'today':
-        filtered = filtered.filter(appointment => appointment.date === today)
-        break
-      case 'upcoming':
-        filtered = filtered.filter(appointment => new Date(appointment.date) > new Date(today))
-        break
-      case 'checked-in':
-        filtered = filtered.filter(appointment => appointment.status === 'checked-in')
-        break
-    }
+  if (searchTerm) {
+    source = source.filter(appointment =>
+      appointment.patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      appointment.dentist.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      appointment.note.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  }
 
-    setFilteredAppointments(filtered)
-  }, [appointments, searchTerm, activeTab])
+  setFilteredAppointments(source)
+}, [activeTab, searchTerm, todayAppointments, allAppointments, checkedInAppointments])
+
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -264,7 +299,7 @@ export default function AppointmentsPage() {
           <TabsContent value={activeTab} className="mt-6">
             {/* Desktop View */}
             <div className="hidden lg:block">
-               {filteredAppointments.length === 1 && (
+              
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">
@@ -327,12 +362,17 @@ export default function AppointmentsPage() {
                               </Badge>
                             </td>
                             <td className="py-4 px-4">
-                              <Button
-                                size="sm"
-                                className="bg-yellow-100 hover:bg-yellow-200 text-yellow-800"
-                              >
-                                Check In
-                              </Button>
+                              {appointment.status === 'checkedin' ? (
+  <CheckCircle className="text-green-600 w-5 h-5" />
+) : (
+  <Button
+    size="sm"
+    className="bg-yellow-100 hover:bg-yellow-200 text-yellow-800"
+  >
+    Check In
+  </Button>
+)}
+
                             </td>
                           </tr>
                         ))}
@@ -341,7 +381,7 @@ export default function AppointmentsPage() {
                   </div>
                 </CardContent>
               </Card>
-            )}
+            
             </div>
 
             {/* Mobile View */}
@@ -406,12 +446,18 @@ export default function AppointmentsPage() {
 
                       {/* Action Button */}
                       <div className="border-t pt-3">
-                        <Button 
-                          size="sm" 
-                          className="w-full bg-yellow-100 hover:bg-yellow-200 text-yellow-800 border-1 border-yellow-200"
-                        >
-                          Check In
-                        </Button>
+                        {appointment.status === 'checkedin' ? (
+  <div className="flex justify-center">
+    <CheckCircle className="text-green-600 w-6 h-6" />
+  </div>
+) : (
+  <Button 
+    size="sm" 
+    className="w-full bg-yellow-100 hover:bg-yellow-200 text-yellow-800 border-1 border-yellow-200"
+  >
+    Check In
+  </Button>
+)}
                       </div>
                     </div>
                   </CardContent>
