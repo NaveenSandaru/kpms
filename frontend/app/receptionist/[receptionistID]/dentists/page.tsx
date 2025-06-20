@@ -184,7 +184,7 @@ export default function DentistDirectory({ params }: DentistDirectoryProps) {
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
-     <div className="mb-4 md:hidden">
+     <div className="mb-8 md:hidden">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Dentist Directory</h1>
             <p className="text-gray-600 mt-1"> Dentist details</p>
@@ -247,7 +247,7 @@ export default function DentistDirectory({ params }: DentistDirectoryProps) {
                       )}
                       <div className="flex items-center justify-between pt-2 border-t border-gray-100">
                         <span className="text-sm font-medium text-gray-900">
-                          ${dentist.appointment_fee?.toFixed(2)}
+                          Rs {dentist.appointment_fee?.toFixed(2)}
                         </span>
                         <span className="text-xs text-gray-500">
                           {dentist.appointment_duration} min
@@ -314,7 +314,7 @@ export default function DentistDirectory({ params }: DentistDirectoryProps) {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">
-                          ${dentist.appointment_fee?.toFixed(2)}
+                          Rs {dentist.appointment_fee?.toFixed(2)}
                         </div>
                       </td>
                       <td className="px-6 py-4">

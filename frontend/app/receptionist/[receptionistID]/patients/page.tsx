@@ -262,10 +262,10 @@ const PatientManagement = () => {
 
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50  p-4 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-         <div className="mb-4 md:hidden">
+         <div className="mb-8 md:hidden">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Patient Directory</h1>
             <p className="text-gray-600 mt-1">Manage patient details</p>
@@ -280,7 +280,7 @@ const PatientManagement = () => {
             placeholder="Search appointments..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
+            className="pl-10 rounded-lg "
           />
         </div>
       

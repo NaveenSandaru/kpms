@@ -276,8 +276,8 @@ const PaymentsInterface: React.FC = () => {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center space-x-1">
-                          <DollarSign className="h-4 w-4 text-green-600" />
-                          <span className="font-semibold text-gray-900">${payment.appointment.fee}</span>
+                          <span className="text-gray-500">Rs</span>
+                          <span className="font-semibold text-gray-900">{payment.appointment.fee}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4">
@@ -323,8 +323,8 @@ const PaymentsInterface: React.FC = () => {
                     </div>
                   </div>
                   <div className="flex items-center space-x-1">
-                    <DollarSign className="h-4 w-4 text-green-600" />
-                    <span className="font-bold text-lg text-gray-900">${payment.appointment.fee}</span>
+                    <span className="text-gray-500">Rs</span>
+                    <span className="font-bold text-lg text-gray-900">{payment.appointment.fee}</span>
                   </div>
                 </div>
               </CardHeader>
