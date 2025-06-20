@@ -137,6 +137,47 @@ router.get('/today/fordentist/:dentist_id', /* authenticateToken, */ async (req,
   }
 });
 
+router.get('/fordentist/patients/:dentist_id', /* authenticateToken, */ async (req, res) => {
+  try {
+    const dentistId = req.params.dentist_id;
+
+    const appointments = await prisma.appointments.findMany({
+      where: {
+        dentist_id: dentistId
+      },
+      include: {
+        patient: {
+          select: {
+            patient_id: true,
+            name: true,
+            profile_picture: true,
+            email: true,
+            phone_number: true,
+            address: true,
+            nic: true,
+            blood_group: true,
+            date_of_birth: true,
+            gender: true
+          }
+        }
+      }
+    });
+
+    // Extract unique patients
+    const uniquePatients = Array.from(
+      new Map(
+        appointments.map(app => [app.patient.patient_id, app.patient])
+      ).values()
+    );
+
+    res.json(uniquePatients);
+  } catch (error) {
+    console.error("Error fetching patients for dentist:", error);
+    res.status(500).json({ error: "Failed to fetch patients for this dentist" });
+  }
+});
+
+
 router.get('/today/forpatient/:patient_id', /* authenticateToken, */ async (req, res) => {
   try {
     const colomboNow = DateTime.now().setZone('Asia/Colombo');

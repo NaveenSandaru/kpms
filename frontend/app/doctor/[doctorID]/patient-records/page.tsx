@@ -4,11 +4,12 @@
 import React, { useState, useEffect } from 'react'
 import { Search, User, FileText, Calendar, Phone, Mail, Download, Upload, AlertCircle, Activity, X, ArrowLeft } from 'lucide-react'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card'
+import { Badge } from '@/Components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/Components/ui/tabs'
+import axios from 'axios'
 
 interface Patient {
   patient_id: string
@@ -41,22 +42,21 @@ interface SOAPNote {
   note_id: number
   patient_id: string
   note: string
-  created_at?: string
+  date?: string
 }
 
 interface MedicalHistory {
   patient_id: string
   medical_question_id: number
   medical_question_answer: string
-  question_text?: string
+  question: {question_id: string, question: string}
 }
 
 interface MedicalReport {
   report_id: number
   patient_id: string
   record_URL: string
-  report_name?: string
-  upload_date?: string
+  record_name?: string
 }
 
 interface DashboardProps {
@@ -79,143 +79,109 @@ const mockDentist: Dentist = {
   appointment_fee: 150.00
 }
 
-const mockPatients: Patient[] = [
-  {
-    patient_id: "P001",
-    name: "John Doe",
-    email: "john@example.com",
-    phone_number: "+1-555-0101",
-    blood_group: "A+",
-    date_of_birth: "1985-06-15",
-    gender: "Male",
-    address: "123 Main St, City"
-  },
-  {
-    patient_id: "P002", 
-    name: "Jane Smith",
-    email: "jane@example.com",
-    phone_number: "+1-555-0102",
-    blood_group: "O-",
-    date_of_birth: "1990-03-22",
-    gender: "Female",
-    address: "456 Oak Ave, City"
-  },
-  {
-    patient_id: "P003",
-    name: "Mike Wilson",
-    email: "mike@example.com",
-    phone_number: "+1-555-0103",
-    blood_group: "B+",
-    date_of_birth: "1978-11-08",
-    gender: "Male",
-    address: "789 Pine Rd, City"
-  },
-  {
-    patient_id: "P004",
-    name: "Sarah Davis",
-    email: "sarah@example.com",
-    phone_number: "+1-555-0104",
-    blood_group: "AB+",
-    date_of_birth: "1982-09-12",
-    gender: "Female",
-    address: "321 Elm St, City"
-  }
-]
-
-const mockMedicalHistory = {
-  "P001": [
-    { patient_id: "P001", medical_question_id: 1, medical_question_answer: "Yes", question_text: "Do you have diabetes?" },
-    { patient_id: "P001", medical_question_id: 2, medical_question_answer: "No", question_text: "Do you have heart disease?" },
-    { patient_id: "P001", medical_question_id: 3, medical_question_answer: "Penicillin", question_text: "Any known allergies?" }
-  ],
-  "P002": [
-    { patient_id: "P002", medical_question_id: 1, medical_question_answer: "No", question_text: "Do you have diabetes?" },
-    { patient_id: "P002", medical_question_id: 2, medical_question_answer: "Yes", question_text: "Do you have heart disease?" },
-    { patient_id: "P002", medical_question_id: 4, medical_question_answer: "Currently taking blood thinners", question_text: "Current medications?" }
-  ],
-  "P003": [
-    { patient_id: "P003", medical_question_id: 1, medical_question_answer: "No", question_text: "Do you have diabetes?" },
-    { patient_id: "P003", medical_question_id: 2, medical_question_answer: "No", question_text: "Do you have heart disease?" },
-    { patient_id: "P003", medical_question_id: 5, medical_question_answer: "Had jaw surgery in 2020", question_text: "Previous dental surgeries?" }
-  ],
-  "P004": [
-    { patient_id: "P004", medical_question_id: 1, medical_question_answer: "No", question_text: "Do you have diabetes?" },
-    { patient_id: "P004", medical_question_id: 2, medical_question_answer: "No", question_text: "Do you have heart disease?" },
-    { patient_id: "P004", medical_question_id: 5, medical_question_answer: "Regular cleanings only", question_text: "Previous dental procedures?" }
-  ]
-}
-
-const mockMedicalReports = {
-  "P001": [
-    { report_id: 1, patient_id: "P001", record_URL: "/reports/p001_xray_2024.pdf", report_name: "Dental X-Ray", upload_date: "2024-01-15" },
-    { report_id: 2, patient_id: "P001", record_URL: "/reports/p001_blood_test.pdf", report_name: "Blood Test Results", upload_date: "2024-02-10" }
-  ],
-  "P002": [
-    { report_id: 3, patient_id: "P002", record_URL: "/reports/p002_mri_scan.pdf", report_name: "MRI Scan", upload_date: "2024-01-20" },
-    { report_id: 4, patient_id: "P002", record_URL: "/reports/p002_dental_exam.pdf", report_name: "Comprehensive Dental Exam", upload_date: "2024-03-05" }
-  ],
-  "P003": [
-    { report_id: 5, patient_id: "P003", record_URL: "/reports/p003_panoramic.pdf", report_name: "Panoramic X-Ray", upload_date: "2024-01-25" }
-  ]
-}
-
-const mockSOAPNotes = {
-  "P001": [
-    { note_id: 1, patient_id: "P001", note: "Regular checkup - good oral hygiene", created_at: "2024-01-15" },
-    { note_id: 2, patient_id: "P001", note: "Cleaning completed - minor tartar buildup", created_at: "2024-02-20" }
-  ],
-  "P002": [
-    { note_id: 3, patient_id: "P002", note: "Cavity treatment on upper left molar", created_at: "2024-01-10" }
-  ],
-  "P003": [
-    { note_id: 4, patient_id: "P003", note: "Routine examination - no issues found", created_at: "2024-01-25" }
-  ]
-}
 
 export default function DentistDashboard({ params }: DashboardProps) {
+
+  const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
+
+  const [doctorID, setDoctorID] = useState("dent123");
+
   const [searchTerm, setSearchTerm] = useState('')
   const [dentist, setDentist] = useState<Dentist | null>(null)
   const [patients, setPatients] = useState<Patient[]>([])
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null)
   const [loading, setLoading] = useState(true)
   const [isMobileOverlayOpen, setIsMobileOverlayOpen] = useState(false)
+  const [loadingPatients, setLoadingPatients] = useState(false);
+  const [loadingMedicalHistory, setLoadingMedicalHistory] = useState(false);
+  const [loadingMedicalReports, setLoadingMedicalReports] = useState(false);
+  const [loadingSOAPNotes, setLoadingSOAPNotes] = useState(false);
+  const [fetchedPatients, setFetchedPatients] = useState<Patient[]>([]);
+  const [medicalHistory, setMedicalHistory] = useState<MedicalHistory[]>([]);
+  const [medicalReport, setMedicalReport] = useState<MedicalReport[]>([]);
+  const [soapNote, setSoapNote] = useState<SOAPNote[]>([]);
 
-  useEffect(() => {
-    // Simulate API call to fetch dentist data
-    const fetchDentistData = async () => {
-      try {
-        // Replace with actual API call
-        // const response = await fetch(`/api/dentists/${params.dentistId}`)
-        // const dentistData = await response.json()
-        
-        setDentist(mockDentist)
-        setPatients(mockPatients)
-        setLoading(false)
-      } catch (error) {
-        console.error('Error fetching dentist data:', error)
-        setLoading(false)
+
+  const fetchPatients = async () => {
+    setLoadingPatients(true);
+    try{
+      const response = await axios.get(
+        `${backendURL}/appointments/fordentist/patients/${doctorID}`
+      );
+      if(response.status == 500){
+        throw new Error("Internal Server Error");
       }
+      setFetchedPatients(response.data);
     }
+    catch(err: any){
+      window.alert(err.message);
+    }
+    finally{
+      setLoadingPatients(false);
+    }
+  };
 
-    fetchDentistData()
-  }, [params.dentistId])
+  const fetchPatientMedicalHistory = async (patient_id: string) => {
+    setLoadingMedicalHistory(true);
+    try{
+      const response = await axios.get(
+        `${backendURL}/medical-history/${patient_id}`
+      );
+      if(response.status == 500){
+        throw new Error("Internal Server Error");
+      }
+      setMedicalHistory(response.data);
+    }
+    catch(err:any){
+      window.alert(err.message);
+    }
+    finally{
+      setLoadingMedicalHistory(false);
+    }
+  };
 
-  const filteredPatients = patients.filter(patient =>
+  const fetchPatientMedicalReports = async (patient_id: string) => {
+    setLoadingMedicalReports(true);
+    try{
+      const response = await axios.get(
+        `${backendURL}/medical-reports/forpatient/${patient_id}`
+      );
+      if(response.status == 500){
+        throw new Error("Internal Server Error");
+      }
+      setMedicalReport(response.data);
+    }
+    catch(err: any){
+      window.alert(err.message);
+    }
+    finally{
+      setLoadingMedicalReports(true);
+    }
+  };
+
+  const fetchPatientSOAPNotes = async(patient_id: string) => {
+    setLoadingSOAPNotes(true);
+    try{
+      const response = await axios.get(
+        `${backendURL}/soap-notes/forpatient/${patient_id}`
+      );
+      if(response.status == 500){
+        throw new Error("Internal Server Error");
+      }
+      setSoapNote(response.data);
+    }
+    catch(err: any){
+      window.alert(err.message);
+    }
+    finally{
+      setLoadingSOAPNotes(false);
+    }
+  }
+
+  const filteredPatients = fetchedPatients.filter(patient =>
     patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     patient.email.toLowerCase().includes(searchTerm.toLowerCase())
   )
-
-  const getPatientMedicalHistory = (patientId: string) => {
-    return mockMedicalHistory[patientId as keyof typeof mockMedicalHistory] || []
-  }
-
-  const getPatientMedicalReports = (patientId: string) => {
-    return mockMedicalReports[patientId as keyof typeof mockMedicalReports] || []
-  }
-
-  const getPatientNotes = (patientId: string) => {
-    return mockSOAPNotes[patientId as keyof typeof mockSOAPNotes] || []
-  }
 
   const handlePatientSelect = (patient: Patient) => {
     setSelectedPatient(patient)
@@ -225,6 +191,38 @@ export default function DentistDashboard({ params }: DashboardProps) {
   const closeMobileOverlay = () => {
     setIsMobileOverlayOpen(false)
   }
+
+  useEffect(()=>{
+    if(selectedPatient){
+      fetchPatientMedicalHistory(selectedPatient.patient_id);
+      fetchPatientMedicalReports(selectedPatient.patient_id);
+      fetchPatientSOAPNotes(selectedPatient.patient_id);
+    }
+    else{
+      setMedicalHistory([]);
+      setMedicalReport([]);
+      setSoapNote([]);
+    }
+  },[selectedPatient]);
+
+  useEffect(() => {
+    // Simulate API call to fetch dentist data
+    const fetchDentistData = async () => {
+      try {
+        setDentist(mockDentist)
+        setLoading(false)
+      } catch (error) {
+        console.error('Error fetching dentist data:', error)
+        setLoading(false)
+      }
+    }
+
+    fetchDentistData()
+  }, [params.dentistId]);
+
+  useEffect(()=>{
+    fetchPatients();
+  },[]);
 
   if (loading) {
     return (
@@ -319,21 +317,21 @@ export default function DentistDashboard({ params }: DashboardProps) {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {selectedPatient && getPatientMedicalHistory(selectedPatient.patient_id).map((history, index) => (
+                    {selectedPatient && medicalHistory.map((history, index) => (
                       <div key={`${history.patient_id}-${history.medical_question_id}`} className="border-l-4 border-blue-500 pl-4 py-2">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                           <div className="flex-1">
-                            <p className="font-medium text-gray-900">{history.question_text}</p>
+                            <p className="font-medium text-gray-900">{history.question?.question}</p>
                             <p className="text-gray-600 mt-1">{history.medical_question_answer}</p>
                           </div>
                           {history.medical_question_answer.toLowerCase().includes('yes') && 
-                           history.question_text?.toLowerCase().includes('disease') && (
+                           history.question?.question.toLowerCase().includes('disease') && (
                             <AlertCircle className="h-5 w-5 text-orange-500 flex-shrink-0" />
                           )}
                         </div>
                       </div>
                     ))}
-                    {selectedPatient && getPatientMedicalHistory(selectedPatient.patient_id).length === 0 && (
+                    {selectedPatient && medicalHistory.length === 0 && (
                       <div className="text-center py-8">
                         <Activity className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                         <p className="text-gray-500">No medical history available</p>
@@ -356,7 +354,7 @@ export default function DentistDashboard({ params }: DashboardProps) {
                 </Button>
               </div>
               <div className="grid gap-4">
-                {selectedPatient && getPatientMedicalReports(selectedPatient.patient_id).map((report) => (
+                {selectedPatient && medicalReport.map((report) => (
                   <Card key={report.report_id} className="hover:shadow-md transition-shadow">
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
@@ -365,8 +363,7 @@ export default function DentistDashboard({ params }: DashboardProps) {
                             <FileText className="h-6 w-6 text-blue-600" />
                           </div>
                           <div>
-                            <h4 className="font-medium text-gray-900">{report.report_name}</h4>
-                            <p className="text-sm text-gray-500">Uploaded: {report.upload_date}</p>
+                            <h4 className="font-medium text-gray-900">{report.record_name}</h4>
                           </div>
                         </div>
                         <Button className=' hover:bg-emerald-100' variant="outline" size="sm" asChild>
@@ -379,7 +376,7 @@ export default function DentistDashboard({ params }: DashboardProps) {
                     </CardContent>
                   </Card>
                 ))}
-                {selectedPatient && getPatientMedicalReports(selectedPatient.patient_id).length === 0 && (
+                {selectedPatient && medicalReport.length === 0 && (
                   <Card>
                     <CardContent className="p-8 text-center">
                       <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -403,19 +400,19 @@ export default function DentistDashboard({ params }: DashboardProps) {
                 </Button>
               </div>
               <div className="space-y-4">
-                {selectedPatient && getPatientNotes(selectedPatient.patient_id).map((note) => (
+                {selectedPatient && soapNote.map((note) => (
                   <Card key={note.note_id}>
                     <CardContent className="p-4">
                       <div className="flex justify-between items-start mb-2">
                         <span className="text-sm text-gray-500">
-                          {note.created_at}
+                          {note.date}
                         </span>
                       </div>
                       <p className="text-gray-900">{note.note}</p>
                     </CardContent>
                   </Card>
                 ))}
-                {selectedPatient && getPatientNotes(selectedPatient.patient_id).length === 0 && (
+                {selectedPatient && soapNote.length === 0 && (
                   <Card>
                     <CardContent className="p-8 text-center">
                       <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -476,13 +473,13 @@ export default function DentistDashboard({ params }: DashboardProps) {
                               {patient.blood_group}
                             </Badge>
                           )}
-                          {getPatientMedicalHistory(patient.patient_id).length > 0 && (
+                          {medicalHistory.length > 0 && (
                             <Badge variant="outline" className="text-xs">
                               <Activity className="h-3 w-3 mr-1" />
                               History
                             </Badge>
                           )}
-                          {getPatientMedicalReports(patient.patient_id).length > 0 && (
+                          {medicalReport.length > 0 && (
                             <Badge variant="outline" className="text-xs">
                               <FileText className="h-3 w-3 mr-1" />
                               Reports

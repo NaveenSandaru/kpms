@@ -16,6 +16,25 @@ router.get('/', /* authenticateToken, */ async (req, res) => {
   }
 });
 
+router.get('/:patient_id', /* authenticateToken, */ async (req, res) => {
+  try {
+    const histories = await prisma.medical_history.findMany(
+      {
+        where: {
+          patient_id: req.params.patient_id,
+        },
+        include: {
+          question: true
+        }
+      }
+    );
+    res.json(histories);
+  } catch(err) {
+    console.log(err)
+    res.status(500).json({ error: 'Failed to fetch medical histories' });
+  }
+});
+
 router.get('/:patient_id/:medical_question_id', /* authenticateToken, */ async (req, res) => {
   try {
     const { patient_id, medical_question_id } = req.params;

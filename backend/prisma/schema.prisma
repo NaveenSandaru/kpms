@@ -116,6 +116,7 @@ model soap_notes {
   dentist_id              String
   patient_id              String
   note                    String
+  date                    String
 
   dentist                 dentists  @relation(fields: [dentist_id], references: [dentist_id])
   patient                 patients  @relation(fields: [patient_id], references: [patient_id])
@@ -149,6 +150,7 @@ model medical_reports {
   report_id               Int      @id @default(autoincrement())
   patient_id              String
   record_url              String
+  record_name             String
 
   patient                 patients  @relation(fields: [patient_id], references: [patient_id])
 }

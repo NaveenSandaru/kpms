@@ -1,6 +1,8 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, Users, CheckCircle, XCircle, AlertCircle, Plus, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
+import Appointments from '@/app/receptionist/appointments/page';
+import axios from 'axios';
 
 // Mock data based on your database structure
 const mockDentistData = {
@@ -15,6 +17,20 @@ const mockDentistData = {
   appointment_duration: "30",
   appointment_fee: 150.00
 };
+
+type Appointment = {
+  appointment_id: number;
+  patient: {
+    name: string;
+    profile_picture: string;
+  };
+  time_from: string;
+  time_to: string;
+  type: string;
+  status: string;
+  fee: number;
+};
+
 
 const mockAppointments = [
   {
@@ -92,44 +108,89 @@ const mockUpcomingAppointments = [
 ];
 
 const DentalDashboard = () => {
+
+  const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
+
+  const [doctorID,setDoctorID] = useState("dent123");
+
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isMobile, setIsMobile] = useState(false);
+  const [loadingAppointments, setLoadingAppointments] = useState(false);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [todaysAppointments, setTodaysAppointments] = useState <Appointment[]>([]);
 
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
     };
-    
+
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const getDaysInMonth = (date) => {
+  const fetchAppointments = async () => {
+    setLoadingAppointments(true);
+    try{
+      const response = await axios.get(
+        `${backendURL}/appointments/fordentist/${doctorID}`
+      );
+      if(response.status == 500){
+        throw new Error("Internal Server Error");
+      }
+      setAppointments(response.data);
+    }
+    catch(err: any){
+      window.alert(err.message);
+    }
+    finally{
+      setLoadingAppointments(false);
+    }
+  }
+
+  const fetchTodaysAppointments = async () => {
+    try{
+      const response = await axios.get(
+        `${backendURL}/appointments/today/fordentist/${doctorID}`
+      );
+      if(response.status == 500){
+        throw new Error("Internal Server Error");
+      }
+      setTodaysAppointments(response.data);
+    }
+    catch(err: any){
+      window.alert(err.message);
+    }
+    finally{
+
+    }
+  }
+
+  const getDaysInMonth = (date: any) => {
     const year = date.getFullYear();
     const month = date.getMonth();
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
     const daysInMonth = lastDay.getDate();
     const startingDayOfWeek = firstDay.getDay();
-    
+
     const days = [];
-    
+
     // Add empty cells for days before the first day of the month
     for (let i = 0; i < startingDayOfWeek; i++) {
       days.push(null);
     }
-    
+
     // Add days of the month
     for (let day = 1; day <= daysInMonth; day++) {
       days.push(day);
     }
-    
+
     return days;
   };
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status: any) => {
     switch (status.toLowerCase()) {
       case 'complete':
         return 'bg-green-100 text-green-800';
@@ -142,7 +203,7 @@ const DentalDashboard = () => {
     }
   };
 
-  const getStatusIcon = (status) => {
+  const getStatusIcon = (status: any) => {
     switch (status.toLowerCase()) {
       case 'complete':
         return <CheckCircle className="w-4 h-4" />;
@@ -156,23 +217,28 @@ const DentalDashboard = () => {
   };
 
   const totalPatients = 1248;
-  const todaysAppointments = mockAppointments.length;
-  const totalCheckIns = 8;
-  const completedAppointments = mockAppointments.filter(apt => apt.status === 'Complete').length;
+  const todaysAppointmentsCount = todaysAppointments.length;
+  const totalCheckIns = appointments.filter(apt => apt.status === 'checked-in').length;
+  const completedAppointments = appointments.filter(apt => apt.status === 'Complete').length;
 
   const monthNames = ["January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"];
   const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-  const navigateMonth = (direction) => {
+  const navigateMonth = (direction: any) => {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + direction, 1));
   };
 
   const days = getDaysInMonth(currentDate);
 
+  useEffect(()=>{
+    fetchAppointments();
+    fetchTodaysAppointments();
+  },[])
+
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
-  
+
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-6">
@@ -192,7 +258,7 @@ const DentalDashboard = () => {
             <Calendar className="w-8 h-8 mr-3" />
             <div>
               <p className="text-purple-100 text-sm">Today's Appointments</p>
-              <p className="text-2xl md:text-3xl font-bold">{todaysAppointments}</p>
+              <p className="text-2xl md:text-3xl font-bold">{todaysAppointmentsCount}</p>
               <p className="text-purple-100 text-xs">3 remaining</p>
             </div>
           </div>
@@ -218,22 +284,22 @@ const DentalDashboard = () => {
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
                 <h2 className="text-lg md:text-xl font-semibold text-gray-900 mb-2 sm:mb-0">Today's Schedule</h2>
                 <div className="text-sm text-gray-500">
-                  {new Date().toLocaleDateString('en-US', { 
-                    weekday: 'long', 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
+                  {new Date().toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
                   })}
                 </div>
               </div>
             </div>
-            
+
             <div className="flex-1 overflow-y-auto px-4 md:px-6 pb-4 md:pb-6">
               <div className="space-y-3">
-                {mockAppointments.map((appointment) => (
+                {appointments.map((appointment) => (
                   <div key={appointment.appointment_id} className="flex items-center p-3 md:p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                    <img 
-                      src={appointment.patient.profile_picture} 
+                    <img
+                      src={appointment.patient.profile_picture}
                       alt={appointment.patient.name}
                       className="w-10 h-10 md:w-12 md:h-12 rounded-full mr-3 md:mr-4"
                     />
@@ -269,13 +335,13 @@ const DentalDashboard = () => {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-gray-900">Calendar</h2>
                 <div className="flex items-center space-x-2">
-                  <button 
+                  <button
                     onClick={() => navigateMonth(-1)}
                     className="p-1 hover:bg-gray-100 rounded"
                   >
                     <ChevronLeft className="w-5 h-5" />
                   </button>
-                  <button 
+                  <button
                     onClick={() => navigateMonth(1)}
                     className="p-1 hover:bg-gray-100 rounded"
                   >
@@ -283,7 +349,7 @@ const DentalDashboard = () => {
                   </button>
                 </div>
               </div>
-              
+
               <div className="text-center mb-4">
                 <h3 className="font-medium text-gray-900">
                   {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
@@ -302,14 +368,13 @@ const DentalDashboard = () => {
                 {days.map((day, index) => (
                   <div key={index} className="aspect-square">
                     {day && (
-                      <button 
-                        className={`w-full h-full flex items-center justify-center text-sm rounded hover:bg-gray-100 ${
-                          day === 13 ? 'bg-emerald-500 text-emerald-800 hover:bg-emerald-600' : 
-                          day === new Date().getDate() && 
-                          currentDate.getMonth() === new Date().getMonth() && 
-                          currentDate.getFullYear() === new Date().getFullYear() 
-                            ? 'bg-emerald-50 text-emerald-800' : 'text-emrald-700'
-                        }`}
+                      <button
+                        className={`w-full h-full flex items-center justify-center text-sm rounded hover:bg-gray-100 ${day === 13 ? 'bg-emerald-500 text-emerald-800 hover:bg-emerald-600' :
+                            day === new Date().getDate() &&
+                              currentDate.getMonth() === new Date().getMonth() &&
+                              currentDate.getFullYear() === new Date().getFullYear()
+                              ? 'bg-emerald-50 text-emerald-800' : 'text-emrald-700'
+                          }`}
                       >
                         {day}
                       </button>
@@ -335,13 +400,13 @@ const DentalDashboard = () => {
                 </button>
               </div>
             </div>
-            
+
             <div className="flex-1 overflow-y-auto px-4 md:px-6 pb-4 md:pb-6">
               <div className="space-y-3">
                 {mockUpcomingAppointments.map((appointment, index) => (
                   <div key={index} className="flex items-center p-3 bg-gray-50 rounded-lg">
-                    <img 
-                      src={appointment.patient.profile_picture} 
+                    <img
+                      src={appointment.patient.profile_picture}
                       alt={appointment.patient.name}
                       className="w-8 h-8 rounded-full mr-3"
                     />

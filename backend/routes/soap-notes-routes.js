@@ -1,5 +1,6 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
+import { DateTime } from 'luxon';
 // import { authenticateToken } from '../middleware/authentication.js';
 
 const prisma = new PrismaClient();
@@ -10,6 +11,16 @@ router.get('/', /* authenticateToken, */ async (req, res) => {
     const notes = await prisma.soap_notes.findMany();
     res.json(notes);
   } catch {
+    res.status(500).json({ error: 'Failed to fetch SOAP notes' });
+  }
+});
+
+router.get('/forpatient/:patient_id', /* authenticateToken, */ async (req, res) => {
+  try {
+    const notes = await prisma.soap_notes.findMany({where:{patient_id:req.params.patient_id}});
+    res.json(notes);
+  } catch(err) {
+    console.log(err);
     res.status(500).json({ error: 'Failed to fetch SOAP notes' });
   }
 });
@@ -29,11 +40,21 @@ router.get('/:note_id', /* authenticateToken, */ async (req, res) => {
 router.post('/', /* authenticateToken, */ async (req, res) => {
   try {
     const { dentist_id, patient_id, note } = req.body;
+
+    const colomboDate = DateTime.now().setZone('Asia/Colombo').toFormat('yyyy-MM-dd');
+
     const created = await prisma.soap_notes.create({
-      data: { dentist_id, patient_id, note },
+      data: {
+        dentist_id,
+        patient_id,
+        note,
+        date: colomboDate
+      }
     });
+
     res.status(201).json(created);
-  } catch {
+  } catch (error) {
+    console.error("Failed to create SOAP note:", error);
     res.status(500).json({ error: 'Failed to create SOAP note' });
   }
 });

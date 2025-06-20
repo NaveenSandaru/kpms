@@ -40,9 +40,9 @@ router.get('/forpatient/:patient_id', /* authenticateToken, */ async (req, res) 
 
 router.post('/', /* authenticateToken, */ async (req, res) => {
   try {
-    const { patient_id, record_url } = req.body;
+    const { patient_id, record_url, record_name } = req.body;
     const created = await prisma.medical_reports.create({
-      data: { patient_id, record_url },
+      data: { patient_id, record_url, record_name },
     });
     res.status(201).json(created);
   } catch {
@@ -53,10 +53,10 @@ router.post('/', /* authenticateToken, */ async (req, res) => {
 router.put('/:report_id', /* authenticateToken, */ async (req, res) => {
   try {
     const report_id = Number(req.params.report_id);
-    const { patient_id, record_url } = req.body;
+    const { patient_id, record_url, record_name } = req.body;
     const updated = await prisma.medical_reports.update({
       where: { report_id },
-      data: { patient_id, record_url },
+      data: { patient_id, record_url, record_name },
     });
     res.json(updated);
   } catch {
