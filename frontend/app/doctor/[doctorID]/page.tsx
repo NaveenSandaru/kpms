@@ -117,6 +117,7 @@ const DentalDashboard = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [loadingAppointments, setLoadingAppointments] = useState(false);
   const [todaysAppointments, setTodaysAppointments] = useState <Appointment[]>([]);
+  const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([]);
 
   useEffect(() => {
     const checkMobile = () => {
