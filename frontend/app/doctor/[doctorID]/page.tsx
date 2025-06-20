@@ -39,7 +39,7 @@ const mockAppointments = [
     time_from: "09:00",
     time_to: "09:30",
     type: "Annual Checkup",
-    status: "Complete",
+    status: "",
     fee: 150.00
   },
   {
@@ -48,7 +48,7 @@ const mockAppointments = [
     time_from: "10:30",
     time_to: "11:00",
     type: "Heart Follow-up",
-    status: "Complete",
+    status: " ",
     fee: 200.00
   },
   {
@@ -57,7 +57,7 @@ const mockAppointments = [
     time_from: "12:00",
     time_to: "12:30",
     type: "Medication Review",
-    status: "In Progress",
+    status: " ",
     fee: 175.00
   },
   {
@@ -66,7 +66,7 @@ const mockAppointments = [
     time_from: "14:15",
     time_to: "14:45",
     type: "Cardiology Consultation",
-    status: "Pending",
+    status: " ",
     fee: 250.00
   },
   {
@@ -75,7 +75,7 @@ const mockAppointments = [
     time_from: "15:30",
     time_to: "16:00",
     type: "Blood Pressure Check",
-    status: "Pending",
+    status: " ",
     fee: 125.00
   },
   {
@@ -203,20 +203,30 @@ const DentalDashboard = () => {
     }
   };
 
-  const getStatusIcon = (status: any) => {
-    switch (status.toLowerCase()) {
-      case 'complete':
-        return <CheckCircle className="w-4 h-4" />;
-      case 'in progress':
-        return <Clock className="w-4 h-4" />;
-      case 'pending':
-        return <AlertCircle className="w-4 h-4" />;
+   const getStatusIcon = (status: any) => {
+    switch (status) {
+      case 'Completed':
+        return '✓';
+     
+      case 'Cancelled':
+        return '❌';
       default:
-        return <XCircle className="w-4 h-4" />;
+        return '⏳';
     }
   };
 
-  const totalPatients = 1248;
+  // Handle status change
+  const handleStatusChange = (appointmentId, newStatus) => {
+    setAppointments(prevAppointments =>
+      prevAppointments.map(appointment =>
+        appointment.appointment_id === appointmentId
+          ? { ...appointment, status: newStatus }
+          : appointment
+      )
+    );
+  };
+
+
   const todaysAppointmentsCount = todaysAppointments.length;
   const totalCheckIns = appointments.filter(apt => apt.status === 'checked-in').length;
   const completedAppointments = appointments.filter(apt => apt.status === 'Complete').length;
@@ -241,17 +251,8 @@ const DentalDashboard = () => {
 
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-6">
-        <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-4 md:p-6 text-white">
-          <div className="flex items-center">
-            <Users className="w-8 h-8 mr-3" />
-            <div>
-              <p className="text-blue-100 text-sm">Total Patients</p>
-              <p className="text-2xl md:text-3xl font-bold">{totalPatients.toLocaleString()}</p>
-              <p className="text-blue-100 text-xs">+5.2%</p>
-            </div>
-          </div>
-        </div>
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-2 gap-4 md:gap-6 mb-6">
+        
 
         <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg p-4 md:p-6 text-white">
           <div className="flex items-center">
@@ -270,7 +271,7 @@ const DentalDashboard = () => {
             <div>
               <p className="text-green-100 text-sm">Total Check-ins</p>
               <p className="text-2xl md:text-3xl font-bold">{totalCheckIns}</p>
-              <p className="text-green-100 text-xs">+8.1%</p>
+              
             </div>
           </div>
         </div>
@@ -278,54 +279,86 @@ const DentalDashboard = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Today's Schedule */}
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-lg shadow-sm border h-full flex flex-col">
-            <div className="p-4 md:p-6 flex-shrink-0">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-                <h2 className="text-lg md:text-xl font-semibold text-gray-900 mb-2 sm:mb-0">Today's Schedule</h2>
-                <div className="text-sm text-gray-500">
-                  {new Date().toLocaleDateString('en-US', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  })}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto px-4 md:px-6 pb-4 md:pb-6">
-              <div className="space-y-3">
-                {appointments.map((appointment) => (
-                  <div key={appointment.appointment_id} className="flex items-center p-3 md:p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                    <img
-                      src={appointment.patient.profile_picture}
-                      alt={appointment.patient.name}
-                      className="w-10 h-10 md:w-12 md:h-12 rounded-full mr-3 md:mr-4"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                        <div className="mb-1 sm:mb-0">
-                          <h3 className="font-medium text-gray-900 truncate">{appointment.patient.name}</h3>
-                          <p className="text-sm text-gray-600 truncate">{appointment.type}</p>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <span className="text-sm font-medium text-gray-700">
-                            {appointment.time_from}
-                          </span>
-                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(appointment.status)}`}>
-                            {getStatusIcon(appointment.status)}
-                            <span className="ml-1 hidden sm:inline">{appointment.status}</span>
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+         <div className="lg:col-span-2">
+      <div className="bg-white rounded-lg shadow-sm border h-full flex flex-col">
+        <div className="p-4 md:p-6 flex-shrink-0">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+            <h2 className="text-lg md:text-xl font-semibold text-gray-900 mb-2 sm:mb-0">Today's Schedule</h2>
+            <div className="text-sm text-gray-500">
+              {new Date().toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })}
             </div>
           </div>
         </div>
+
+        <div className="flex-1 overflow-y-auto px-4 md:px-6 pb-4 md:pb-6">
+          <div className="space-y-3">
+            {appointments.map((appointment) => (
+              <div key={appointment.appointment_id} className="flex items-center p-3 md:p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                <img
+                  src={appointment.patient.profile_picture}
+                  alt={appointment.patient.name}
+                  className="w-10 h-10 md:w-12 md:h-12 rounded-full mr-3 md:mr-4"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                    <div className="mb-1 sm:mb-0">
+                      <h3 className="font-medium text-gray-900 truncate">{appointment.patient.name}</h3>
+                      <p className="text-sm text-gray-600 truncate">{appointment.type}</p>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <span className="text-sm font-medium text-gray-700">
+                        {appointment.time_from}
+                      </span>
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(appointment.status)}`}>
+                        {getStatusIcon(appointment.status)}
+                        <span className="ml-1 hidden sm:inline">{appointment.status}</span>
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {/* Status Radio Buttons */}
+                  <div className="mt-3 flex flex-wrap gap-3">
+                   
+                    
+                  
+                    
+                    <label className="flex items-center space-x-2 text-sm">
+                      <input
+                        type="radio"
+                        name={`status-${appointment.appointment_id}`}
+                        value="Completed"
+                        checked={appointment.status === 'Completed'}
+                        onChange={(e) => handleStatusChange(appointment.appointment_id, e.target.value)}
+                        className="text-green-600 focus:ring-green-500"
+                      />
+                      <span className="text-gray-700">Completed</span>
+                    </label>
+                    
+                    <label className="flex items-center space-x-2 text-sm">
+                      <input
+                        type="radio"
+                        name={`status-${appointment.appointment_id}`}
+                        value="Cancelled"
+                        checked={appointment.status === 'Cancelled'}
+                        onChange={(e) => handleStatusChange(appointment.appointment_id, e.target.value)}
+                        className="text-red-600 focus:ring-red-500"
+                      />
+                      <span className="text-gray-700">Cancelled</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  
 
         {/* Calendar and Upcoming */}
         <div className="space-y-6">
