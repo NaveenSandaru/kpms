@@ -1,11 +1,14 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, use } from 'react';
 import { Search, Clock, Phone, Mail, MapPin } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { useParams } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+
+import axios from 'axios';
 
 interface Dentist {
   dentist_id: string;
@@ -23,11 +26,13 @@ interface Dentist {
   appointment_fee?: number;
 }
 
+
 interface DentistDirectoryProps {
-  params: {
+  params: Promise<{
     receptionistID: string;
-  };
+  }>;
 }
+
 
 // Mock data based on your database structure
 const mockDentists: Dentist[] = [
@@ -108,12 +113,16 @@ const mockDentists: Dentist[] = [
   }
 ];
 
-export default function DentistDirectory({ params }: DentistDirectoryProps) {
+export default function DentistDirectory() {
+  
+  const { receptionistID } = useParams();
   const [dentists, setDentists] = useState<Dentist[]>([]);
   const [filteredDentists, setFilteredDentists] = useState<Dentist[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
- const [receptionistId, setReceptionistId] = useState<string>('123')
+
+   const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
+
 
   useEffect(() => {
     // Get receptionist ID from auth token or use default
@@ -121,21 +130,31 @@ export default function DentistDirectory({ params }: DentistDirectoryProps) {
       try {
         // In a real app, you'd decode the auth token here
         // For now, use the param or default to '123'
-        return params.receptionistID || '123';
+        return receptionistID || '123';
       } catch (error) {
         return '123';
       }
     };
 
-    setReceptionistId(getReceptionistId());
+   
     
-    // Simulate API call
-    setTimeout(() => {
-      setDentists(mockDentists);
-      setFilteredDentists(mockDentists);
-      setLoading(false);
-    }, 1000);
-  }, [params.receptionistID]);
+   
+    const fetchDentists = async () => {
+      try {
+        const response = await axios.get(`${backendURL}/dentists`);
+        console.log("Fetched dentists:", response.data);
+        setDentists(response.data);
+        setFilteredDentists(response.data);
+      } catch (error) {
+        console.error('Error fetching dentists:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDentists();
+  }, []);
+  
 
   useEffect(() => {
     const filtered = dentists.filter(
@@ -247,7 +266,7 @@ export default function DentistDirectory({ params }: DentistDirectoryProps) {
                       )}
                       <div className="flex items-center justify-between pt-2 border-t border-gray-100">
                         <span className="text-sm font-medium text-gray-900">
-                          Rs {dentist.appointment_fee?.toFixed(2)}
+                          Rs {Number(dentist.appointment_fee).toFixed(2)}
                         </span>
                         <span className="text-xs text-gray-500">
                           {dentist.appointment_duration} min
@@ -262,7 +281,8 @@ export default function DentistDirectory({ params }: DentistDirectoryProps) {
         </div>
 
         {/* Desktop Table View */}
-         <div className="hidden md:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        
+         <div className="hidden md:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">         
           <div className="overflow-x-auto">
               <table className="w-full">
                <thead className="bg-green-50 border-b border-gray-200">
@@ -314,7 +334,7 @@ export default function DentistDirectory({ params }: DentistDirectoryProps) {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">
-                          Rs {dentist.appointment_fee?.toFixed(2)}
+                          Rs {Number(dentist.appointment_fee).toFixed(2)}
                         </div>
                       </td>
                       <td className="px-6 py-4">
@@ -330,8 +350,9 @@ export default function DentistDirectory({ params }: DentistDirectoryProps) {
                 </tbody>
               </table>
             </div>
-          
+         
         </div>
+     
 
         {/* No Results */}
         {filteredDentists.length === 0 && !loading && (
