@@ -228,19 +228,15 @@ export default function AppointmentsPage() {
     <div className="min-h-screen bg-gray-50 p-4 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+         <div className="mb-4 md:hidden">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Appointments</h1>
             <p className="text-gray-600 mt-1">Manage patient appointments</p>
           </div>
-          <Button className="bg-emerald-500 hover:bg-emerald-600 text-white">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Appointment
-          </Button>
         </div>
-
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         {/* Search */}
-        <div className="relative mb-6">
+        <div className="relative w-full md:w-4/5">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
           <Input
             placeholder="Search appointments..."
@@ -249,6 +245,13 @@ export default function AppointmentsPage() {
             className="pl-10"
           />
         </div>
+      
+        <Button className="bg-emerald-500 hover:bg-emerald-600 text-white">
+            <Plus className="w-4 h-4 mr-2" />
+            Add Appointment
+          </Button>
+      
+      </div>
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
@@ -273,7 +276,7 @@ export default function AppointmentsPage() {
                 <CardContent>
                   <div className="overflow-x-auto">
                     <table className="w-full">
-                      <thead>
+                      <thead className="bg-green-50 border-b border-gray-200">
                         <tr className="border-b">
                           <th className="text-left py-3 px-4 font-medium text-gray-600">Patient</th>
                           <th className="text-left py-3 px-4 font-medium text-gray-600">Dentist</th>

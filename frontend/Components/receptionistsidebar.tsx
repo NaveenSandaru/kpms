@@ -67,22 +67,22 @@ const ReceptionistSidebar = () => {
   },
   {
     title: "Pending Appointments",
-    url: `/receptionist//${receptionistId}/pendingappointments`,
+    url: `/receptionist/${receptionistId}/pendingappointments`,
     icon: UserCheck,
   },
   {
     title: "Dentists",
-    url: `/receptionist/${receptionistId}/dentists/`, 
+    url: `/receptionist/${receptionistId}/dentists`, 
     icon: Users,
   },
   {
     title: "Patients",
-    url: `/receptionist//${receptionistId}/patients/`,
+    url: `/receptionist/${receptionistId}/patients`,
     icon: User2,
   },
   {
     title: "Payments",
-    url: `/receptionist//${receptionistId}/payments`,
+    url: `/receptionist/${receptionistId}/payments`,
     icon: KanbanSquare,
   },
     ];
