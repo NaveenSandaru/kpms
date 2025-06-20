@@ -164,14 +164,17 @@ useEffect(() => {
       setTodayAppointments(todayData);
       setCheckedInAppointments(checkedInData);
 
-      const now = new Date();
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Normalize to midnight for accurate comparison
 
-      const upcomingAppointments = allData.filter((appointment: Appointment) => {
-        const appointmentDateTime = new Date(`${appointment.date}T${appointment.time_from}`);
-        return appointmentDateTime > now;
+      // Get only appointments where date > today
+      const upcoming = allData.filter((appointment: Appointment) => {
+        const appointmentDate = new Date(appointment.date);
+        appointmentDate.setHours(0, 0, 0, 0);
+        return appointmentDate > today;
       });
 
-      setAllAppointments(upcomingAppointments);
+      setAllAppointments(upcoming);
     } catch (error) {
       console.error("Failed to fetch appointments:", error);
     }
