@@ -38,7 +38,7 @@ router.get('/', /* authenticateToken, */ async (req, res) => {
 router.get('/fordentist/:dentist_id', /* authenticateToken, */ async (req, res) => {
   try {
     const appointments = await prisma.appointments.findMany({
-      where:{dentist_id: req.params.dentist_id},
+      where: { dentist_id: req.params.dentist_id },
       include: {
         patient: {
           select: {
@@ -68,7 +68,7 @@ router.get('/fordentist/:dentist_id', /* authenticateToken, */ async (req, res) 
 router.get('/forpatient/:patient_id', /* authenticateToken, */ async (req, res) => {
   try {
     const appointments = await prisma.appointments.findMany({
-      where:{patient_id: req.params.patient_id},
+      where: { patient_id: req.params.patient_id },
       include: {
         patient: {
           select: {
@@ -95,20 +95,14 @@ router.get('/forpatient/:patient_id', /* authenticateToken, */ async (req, res) 
   }
 });
 
-router.get('/today/fordentist/:dentist_id', /* authenticateToken, */ async (req, res) => {
+router.get('/today/fordentist/:dentist_id', async (req, res) => {
   try {
-    const colomboNow = DateTime.now().setZone('Asia/Colombo');
-
-    const startOfToday = colomboNow.startOf('day').toJSDate();
-    const startOfTomorrow = colomboNow.plus({ days: 1 }).startOf('day').toJSDate();
+    const colomboToday = DateTime.now().setZone('Asia/Colombo').toFormat('yyyy-MM-dd');
 
     const appointments = await prisma.appointments.findMany({
       where: {
         dentist_id: req.params.dentist_id,
-        date: {
-          gte: startOfToday,
-          lt: startOfTomorrow
-        }
+        date: colomboToday,
       },
       include: {
         patient: {
@@ -116,7 +110,7 @@ router.get('/today/fordentist/:dentist_id', /* authenticateToken, */ async (req,
             patient_id: true,
             name: true,
             email: true,
-            profile_picture: true
+            profile_picture: true,
           }
         },
         dentist: {
@@ -124,7 +118,7 @@ router.get('/today/fordentist/:dentist_id', /* authenticateToken, */ async (req,
             dentist_id: true,
             name: true,
             email: true,
-            profile_picture: true
+            profile_picture: true,
           }
         }
       }
@@ -177,21 +171,80 @@ router.get('/fordentist/patients/:dentist_id', /* authenticateToken, */ async (r
   }
 });
 
-
 router.get('/today/forpatient/:patient_id', /* authenticateToken, */ async (req, res) => {
   try {
     const colomboNow = DateTime.now().setZone('Asia/Colombo');
-
-    const startOfToday = colomboNow.startOf('day').toJSDate();
-    const startOfTomorrow = colomboNow.plus({ days: 1 }).startOf('day').toJSDate();
-
     const appointments = await prisma.appointments.findMany({
       where: {
         patient_id: req.params.patient_id,
-        date: {
-          gte: startOfToday,
-          lt: startOfTomorrow
+        date: colomboNow
+      },
+      include: {
+        patient: {
+          select: {
+            patient_id: true,
+            name: true,
+            email: true,
+            profile_picture: true
+          }
+        },
+        dentist: {
+          select: {
+            dentist_id: true,
+            name: true,
+            email: true,
+            profile_picture: true
+          }
         }
+      }
+    });
+
+    res.json(appointments);
+  } catch (error) {
+    console.error("Error fetching today's appointments:", error);
+    res.status(500).json({ error: "Failed to fetch today's appointments" });
+  }
+});
+
+router.get('/today', /* authenticateToken, */ async (req, res) => {
+  try {
+    const colomboNow = DateTime.now().setZone('Asia/Colombo');
+    const appointments = await prisma.appointments.findMany({
+      where: {
+        date: colomboNow
+      },
+      include: {
+        patient: {
+          select: {
+            patient_id: true,
+            name: true,
+            email: true,
+            profile_picture: true
+          }
+        },
+        dentist: {
+          select: {
+            dentist_id: true,
+            name: true,
+            email: true,
+            profile_picture: true
+          }
+        }
+      }
+    });
+
+    res.json(appointments);
+  } catch (error) {
+    console.error("Error fetching today's appointments:", error);
+    res.status(500).json({ error: "Failed to fetch today's appointments" });
+  }
+});
+
+router.get('/pending', /* authenticateToken, */ async (req, res) => {
+  try {
+    const appointments = await prisma.appointments.findMany({
+      where: {
+        status: "pending"
       },
       include: {
         patient: {
@@ -231,7 +284,7 @@ router.get('/count', /* authenticateToken, */ async (req, res) => {
 
 router.get('/pending-count', /* authenticateToken, */ async (req, res) => {
   try {
-    const count = await prisma.appointments.count({where:{status:"pending"}});
+    const count = await prisma.appointments.count({ where: { status: "pending" } });
     res.json(count);
   } catch {
     res.status(500).json({ error: 'Failed to fetch appointments' });
@@ -240,7 +293,7 @@ router.get('/pending-count', /* authenticateToken, */ async (req, res) => {
 
 router.get('/completed-count', /* authenticateToken, */ async (req, res) => {
   try {
-    const count = await prisma.appointments.count({where:{status:"completed"}});
+    const count = await prisma.appointments.count({ where: { status: "completed" } });
     res.json(count);
   } catch {
     res.status(500).json({ error: 'Failed to fetch appointments' });
@@ -249,7 +302,7 @@ router.get('/completed-count', /* authenticateToken, */ async (req, res) => {
 
 router.get('/confirmed-count', /* authenticateToken, */ async (req, res) => {
   try {
-    const count = await prisma.appointments.count({where:{status:"confirmed"}});
+    const count = await prisma.appointments.count({ where: { status: "confirmed" } });
     res.json(count);
   } catch {
     res.status(500).json({ error: 'Failed to fetch appointments' });

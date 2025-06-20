@@ -1,7 +1,6 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, Users, CheckCircle, XCircle, AlertCircle, Plus, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
-import Appointments from '@/app/receptionist/appointments/page';
 import axios from 'axios';
 
 // Mock data based on your database structure
@@ -117,7 +116,6 @@ const DentalDashboard = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isMobile, setIsMobile] = useState(false);
   const [loadingAppointments, setLoadingAppointments] = useState(false);
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [todaysAppointments, setTodaysAppointments] = useState <Appointment[]>([]);
 
   useEffect(() => {
@@ -129,25 +127,6 @@ const DentalDashboard = () => {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
-
-  const fetchAppointments = async () => {
-    setLoadingAppointments(true);
-    try{
-      const response = await axios.get(
-        `${backendURL}/appointments/fordentist/${doctorID}`
-      );
-      if(response.status == 500){
-        throw new Error("Internal Server Error");
-      }
-      setAppointments(response.data);
-    }
-    catch(err: any){
-      window.alert(err.message);
-    }
-    finally{
-      setLoadingAppointments(false);
-    }
-  }
 
   const fetchTodaysAppointments = async () => {
     try{
@@ -216,7 +195,7 @@ const DentalDashboard = () => {
   };
 
   // Handle status change
-  const handleStatusChange = (appointmentId, newStatus) => {
+  const handleStatusChange = (appointmentId: any, newStatus: any) => {
     setAppointments(prevAppointments =>
       prevAppointments.map(appointment =>
         appointment.appointment_id === appointmentId
@@ -228,8 +207,8 @@ const DentalDashboard = () => {
 
 
   const todaysAppointmentsCount = todaysAppointments.length;
-  const totalCheckIns = appointments.filter(apt => apt.status === 'checked-in').length;
-  const completedAppointments = appointments.filter(apt => apt.status === 'Complete').length;
+  const totalCheckIns = todaysAppointments.filter(apt => apt.status === 'checked-in').length;
+  const completedAppointments = todaysAppointments.filter(apt => apt.status === 'Complete').length;
 
   const monthNames = ["January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"];
@@ -242,7 +221,6 @@ const DentalDashboard = () => {
   const days = getDaysInMonth(currentDate);
 
   useEffect(()=>{
-    fetchAppointments();
     fetchTodaysAppointments();
   },[])
 
@@ -297,7 +275,7 @@ const DentalDashboard = () => {
 
         <div className="flex-1 overflow-y-auto px-4 md:px-6 pb-4 md:pb-6">
           <div className="space-y-3">
-            {appointments.map((appointment) => (
+            {todaysAppointments.map((appointment) => (
               <div key={appointment.appointment_id} className="flex items-center p-3 md:p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                 <img
                   src={appointment.patient.profile_picture}
