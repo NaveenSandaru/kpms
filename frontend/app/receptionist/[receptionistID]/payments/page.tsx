@@ -205,24 +205,26 @@ const PaymentsInterface: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6 overflow-auto">
+    <div className="min-h-screen bg-gray-50  p-4 md:p-6 lg:p-8 overflow-auto">
       <div className="mx-auto max-w-7xl">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mt-7 md:mt-0 text-gray-900 mb-2">Payments</h1>
-          <p className="text-gray-600">View Payments database entries</p>
+       {/* Header */}
+         <div className="mb-8 md:hidden">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Payments</h1>
+            <p className="text-gray-600 mt-1">See payment history</p>
+          </div>
         </div>
 
         {/* Search Bar */}
         <div className="mb-6">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" size={20} />
             <input
               type="text"
               placeholder="Search appointments..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
+              className="w-full pl-10 pr-4 py-1 border border-gray-300 rounded-lg focus:-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
             />
           </div>
         </div>
