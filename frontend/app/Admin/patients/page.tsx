@@ -1,6 +1,6 @@
 "use client";
 import React, { useContext, useEffect, useState } from 'react';
-import { Plus, Edit, Trash2, X, Phone, Mail, MapPin, User, Calendar, Droplets } from 'lucide-react';
+import { Plus, Edit, Trash2, X, Phone, Mail, MapPin, User, Calendar, Droplets, Search } from 'lucide-react';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/Components/ui/label';
@@ -302,14 +302,17 @@ const PatientManagement = () => {
         </div>
 
         {/* Search Bar */}
-        <div className="mb-6">
-          <Input
-            type="text"
-            placeholder="Search by name, email, phone, or ID..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full"
-          />
+          <div className="bg-white rounded-lg shadow-sm border p-4 mb-6">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+            <input
+              type="text"
+              placeholder="Search appointments..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg   focus:border-transparent"
+            />
+          </div>
         </div>
 
         {/* Desktop Table View */}

@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Search, Plus, Phone, Mail, Calendar, Clock, User, DollarSign, FileText, CheckCircle } from 'lucide-react'
+import { Badge } from '@/Components/ui/badge'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/Components/ui/tabs'
+import { Switch } from '@/Components/ui/switch'
+import { Search, Plus, Phone, Mail, Calendar, Clock, User, DollarSign, FileText, CheckCircle, CreditCard } from 'lucide-react'
 import axios from 'axios';
 
 interface Patient {
@@ -129,7 +130,6 @@ const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([])
 const [allAppointments, setAllAppointments] = useState<Appointment[]>([])
 const [checkedInAppointments, setCheckedInAppointments] = useState<Appointment[]>([])
 
-
  
   const [filteredAppointments, setFilteredAppointments] = useState<Appointment[]>([])
   const [searchTerm, setSearchTerm] = useState('')
@@ -183,7 +183,38 @@ useEffect(() => {
   fetchAppointments();
 }, []);
 
+  // Handle payment status toggle
+  const handlePaymentToggle = async (appointmentId: number, currentStatus: string) => {
+    // Prevent toggling if already paid
+    if (currentStatus === 'paid') {
+      return;
+    }
 
+    try {
+      const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
+      
+      // Update payment status to paid
+      await axios.patch(`${backendURL}/appointments/${appointmentId}/payment`, {
+        payment_status: 'paid'
+      });
+
+      // Update local state
+      const updateAppointmentPayment = (appointments: Appointment[]) =>
+        appointments.map(appointment =>
+          appointment.appointment_id === appointmentId
+            ? { ...appointment, payment_status: 'paid' }
+            : appointment
+        );
+
+      setTodayAppointments(prev => updateAppointmentPayment(prev));
+      setAllAppointments(prev => updateAppointmentPayment(prev));
+      setCheckedInAppointments(prev => updateAppointmentPayment(prev));
+      
+    } catch (error) {
+      console.error("Failed to update payment status:", error);
+      // You might want to show a toast notification here
+    }
+  };
 
   // Filter appointments based on search and tab
   useEffect(() => {
@@ -213,7 +244,6 @@ useEffect(() => {
 
   setFilteredAppointments(source)
 }, [activeTab, searchTerm, todayAppointments, allAppointments, checkedInAppointments])
-
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -321,7 +351,7 @@ useEffect(() => {
                           <th className="text-left py-3 px-4 font-medium text-gray-600">Dentist</th>
                           <th className="text-left py-3 px-4 font-medium text-gray-600">Note</th>
                           <th className="text-left py-3 px-4 font-medium text-gray-600">Date & Time</th>
-                          <th className="text-left py-3 px-4 font-medium text-gray-600">Payment Status</th>
+                          <th className="text-left py-3 px-4 font-medium text-gray-600">Payment</th>
                           <th className="text-left py-3 px-4 font-medium text-gray-600">Action</th>
                         </tr>
                       </thead>
@@ -361,9 +391,23 @@ useEffect(() => {
                               </div>
                             </td>
                             <td className="py-4 px-4">
-                              <Badge className={getPaymentStatusColor(appointment.payment_status)}>
-                                {appointment.payment_status}
-                              </Badge>
+                              <div className="space-y-2">
+                                <Badge className={getPaymentStatusColor(appointment.payment_status)}>
+                                  {appointment.payment_status}
+                                </Badge>
+                                <div className="flex items-center space-x-2">
+                                  <CreditCard className="w-4 h-4 text-gray-500" />
+                                  <Switch
+                                    checked={appointment.payment_status === 'paid'}
+                                    onCheckedChange={() => handlePaymentToggle(appointment.appointment_id, appointment.payment_status)}
+                                    disabled={appointment.payment_status === 'paid'}
+                                    className="data-[state=checked]:bg-green-500"
+                                  />
+                                  <span className="text-xs text-gray-500">
+                                    {appointment.payment_status === 'paid' ? 'Paid' : 'Mark as Paid'}
+                                  </span>
+                                </div>
+                              </div>
                             </td>
                             <td className="py-4 px-4">
                               {appointment.status === 'checkedin' ? (
@@ -376,7 +420,6 @@ useEffect(() => {
     Check In
   </Button>
 )}
-
                             </td>
                           </tr>
                         ))}
@@ -446,6 +489,27 @@ useEffect(() => {
                             <span className="text-gray-600">{appointment.note}</span>
                           </div>
                         )}
+                      </div>
+
+                      {/* Payment Toggle */}
+                      <div className="border-t pt-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <CreditCard className="w-4 h-4 text-gray-500" />
+                            <span className="text-sm font-medium">Payment Status</span>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Switch
+                              checked={appointment.payment_status === 'paid'}
+                              onCheckedChange={() => handlePaymentToggle(appointment.appointment_id, appointment.payment_status)}
+                              disabled={appointment.payment_status === 'paid'}
+                              className="data-[state=checked]:bg-green-500"
+                            />
+                            <span className="text-xs text-gray-500">
+                              {appointment.payment_status === 'paid' ? 'Paid' : 'Mark as Paid'}
+                            </span>
+                          </div>
+                        </div>
                       </div>
 
                       {/* Action Button */}
