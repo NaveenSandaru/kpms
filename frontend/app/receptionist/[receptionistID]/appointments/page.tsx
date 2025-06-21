@@ -302,6 +302,7 @@ useEffect(() => {
           <TabsContent value={activeTab} className="mt-6">
             {/* Desktop View */}
             <div className="hidden lg:block">
+               {filteredAppointments.length > 0 && (
               
               <Card>
                 <CardHeader>
@@ -384,7 +385,7 @@ useEffect(() => {
                   </div>
                 </CardContent>
               </Card>
-            
+               )}
             </div>
 
             {/* Mobile View */}
