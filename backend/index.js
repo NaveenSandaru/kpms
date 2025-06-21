@@ -29,6 +29,8 @@ import securityQuestionsRouter from './routes/security-questions-routes.js';
 import serviceTypesRouter from './routes/service-types-routes.js';
 import soapNotesRouter from './routes/soap-notes-routes.js';
 
+import studyRouter from './routes/study-routes.js';
+
 dotenv.config();
 
 const app = express();
@@ -64,5 +66,7 @@ app.use('/receptionists', receptionistsRouter);
 app.use('/security-questions', securityQuestionsRouter);
 app.use('/service-types', serviceTypesRouter);
 app.use('/soap-notes', soapNotesRouter);
+
+app.use('/studies', studyRouter);
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
