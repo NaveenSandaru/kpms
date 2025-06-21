@@ -31,6 +31,7 @@ import soapNotesRouter from './routes/soap-notes-routes.js';
 
 import studyRouter from './routes/study-routes.js';
 import radiologistRouter from './routes/radiologist-routes.js';
+import reportsRouter from './routes/reports-routes.js';
 
 dotenv.config();
 
@@ -70,5 +71,6 @@ app.use('/soap-notes', soapNotesRouter);
 
 app.use('/studies', studyRouter);
 app.use('/radiologists', radiologistRouter);
+app.use('/reports', reportsRouter);
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
