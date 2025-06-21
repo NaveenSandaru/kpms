@@ -44,20 +44,9 @@ export default function LoginPage() {
           }
         }
       );
-      if (response.data.successful && response.data.user.role == "patient") {
+      if(response.data.successful){
         setUser(response.data.user);
         setAccessToken(response.data.accessToken);
-        handleRedirection("patient","/");
-      }
-      else if (response.data.successful && response.data.user.role == "dentist") {
-        setUser(response.data.user);
-        setAccessToken(response.data.accessToken);
-        handleRedirection("dentist","/doctor/123");
-      }
-      else if (response.data.successful && response.data.user.role == "admin") {
-        setUser(response.data.user);
-        setAccessToken(response.data.accessToken);
-        handleRedirection("admin","/admin");
       }
       else {
         console.log(response.data)
@@ -73,18 +62,36 @@ export default function LoginPage() {
     finally {
       setIsLoading(false);
     }
-  }
+  };
 
-  const handleRedirection = (role: string, path: string) => {
+  const handleRedirection = (role: string) => {
     toast.success("Login Successful", {
       description: `Logged in as a ${role}`
     });
-    router.push(path);
-  }
+    router.push(`/${role}`);
+  };
 
   const handleForgotPassword = (e: React.MouseEvent<HTMLAnchorElement>) => {
     
   };
+
+  const handleAutoLogin = async () => {
+    if(isLoggedIn){
+      router.push(`/${user.role}`);
+    }
+  }
+
+  useEffect(()=>{
+    if(!isLoadingAuth){
+      handleAutoLogin();
+    }
+  },[isLoadingAuth]);
+
+  useEffect(()=>{
+    if(user){
+      handleRedirection(user.role);
+    }
+  },[user]);
 
 
   return (

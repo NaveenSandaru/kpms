@@ -1,11 +1,13 @@
 "use client";
 import { useContext, useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/Components/ui/button";
 import { Eye, Trash2, Search, Plus, User, Phone, Mail, UserCheck } from "lucide-react";
 import ViewUserDialog from "@/Components/ViewUserDialog";
 import InviteUserDialog from "@/Components/InviteUserDialog";
 import axios from "axios";
 import { AuthContext } from "@/context/auth-context";
+import { useRouter } from 'next/navigation';
+import {toast} from 'sonner';
 
 type Role = "Dentist" | "Receptionist";
 
@@ -21,8 +23,9 @@ interface User {
 export default function UserTable() {
 
   const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
+  const router = useRouter();
 
-  const {isLoadingAuth, isLoggedIn} = useContext(AuthContext);
+  const {isLoadingAuth, isLoggedIn, user} = useContext(AuthContext);
 
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
@@ -98,8 +101,16 @@ export default function UserTable() {
   useEffect(()=>{
     if(!isLoadingAuth){
       if(!isLoggedIn){
-        window.alert("Please Log in");
-        window.location.href = "/";
+        toast.error("Session Error", {
+          description: "Your session is expired, please login again"
+        });
+        router.push("/");
+      }
+      else if(user.role != "admin"){
+        toast.error("Access Error", {
+          description: "You do not have access, redirecting..."
+        });
+        router.push("/");
       }
     }
   },[isLoadingAuth]);

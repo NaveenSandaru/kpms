@@ -1,9 +1,11 @@
 "use client";
 import React, { useState, useMemo, useEffect, useContext } from 'react';
 import { Search, Plus, Calendar, Clock, User, Stethoscope, FileText, DollarSign, RefreshCw, AlertCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/Components/ui/button';
 import { AuthContext } from '@/context/auth-context';
 import axios from 'axios';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 // Updated types based on the new data structure
 interface Patient {
@@ -42,8 +44,9 @@ interface ApiError {
 
 const AppointmentsDashboard = () => {
   const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL ;
+  const router = useRouter();
 
-  const {isLoadingAuth, isLoggedIn} = useContext(AuthContext);
+  const {isLoadingAuth, isLoggedIn, user} = useContext(AuthContext);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
@@ -110,8 +113,16 @@ const AppointmentsDashboard = () => {
   useEffect(()=>{
     if(!isLoadingAuth){
       if(!isLoggedIn){
-        window.alert("Please Log in");
-        window.location.href = "/";
+        toast.error("Session Error", {
+          description: "Your session is expired, please login again"
+        });
+        router.push("/");
+      }
+      else if(user.role != "admin"){
+        toast.error("Access Error", {
+          description: "You do not have access, redirecting..."
+        });
+        router.push("/");
       }
     }
   },[isLoadingAuth]);
