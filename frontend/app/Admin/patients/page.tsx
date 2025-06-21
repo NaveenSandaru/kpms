@@ -1,14 +1,14 @@
 "use client";
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { Plus, Edit, Trash2, X, Phone, Mail, MapPin, User, Calendar, Droplets } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Label } from '@/Components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/Components/ui/select';
 import { Textarea } from '@/Components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/Components/ui/dialog';
 import axios from 'axios';
-import { profile } from 'console';
+import { AuthContext } from '@/context/auth-context';
 
 type Patient = {
   patient_id: string;
@@ -28,6 +28,8 @@ type Patient = {
 const PatientManagement = () => {
 
   const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
+
+  const {isLoadingAuth, isLoggedIn} = useContext(AuthContext);
 
   const [loadingPatient, setLoadingPatient] = useState(false);
   const [patients, setPatients] = useState<Patient[]>([
@@ -259,6 +261,15 @@ const PatientManagement = () => {
   useEffect(() => {
     fetchPatients();
   }, []);
+
+  useEffect(()=>{
+    if(!isLoadingAuth){
+      if(!isLoggedIn){
+        window.alert("Please Log in");
+        window.location.href = "/";
+      }
+    }
+  },[isLoadingAuth]);
 
 
   return (

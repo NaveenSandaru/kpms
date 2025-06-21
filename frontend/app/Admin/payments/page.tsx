@@ -1,11 +1,11 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Search, Calendar, DollarSign, User, Clock } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/Components/ui/card';
+import { Badge } from '@/Components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import axios from 'axios';
+import { AuthContext } from '@/context/auth-context';
 
 // Types based on the database schema
 interface Patient {
@@ -50,83 +50,15 @@ interface PaymentRecord {
   payment: PaymentHistory;
 }
 
-// Mock data for demonstration
-const mockPayments: PaymentRecord[] = [
-  {
-    appointment: {
-      appointment_id: 1,
-      patient_id: 'P001',
-      dentist_id: 'D001',
-      date: '2025-06-12',
-      time_from: '9:00',
-      time_to: '9:30',
-      fee: 200.00,
-      status: 'completed',
-      payment_status: 'paid'
-    },
-    patient: {
-      patient_id: 'P001',
-      name: 'Jane Doe',
-      email: 'jane@example.com',
-      phone_number: '(123)456-789',
-      profile_picture: undefined
-    },
-    dentist: {
-      dentist_id: 'D001',
-      name: 'John Doe',
-      email: 'john@example.com',
-      phone_number: '(123)456-789',
-      profile_picture: undefined
-    },
-    payment: {
-      appointment_id: 1,
-      payment_date: '2025-06-12',
-      payment_time: '9:30',
-      reference_number: '123658890054125'
-    }
-  },
-  {
-    appointment: {
-      appointment_id: 2,
-      patient_id: 'P002',
-      dentist_id: 'D002',
-      date: '2025-06-11',
-      time_from: '14:00',
-      time_to: '14:30',
-      fee: 150.00,
-      status: 'completed',
-      payment_status: 'paid'
-    },
-    patient: {
-      patient_id: 'P002',
-      name: 'Alice Smith',
-      email: 'alice@example.com',
-      phone_number: '(555)123-4567',
-      profile_picture: undefined
-    },
-    dentist: {
-      dentist_id: 'D002',
-      name: 'Dr. Sarah Wilson',
-      email: 'sarah@example.com',
-      phone_number: '(555)987-6543',
-      profile_picture: undefined
-    },
-    payment: {
-      appointment_id: 2,
-      payment_date: '2025-06-11',
-      payment_time: '14:30',
-      reference_number: '987654321098765'
-    }
-  }
-];
-
 const PaymentsInterface: React.FC = () => {
 
   const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
+  const {isLoadingAuth, isLoggedIn} = useContext(AuthContext);
+
   const [searchTerm, setSearchTerm] = useState('');
-  const [payments, setPayments] = useState<PaymentRecord[]>(mockPayments);
-  const [filteredPayments, setFilteredPayments] = useState<PaymentRecord[]>(mockPayments);
+  const [payments, setPayments] = useState<PaymentRecord[]>([]);
+  const [filteredPayments, setFilteredPayments] = useState<PaymentRecord[]>([]);
   const [loadingPayments, setLoadingPayments] = useState(false);
 
   const fetchPayments = async () => {
@@ -184,6 +116,15 @@ const PaymentsInterface: React.FC = () => {
     fetchPayments();
   },[]);
 
+  useEffect(()=>{
+    if(!isLoadingAuth){
+      if(!isLoggedIn){
+        window.alert("Please Log in");
+        window.location.href = "/";
+      }
+    }
+  },[isLoadingAuth]);
+
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -236,7 +177,7 @@ const PaymentsInterface: React.FC = () => {
                   <tr>
                     <th className="text-left px-6 py-4 font-medium text-gray-700">Patient</th>
                     <th className="text-left px-6 py-4 font-medium text-gray-700">Dentist</th>
-                    <th className="text-left px-6 py-4 font-medium text-gray-700">Fee</th>
+                    <th className="text-left px-6 py-4 font-medium text-gray-700">Fee (Rs)</th>
                     <th className="text-left px-6 py-4 font-medium text-gray-700">Date & Time</th>
                     <th className="text-left px-6 py-4 font-medium text-gray-700">Reference no</th>
                   </tr>
@@ -276,7 +217,6 @@ const PaymentsInterface: React.FC = () => {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center space-x-1">
-                          <span className="text-gray-500">Rs</span>
                           <span className="font-semibold text-gray-900">{payment.appointment.fee}</span>
                         </div>
                       </td>

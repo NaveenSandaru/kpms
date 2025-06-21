@@ -7,7 +7,6 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 const router = express.Router();
 
-// Helper to find user across roles
 const findUserById = async (id) => {
   let user = await prisma.patients.findUnique({ where: { patient_id: id } });
   if (user) return { user, role: 'patient' };
@@ -17,6 +16,9 @@ const findUserById = async (id) => {
 
   user = await prisma.receptionists.findUnique({ where: { receptionist_id: id } });
   if (user) return { user, role: 'receptionist' };
+
+  user = await prisma.admins.findUnique({ where: { admin_id: id } });
+  if (user) return { user, role: 'admin' };
 
   return { user: null, role: null };
 };
@@ -40,17 +42,18 @@ router.post('/login', async (req, res) => {
     }
 
     // Check if email is verified
-    const verificationRecord = await prisma.email_verification.findUnique({
-      where: { email: user.email }
-    });
-
-    if (verificationRecord) {
-      return res.json({
-        successful: false,
-        message: 'Please verify your email before logging in',
-        needsVerification: true,
-        email: user.email
+    if(user.email){
+      const verificationRecord = await prisma.email_verifications.findUnique({
+        where: { email: user?.email }
       });
+      if (verificationRecord) {
+        return res.json({
+          successful: false,
+          message: 'Please verify your email before logging in',
+          needsVerification: true,
+          email: user.email
+        });
+    }
     }
 
     const tokens = jwTokens(user[`${role}_id`], user.name, role);
@@ -69,7 +72,7 @@ router.post('/login', async (req, res) => {
       message: 'Login successful',
       accessToken: tokens.accessToken,
       user: {
-        email: user.email,
+        id: user[`${role}_id`],
         name: user.name,
         role: role
       }
@@ -78,44 +81,6 @@ router.post('/login', async (req, res) => {
   } catch (err) {
     console.error(err.message);
     return res.status(500).json({ error: err.message });
-  }
-});
-
-router.post('/admin_login', async (req, res) => {
-  const { id, password, checked } = req.body;
-  try {
-    const admin = await prisma.admins.findUnique({ where: { admin_id: id } });
-
-    if (!admin || !admin.password) {
-      return res.status(401).json({ successful: false, message: 'Invalid credentials' });
-    }
-
-    const validPassword = await bcrypt.compare(password, admin.password);
-    if (!validPassword) {
-      return res.status(401).json({ successful: false, message: 'Invalid credentials' });
-    }
-
-    const tokens = jwTokens(admin.admin_id, admin.name, "admin");
-
-    res.cookie('refreshToken', tokens.refreshToken, {
-      httpOnly: true,
-      sameSite: 'None',
-      secure: true,
-      maxAge: checked ? 14 * 24 * 60 * 60 * 1000 : undefined,
-    });
-
-    return res.json({
-      successful: true,
-      message: 'Login successful',
-      accessToken: tokens.accessToken,
-      user: {
-        email: admin.admin_id,
-        name: admin.name,
-        role: 'admin',
-      }
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
   }
 });
 

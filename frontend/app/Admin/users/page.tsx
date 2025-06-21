@@ -1,12 +1,11 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { DialogTrigger } from "@/Components/ui/dialog";
 import { Eye, Trash2, Search, Plus, User, Phone, Mail, UserCheck } from "lucide-react";
 import ViewUserDialog from "@/Components/ViewUserDialog";
 import InviteUserDialog from "@/Components/InviteUserDialog";
 import axios from "axios";
+import { AuthContext } from "@/context/auth-context";
 
 type Role = "Dentist" | "Receptionist";
 
@@ -18,33 +17,12 @@ interface User {
   role: Role;
 }
 
-const mockUsers: User[] = [
-  {
-    id: "1",
-    name: "John Doe",
-    email: "john@example.com",
-    phone: "+123456789",
-    role: "Dentist",
-  },
-  {
-    id: "2",
-    name: "Jane Smith",
-    email: "jane@example.com",
-    phone: "+987654321",
-    role: "Receptionist",
-  },
-  {
-    id: "3",
-    name: "Dr. Sarah Wilson",
-    email: "sarah@example.com",
-    phone: "+456789123",
-    role: "Dentist",
-  },
-];
 
 export default function UserTable() {
 
   const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
+
+  const {isLoadingAuth, isLoggedIn} = useContext(AuthContext);
 
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
@@ -116,6 +94,15 @@ export default function UserTable() {
   useEffect(()=>{
     fetchUsers();
   },[]);
+
+  useEffect(()=>{
+    if(!isLoadingAuth){
+      if(!isLoggedIn){
+        window.alert("Please Log in");
+        window.location.href = "/";
+      }
+    }
+  },[isLoadingAuth]);
 
   return (
     <div className="min-h-screen bg-gray-50 p-6 overflow-auto">

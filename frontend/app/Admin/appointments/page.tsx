@@ -1,7 +1,8 @@
 "use client";
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useContext } from 'react';
 import { Search, Plus, Calendar, Clock, User, Stethoscope, FileText, DollarSign, RefreshCw, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { AuthContext } from '@/context/auth-context';
 import axios from 'axios';
 
 // Updated types based on the new data structure
@@ -41,6 +42,8 @@ interface ApiError {
 
 const AppointmentsDashboard = () => {
   const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL ;
+
+  const {isLoadingAuth, isLoggedIn} = useContext(AuthContext);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
@@ -103,6 +106,15 @@ const AppointmentsDashboard = () => {
   useEffect(() => {
     fetchAppointments();
   }, []);
+
+  useEffect(()=>{
+    if(!isLoadingAuth){
+      if(!isLoggedIn){
+        window.alert("Please Log in");
+        window.location.href = "/";
+      }
+    }
+  },[isLoadingAuth]);
 
   // Helper function to format date
   const formatDate = (dateString: string) => {
@@ -261,7 +273,7 @@ const AppointmentsDashboard = () => {
                     <th className="px-6 py-4 text-left text-sm font-medium text-gray-900">Dentist</th>
                     <th className="px-6 py-4 text-left text-sm font-medium text-gray-900">Date & Time</th>
                     <th className="px-6 py-4 text-left text-sm font-medium text-gray-900">Note</th>
-                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-900">Fee</th>
+                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-900">Fee (Rs)</th>
                     <th className="px-6 py-4 text-left text-sm font-medium text-gray-900">Status</th>
                     <th className="px-6 py-4 text-left text-sm font-medium text-gray-900">Payment</th>
                   </tr>
@@ -323,8 +335,7 @@ const AppointmentsDashboard = () => {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
-                          <DollarSign size={16} className="text-gray-400" />
-                          <span className="text-sm font-semibold text-gray-900">${appointment.fee}</span>
+                          <span className="text-sm font-semibold text-gray-900">{appointment.fee}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4">

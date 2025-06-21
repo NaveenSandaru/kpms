@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef, useContext } from 'react';
-import { Calendar, Users, UserCheck, CreditCard, TrendingUp, Activity, MoreHorizontal } from 'lucide-react';
+import { Calendar, Users, UserCheck, CreditCard, TrendingUp, Activity, MoreHorizontal, Router } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Badge } from '@/Components/ui/badge';
 import * as Chart from 'chart.js';
@@ -80,14 +80,7 @@ const DentalDashboard: React.FC = () => {
     { name: 'Confirmed', value: 0, color: '#3B82F6' }
   ]);
 
-  const [paymentTrends, setPaymentTrends] = useState<PaymentTrend[]>([
-    { month: 'Jan', revenue: 95000, appointments: 145 },
-    { month: 'Feb', revenue: 108000, appointments: 160 },
-    { month: 'Mar', revenue: 118000, appointments: 175 },
-    { month: 'Apr', revenue: 112000, appointments: 168 },
-    { month: 'May', revenue: 125400, appointments: 185 },
-    { month: 'Jun', revenue: 132000, appointments: 195 }
-  ])
+  const [paymentTrends, setPaymentTrends] = useState<PaymentTrend[]>([]);
 
   const fetchMainCounts = async () => {
     setLoadingMainCounts(true);
@@ -182,7 +175,16 @@ const DentalDashboard: React.FC = () => {
     fetchMainCounts();
     fetchAppointmentCounts();
     fetchPaymentTrends();
-  }, [])
+  }, []);
+
+  useEffect(()=>{
+    if(!isLoadingAuth){
+      if(!isLoggedIn){
+        window.alert("Please Log in");
+        window.location.href = "/";
+      }
+    }
+  },[isLoadingAuth]);
 
   // Refs for chart canvases
   const pieChartRef = useRef<HTMLCanvasElement>(null);

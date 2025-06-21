@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 
 //import endpoint routers
+import authRouter from './auth-routes/user-auth-route.js';
 import adminRouter from './routes/admin-routes.js';
 import appointmentHistoryRouter from './routes/appointments-history-routes.js';
 import appointmentsRouter from './routes/appointments-routes.js';
@@ -40,6 +41,7 @@ app.use(cookieParser());
 app.use('/uploads', express.static('uploads'));
 
 //configure routers to redirect to endpoints
+app.use('/auth',authRouter);
 app.use('/admins', adminRouter);
 app.use('/appointment-history', appointmentHistoryRouter);
 app.use('/appointments', appointmentsRouter);
