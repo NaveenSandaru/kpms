@@ -25,7 +25,7 @@ export default function AdminLayout({
  return (
     <SidebarProvider>
       <div className="flex h-screen w-full">
-        <PatientSidebar />
+     <PatientSidebar/>
         <div className="flex-1 flex flex-col overflow-hidden bg-gray-100">
           <PatientHeader/> {/* <- Add the Header component here */}
           <main className="flex-1 overflow-auto">

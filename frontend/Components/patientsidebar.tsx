@@ -1,9 +1,9 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useState, useContext, useEffect } from "react";
+import { useState, useContext, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { BarChart3, LogOut, Settings, User2, Menu, X } from "lucide-react"; 
+import { BarChart3, LogOut, Settings, User2, Menu, X } from "lucide-react";
 //import { AuthContext } from "@/context/auth-context";
 //import { toast } from "sonner";
 
@@ -20,34 +20,58 @@ import {
 } from "@/Components/ui/sidebar";
 
 import Image from "next/image";
-import { LayoutGrid, KanbanSquare, Ticket, ClipboardList, BookText, Users, UserCheck, Calendar } from "lucide-react";
+import {
+  LayoutGrid,
+  KanbanSquare,
+  Ticket,
+  ClipboardList,
+  BookText,
+  Users,
+  UserCheck,
+  Calendar,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 //import axios from "axios";
-
-const items = [
-   {
-    title: "Dashboard",
-    url: "/patient",
-    icon: LayoutGrid,
-  },
-  {
-    title: "Appointments",
-    url: "/patient/appointments",
-    icon: Calendar,
-  },
-  {
-    title: "Billing & Payments",
-    url: "/patient/billing",
-    icon: UserCheck,
-  },
-];
 
 const PatientSidebar = () => {
   //const {setUser, setAccessToken} = useContext(AuthContext);
   const router = useRouter();
+  const pathname = usePathname();
   const [isLoading, setIsLoading] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const pathname = usePathname();
+
+  // Extract receptionistID from pathname
+  const patinetId = useMemo(() => {
+    const pathSegments = pathname.split('/');
+    const patientIndex = pathSegments.findIndex(segment => segment === 'patient');
+    if (patientIndex !== -1 && pathSegments[patientIndex + 1]) {
+      return pathSegments[patientIndex + 1];
+    }
+    return null;
+  }, [pathname]);
+
+  // Generate dynamic menu items based on receptionistId
+  const items = useMemo(() => {
+    if (!patinetId) return [];
+    
+    return [
+    {
+    title: "Dashboard",
+    url: `/patient/${patinetId}`,
+    icon: LayoutGrid,
+  },
+  {
+    title: "Appointments",
+    url: `/patient/${patinetId}/appointments`,
+    icon: Calendar,
+  },
+  {
+    title: "Billing & Payments",
+    url: `/patient//${patinetId}/billing`,
+    icon: UserCheck,
+  },
+    ];
+  }, [patinetId]);
 
   // Close mobile menu when route changes
   useEffect(() => {
@@ -56,35 +80,37 @@ const PatientSidebar = () => {
 
   const handleLogout = async () => {
     setIsLoading(true);
-    try{
+    try {
       const response = await axios.delete(
         `${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/delete_token`,
         {
-          withCredentials: true
+          withCredentials: true,
         }
       );
-      if(response.status == 200){
+      if (response.status == 200) {
         setUser(null);
         setAccessToken("");
-        router.push("/admin");
-      }
-      else{
+        router.push("/");
+      } else {
         throw new Error("Error logging out");
       }
-    }
-    catch(err: any){
+    } catch (err: any) {
       toast.error("Error logging out", {
-        description: "Could not log out."
+        description: "Could not log out.",
       });
-    }
-    finally{
+    } finally {
       setIsLoading(false);
-    } 
+    }
   };
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
+
+  // Don't render if no receptionistId is found
+  if (!patinetId) {
+    return null;
+  }
 
   return (
     <>
@@ -95,17 +121,21 @@ const PatientSidebar = () => {
         className="md:hidden fixed top-4 left-4 z-50 bg-white shadow-md border"
         onClick={toggleMobileMenu}
       >
-        {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+        {isMobileMenuOpen ? (
+          <X className="w-5 h-5" />
+        ) : (
+          <Menu className="w-5 h-5" />
+        )}
       </Button>
 
       {/* Mobile overlay */}
       {isMobileMenuOpen && (
-        <div 
-          className="fixed inset-0 backdrop-blur-sm  bg-opacity-80 z-30 md:hidden"
+        <div
+          className="fixed inset-0 backdrop-blur-sm bg-opacity-80 z-30 md:hidden"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
-      
+
       {/* Desktop Sidebar - using shadcn Sidebar components */}
       <Sidebar className="hidden md:flex w-56 lg:w-64 bg-white shadow-sm min-h-screen border-r border-gray-200">
         <SidebarHeader className="p-4 md:p-6 border-b border-gray-100">
@@ -122,12 +152,13 @@ const PatientSidebar = () => {
           <p className="text-sm text-gray-600 text-center mt-1">
             Patient Dashboard
           </p>
+         
         </SidebarHeader>
 
         <SidebarContent className="p-4">
           <SidebarGroup>
             <SidebarGroupContent>
-              <SidebarMenu className="space-y-2">
+              <SidebarMenu className="space-y-5">
                 {items.map((item) => {
                   const isActive = pathname === item.url;
                   return (
@@ -136,12 +167,16 @@ const PatientSidebar = () => {
                         <a
                           href={item.url}
                           className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-left transition-all duration-200 ${
-                            isActive 
-                              ? "bg-blue-100 text-blue-700 border border-blue-200 shadow-sm" 
+                            isActive
+                              ? "bg-emerald-100 text-emerald-700 border-l-4 border-emerald-500 shadow-sm"
                               : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
                           }`}
                         >
-                          <item.icon className={`w-5 h-5 ${isActive ? "text-blue-600" : "text-gray-500"}`} />
+                          <item.icon
+                            className={`w-5 h-5 ${
+                              isActive ? "text-emerald-600" : "text-gray-500"
+                            }`}
+                          />
                           <span className="font-medium">{item.title}</span>
                         </a>
                       </SidebarMenuButton>
@@ -154,10 +189,10 @@ const PatientSidebar = () => {
         </SidebarContent>
 
         <SidebarFooter className="p-4 border-t border-gray-100">
-          <Button 
-            type="submit" 
-            className="w-full bg-red-600 text-white hover:bg-red-700 transition-colors duration-200 flex items-center justify-center gap-2 py-2.5" 
-            onClick={handleLogout} 
+          <Button
+            type="submit"
+            className="w-full bg-emerald-600 text-white hover:bg-emerald-500 transition-colors duration-200 flex items-center justify-center gap-2 py-2.5"
+            onClick={handleLogout}
             disabled={isLoading}
           >
             <LogOut className="w-4 h-4" />
@@ -167,9 +202,9 @@ const PatientSidebar = () => {
       </Sidebar>
 
       {/* Mobile Sidebar - custom div structure */}
-      <div 
+      <div
         className={`md:hidden fixed left-0 top-0 z-40 w-72 bg-white shadow-lg min-h-screen border-r border-gray-200 flex flex-col transform transition-transform duration-300 ease-in-out ${
-          isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         {/* Mobile Header */}
@@ -185,8 +220,9 @@ const PatientSidebar = () => {
             />*/}
           </div>
           <p className="text-xs text-gray-600 text-center mt-1">
-            Receptionist Dashboard
+            Doctor Dashboard
           </p>
+        
         </div>
 
         {/* Mobile Content */}
@@ -199,13 +235,19 @@ const PatientSidebar = () => {
                   key={item.title}
                   href={item.url}
                   className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-all duration-200 ${
-                    isActive 
-                      ? "bg-blue-100 text-blue-700 border border-blue-200 shadow-sm" 
+                    isActive
+                      ? "bg-emerald-100 text-emerald-700 border border-emerald-200 shadow-sm"
                       : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
                   }`}
                 >
-                  <item.icon className={`w-4 h-4 flex-shrink-0 ${isActive ? "text-blue-600" : "text-gray-500"}`} />
-                  <span className="font-medium text-sm truncate">{item.title}</span>
+                  <item.icon
+                    className={`w-4 h-4 flex-shrink-0 ${
+                      isActive ? "text-emerald-600" : "text-emerald-500"
+                    }`}
+                  />
+                  <span className="font-medium text-sm truncate">
+                    {item.title}
+                  </span>
                 </a>
               );
             })}
@@ -214,10 +256,10 @@ const PatientSidebar = () => {
 
         {/* Mobile Footer */}
         <div className="p-3 border-t border-gray-100">
-          <Button 
-            type="submit" 
-            className="w-full bg-red-600 text-white hover:bg-red-700 transition-colors duration-200 flex items-center justify-center gap-2 py-2 text-sm" 
-            onClick={handleLogout} 
+          <Button
+            type="submit"
+            className="w-full bg-emerald-600 text-white hover:bg-emerald-500 transition-colors duration-200 flex items-center justify-center gap-2 py-2 text-sm"
+            onClick={handleLogout}
             disabled={isLoading}
           >
             <LogOut className="w-3 h-3" />
