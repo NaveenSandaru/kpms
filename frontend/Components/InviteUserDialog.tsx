@@ -10,6 +10,13 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/Components/ui/label";
 import axios from "axios";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/Components/ui/select"
 
 interface Props {
   open: boolean;
@@ -19,7 +26,7 @@ interface Props {
 export default function InviteUserDialog({ open, onClose }: Props) {
   const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
-  const [role, setRole] = useState<"Dentist" | "Receptionist">("Dentist");
+  const [role, setRole] = useState<"Dentist" | "Receptionist"| "Rediologist">("Dentist");
   const [email, setEmail] = useState("");
   const [sendingEmail, setSendingEmail] = useState(false);
 
@@ -120,28 +127,18 @@ export default function InviteUserDialog({ open, onClose }: Props) {
 
         <div className="space-y-4">
           <div>
-            <Label>Select Role:</Label>
-            <div className="flex gap-4 mt-2">
-              <label className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  value="Dentist"
-                  checked={role === "Dentist"}
-                  onChange={() => setRole("Dentist")}
-                />
-                Dentist
-              </label>
-              <label className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  value="Receptionist"
-                  checked={role === "Receptionist"}
-                  onChange={() => setRole("Receptionist")}
-                />
-                Receptionist
-              </label>
-            </div>
-          </div>
+  <Label>Select Role:</Label>
+  <Select value={role} onValueChange={setRole}>
+    <SelectTrigger className="w-full mt-2">
+      <SelectValue placeholder="Choose a role" />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem value="Dentist">Dentist</SelectItem>
+      <SelectItem value="Receptionist">Receptionist</SelectItem>
+      <SelectItem value="Rediologist">Rediologist</SelectItem>
+    </SelectContent>
+  </Select>
+</div>
 
           <div>
             <Label className="mb-2">Email</Label>

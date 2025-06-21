@@ -1,7 +1,7 @@
 "use client"
 
 import React, { use, useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card'
 import { Input } from '@/components/ui/input'
 import { ServiceCard } from '@/Components/serviceCard'
 import { BookingCard } from '@/Components/BookingCard'
@@ -9,7 +9,7 @@ import { AuthContext } from '@/context/auth-context';
 import { useContext, useEffect } from 'react';
 import Link from 'next/link'
 import axios from 'axios'
-import { toast } from 'sonner'
+import { toast } from "sonner"
 import { useRouter } from 'next/navigation'
 
 
@@ -52,7 +52,7 @@ export default function Home() {
     try {
       setIsLoadingAppointments(true);
       const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/appointments/client/${user.email}`
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/appointments/forpatient/${user.Id}`
       );
 
       const enrichedAppointments = await Promise.all(
@@ -187,33 +187,8 @@ export default function Home() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-6 pb-8">
-        {/* Featured Services */}
-        <div className="mb-8">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-semibold">Featured Services</h2>
-            <Link href="/services"><button className="text-[#6B7280] hover:text-[#6B7280]/80 text-sm">View all</button></Link>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {isLoadingServices ? (
-              <p>Loading...</p>
-            ) : retrievedServices && retrievedServices.length > 0 ? (
-              retrievedServices.slice(0, 3).map((retrievedService: Service) => (
-                <div key={retrievedService.service_id} className="flex">
-                  <ServiceCard
-                    serviceId={retrievedService.service_id}
-                    service={retrievedService.service}
-                    description={retrievedService.description}
-                    image={retrievedService.picture?.includes('/uploads')
-                      ? `${process.env.NEXT_PUBLIC_BACKEND_URL}${retrievedService.picture}`
-                      : retrievedService.picture}
-                  />
-                </div>
-              ))
-            ) : (
-              <p>No services available</p>
-            )}
-          </div>
-        </div>
+        
+        
 
         {/* Recent Bookings */}
         <div>

@@ -4,8 +4,8 @@ import { usePathname } from "next/navigation";
 import { useState, useContext, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { BarChart3, LogOut, Settings, User2, Menu, X } from "lucide-react";
-//import { AuthContext } from "@/context/auth-context";
-//import { toast } from "sonner";
+import { AuthContext } from "@/context/auth-context";
+import { toast } from "sonner";
 
 import {
   Sidebar,
@@ -30,8 +30,8 @@ import {
   UserCheck,
   Calendar,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-//import axios from "axios";
+import { Button } from "@/Components/ui/button";
+import axios from "axios";
 
 const items = [
   {
@@ -63,7 +63,7 @@ const items = [
 ];
 
 const AdminSidebar = () => {
-  //const {setUser, setAccessToken} = useContext(AuthContext);
+  const {setUser, setAccessToken} = useContext(AuthContext);
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);

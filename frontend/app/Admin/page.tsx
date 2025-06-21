@@ -6,6 +6,9 @@ import { Badge } from '@/Components/ui/badge';
 import * as Chart from 'chart.js';
 import { AuthContext } from '@/context/auth-context';
 import axios from 'axios';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
+
 
 // Register Chart.js components - including DoughnutController
 Chart.Chart.register(
@@ -61,7 +64,9 @@ interface PaymentStatus {
 const DentalDashboard: React.FC = () => {
   const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
-  const { accessToken, isLoggedIn, isLoadingAuth, user } = useContext(AuthContext);
+  const router = useRouter();
+
+  const {accessToken, isLoggedIn, isLoadingAuth, user } = useContext(AuthContext);
   const [loadingMainCounts, setLoadingMainCounts] = useState(false);
   const [loadingAppointmentCounts, setLoadingAppointmentCounts] = useState(false);
   const [loadingPaymentTrends, setLoadingPaymentTrends] = useState(false);
@@ -180,8 +185,16 @@ const DentalDashboard: React.FC = () => {
   useEffect(()=>{
     if(!isLoadingAuth){
       if(!isLoggedIn){
-        window.alert("Please Log in");
-        window.location.href = "/";
+        toast.error("Session Error", {
+          description: "Your session is expired, please login again"
+        });
+        router.push("/");
+      }
+      else if(user.role != "admin"){
+        toast.error("Access Error", {
+          description: "You do not have access, redirecting..."
+        });
+        router.push("/");
       }
     }
   },[isLoadingAuth]);

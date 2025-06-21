@@ -209,6 +209,7 @@ export default function AppointmentsPage() {
 
         {/* Desktop Table View */}
         <div className="hidden md:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+           {filteredAppointments.length > 0 && (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-green-50 border-b border-gray-200">
@@ -283,6 +284,7 @@ export default function AppointmentsPage() {
               </tbody>
             </table>
           </div>
+        )}
         </div>
 
         {/* Mobile Card View */}
