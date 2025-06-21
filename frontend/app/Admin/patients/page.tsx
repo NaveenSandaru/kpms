@@ -1,7 +1,7 @@
 "use client";
 import React, { useContext, useEffect, useState } from 'react';
 import { Plus, Edit, Trash2, X, Phone, Mail, MapPin, User, Calendar, Droplets } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/Components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/Components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/Components/ui/select';
@@ -9,6 +9,8 @@ import { Textarea } from '@/Components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/Components/ui/dialog';
 import axios from 'axios';
 import { AuthContext } from '@/context/auth-context';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 type Patient = {
   patient_id: string;
@@ -28,8 +30,9 @@ type Patient = {
 const PatientManagement = () => {
 
   const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
+  const router = useRouter();
 
-  const {isLoadingAuth, isLoggedIn} = useContext(AuthContext);
+  const {isLoadingAuth, isLoggedIn, user} = useContext(AuthContext);
 
   const [loadingPatient, setLoadingPatient] = useState(false);
   const [patients, setPatients] = useState<Patient[]>([
@@ -265,8 +268,16 @@ const PatientManagement = () => {
   useEffect(()=>{
     if(!isLoadingAuth){
       if(!isLoggedIn){
-        window.alert("Please Log in");
-        window.location.href = "/";
+        toast.error("Session Error", {
+          description: "Your session is expired, please login again"
+        });
+        router.push("/");
+      }
+      else if(user.role != "admin"){
+        toast.error("Access Error", {
+          description: "You do not have access, redirecting..."
+        });
+        router.push("/");
       }
     }
   },[isLoadingAuth]);
