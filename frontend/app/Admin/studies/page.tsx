@@ -258,9 +258,7 @@ const MedicalStudyInterface: React.FC = () => {
               <div key={study.study_id} className="p-4">
                 <div className="flex justify-between items-start mb-2">
                   <div className="font-medium text-gray-900">{study.patient_id} - John Doe</div>
-                  <button className="text-emerald-400 hover:text-emerald-600">
-                    <MoreHorizontal className="w-4 h-4" />
-                  </button>
+                 
                 </div>
                 <div className="text-sm text-gray-600 space-y-1">
                   <div>Modality: {study.modality}</div>
@@ -273,7 +271,7 @@ const MedicalStudyInterface: React.FC = () => {
             ))}
           </div>
 
-          =
+   
           
         </div>
       </div>
@@ -444,13 +442,13 @@ const MedicalStudyInterface: React.FC = () => {
                 <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-gray-200">
                   <button
                     onClick={() => setIsAddStudyOpen(false)}
-                    className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                    className="px-6 py-2 border border-emerald-300 text-gray-700 rounded-lg hover:bg-emerald-50"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleSubmitStudy}
-                    className="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700"
+                    className="px-6 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600"
                   >
                     Upload Study
                   </button>
