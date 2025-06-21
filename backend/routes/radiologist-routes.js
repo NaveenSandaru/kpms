@@ -65,7 +65,6 @@ router.post('/', /* authenticateToken, */ async (req, res) => {
       return res.status(409).json({ error: 'Email already in use' });
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
     const newRadiologist = await prisma.radiologists.create({
