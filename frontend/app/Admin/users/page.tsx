@@ -7,7 +7,7 @@ import InviteUserDialog from "@/Components/InviteUserDialog";
 import axios from "axios";
 import { AuthContext } from "@/context/auth-context";
 
-type Role = "Dentist" | "Receptionist";
+type Role = "Dentist" | "Receptionist" | "Rediologist";
 
 interface User {
   id: string;
