@@ -40,6 +40,7 @@ model patients {
   medical_histories       medical_history[]
   security_answers        patient_security_question_answers[]
   insurance_detail        insurance_details?
+  studies                 study[]
 }
 
 model dentists {
@@ -63,6 +64,7 @@ model dentists {
   soap_notes              soap_notes[]
   blocked_dates           blocked_dates[]
   security_answers        dentist_security_question_answers[]
+  dentistAssigns  DentistAssign[]
 }
 
 model receptionists {
@@ -226,4 +228,67 @@ model insurance_details {
   patient_id              String  @id
 
   patient                 patients @relation(fields: [patient_id], references: [patient_id])
+}
+
+model study {
+  study_id          Int         @id @default(autoincrement())
+  patient_id        String
+  radiologist_id    Int?
+  date              DateTime
+  time              String
+  modality          String?
+  report_id         Int?
+  assertion_number  Int?
+  description       String?
+  source            String?
+  isurgent          Boolean     @default(false)
+  dicom_file_url    String?
+  body_part         String?
+  reason            String?
+
+  // Relations
+  patient           patients      @relation(fields: [patient_id], references: [patient_id])
+  radiologist       radiologists? @relation(fields: [radiologist_id], references: [radiologist_id])
+  report            reports?      @relation(fields: [report_id], references: [report_id])
+  dentistAssigns    DentistAssign[]
+
+
+}
+
+// Add new models
+model reports {
+  report_id       Int     @id @default(autoincrement())
+  status          String
+  report_file_url String?
+
+  // Relations
+  studies         study[]
+  
+  @@map("reports")
+}
+
+model radiologists {
+  radiologist_id  Int      @id @default(autoincrement())
+  password        String
+  name            String
+  profile_picture String?
+  email           String   @unique
+  phone_number    String?
+
+  // Relations
+  studies         study[]
+  
+  @@map("radiologists")
+}
+
+model DentistAssign {
+  study_id    Int
+  dentist_id  String
+
+  // Relations
+  study       study      @relation(fields: [study_id], references: [study_id])
+  dentist     dentists   @relation(fields: [dentist_id], references: [dentist_id])
+
+  @@id([study_id, dentist_id])
+  @@map("dentist_assign")
 }
