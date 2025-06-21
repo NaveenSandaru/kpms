@@ -1,4 +1,3 @@
-// app/dentist/[dentistId]/dashboard/page.tsx
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
@@ -6,11 +5,11 @@ import { Search, User, FileText, Calendar, Phone, Mail, Download, Upload, AlertC
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card'
 import { Badge } from '@/Components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Button } from '@/Components/ui/button'
+import { Avatar, AvatarFallback, AvatarImage } from '@/Components/ui/avatar'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/Components/ui/tabs'
-import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
+import { Textarea } from '@/Components/ui/textarea'
+import { Label } from '@/Components/ui/label'
 import axios from 'axios'
 
 interface Patient {

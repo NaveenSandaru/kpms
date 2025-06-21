@@ -242,13 +242,56 @@ router.get('/today', /* authenticateToken, */ async (req, res) => {
   }
 });
 
-router.get('/upcoming', /* authenticateToken, */ async (req, res) => {
+router.get('/fordentist/upcoming/:dentist_id', /* authenticateToken, */ async (req, res) => {
   try {
     // Get today's date in Asia/Colombo (without time)
     const colomboToday = DateTime.now().setZone('Asia/Colombo').toISODate(); // '2025-06-20'
 
     const appointments = await prisma.appointments.findMany({
       where: {
+        dentist_id: req.params.dentist_id,
+        date: {
+          gt: new Date(colomboToday) // Appointments after today
+        }
+      },
+      orderBy: {
+        date: 'asc'
+      },
+      include: {
+        patient: {
+          select: {
+            patient_id: true,
+            name: true,
+            email: true,
+            profile_picture: true
+          }
+        },
+        dentist: {
+          select: {
+            dentist_id: true,
+            name: true,
+            email: true,
+            profile_picture: true
+          }
+        }
+      }
+    });
+
+    res.json(appointments);
+  } catch (error) {
+    console.error("Error fetching upcoming appointments:", error);
+    res.status(500).json({ error: "Failed to fetch upcoming appointments" });
+  }
+});
+
+router.get('/forpatient/upcoming/:patient_id', /* authenticateToken, */ async (req, res) => {
+  try {
+    // Get today's date in Asia/Colombo (without time)
+    const colomboToday = DateTime.now().setZone('Asia/Colombo').toISODate(); // '2025-06-20'
+
+    const appointments = await prisma.appointments.findMany({
+      where: {
+        patient_id: req.params.patient_id,
         date: {
           gt: new Date(colomboToday) // Appointments after today
         }

@@ -77,6 +77,7 @@ export default function LoginPage() {
 
   const handleAutoLogin = async () => {
     if(isLoggedIn){
+      console.log(user);
       router.push(`/${user.role}`);
     }
   }

@@ -4,8 +4,8 @@ import { usePathname } from "next/navigation";
 import { useState, useContext, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { BarChart3, LogOut, Settings, User2, Menu, X } from "lucide-react";
-//import { AuthContext } from "@/context/auth-context";
-//import { toast } from "sonner";
+import { AuthContext } from "@/context/auth-context";
+import { toast } from "sonner";
 
 import {
   Sidebar,
@@ -19,7 +19,6 @@ import {
   SidebarFooter,
 } from "@/Components/ui/sidebar";
 
-import Image from "next/image";
 import {
   LayoutGrid,
   KanbanSquare,
@@ -30,44 +29,32 @@ import {
   UserCheck,
   Calendar,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-//import axios from "axios";
+import { Button } from "@/Components/ui/button";
+import axios from "axios";
 
 const DoctorSidebar = () => {
-  //const {setUser, setAccessToken} = useContext(AuthContext);
+  const {setUser, setAccessToken, user} = useContext(AuthContext);
   const router = useRouter();
   const pathname = usePathname();
   const [isLoading, setIsLoading] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Extract doctorID from pathname
-  const doctorId = useMemo(() => {
-    const pathSegments = pathname.split('/');
-    const doctorIndex = pathSegments.findIndex(segment => segment === 'doctor');
-    if (doctorIndex !== -1 && pathSegments[doctorIndex + 1]) {
-      return pathSegments[doctorIndex + 1];
-    }
-    return null;
-  }, [pathname]);
-
   // Generate dynamic menu items based on doctorId
   const items = useMemo(() => {
-    if (!doctorId) return [];
-    
     return [
       {
         title: "Dashboard",
-        url: `/doctor/${doctorId}`,
+        url: `/dentist`,
         icon: LayoutGrid,
       },
       {
         title: "Patient Records",
-        url: `/doctor/${doctorId}/patient-records`,
+        url: `/dentist/patient-records`,
         icon: ClipboardList,
       },
       {
         title: "Schedule",
-        url: `/doctor/${doctorId}/schedule`,
+        url: `/dentist/schedule`,
         icon: Calendar,
       },
       /*{
@@ -81,7 +68,7 @@ const DoctorSidebar = () => {
         icon: BarChart3,
       },*/
     ];
-  }, [doctorId]);
+  }, []);
 
   // Close mobile menu when route changes
   useEffect(() => {
@@ -116,11 +103,6 @@ const DoctorSidebar = () => {
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
-
-  // Don't render if no doctorId is found
-  if (!doctorId) {
-    return null;
-  }
 
   return (
     <>
@@ -163,7 +145,10 @@ const DoctorSidebar = () => {
             Doctor Dashboard
           </p>
           <p className="text-xs text-gray-500 text-center mt-1">
-            ID: {doctorId}
+            ID: {user?.id}
+          </p>
+          <p className="text-xs text-gray-500 text-center mt-1">
+            Name: {user?.name}
           </p>
         </SidebarHeader>
 
@@ -235,7 +220,10 @@ const DoctorSidebar = () => {
             Doctor Dashboard
           </p>
           <p className="text-xs text-gray-500 text-center">
-            ID: {doctorId}
+            ID: {user?.id}
+          </p>
+          <p className="text-xs text-gray-500 text-center mt-1">
+            Name: {user?.name}
           </p>
         </div>
 

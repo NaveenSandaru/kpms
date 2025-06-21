@@ -1,20 +1,20 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Calendar, Clock, Users, CheckCircle, XCircle, AlertCircle, Plus, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
 import axios from 'axios';
+import { AuthContext } from '@/context/auth-context';
 
-// Mock data based on your database structure
-const mockDentistData = {
-  dentist_id: "DENT001",
-  name: "Dr. Sarah Johnson",
-  profile_picture: "/api/placeholder/40/40",
-  email: "sarah.johnson@clinic.com",
-  phone_number: "+1-555-0123",
-  service_types: "General Dentistry, Orthodontics, Cosmetic Dentistry",
-  work_time_from: "09:00",
-  work_time_to: "17:00",
-  appointment_duration: "30",
-  appointment_fee: 150.00
+type Dentist = {
+  dentist_id: string,
+  name: string,
+  profile_picture: string,
+  email: string,
+  phone_number: string,
+  service_types: string,
+  work_time_from: string,
+  work_time_to: string,
+  appointment_duration: string,
+  appointment_fee: number
 };
 
 type Appointment = {
@@ -25,97 +25,21 @@ type Appointment = {
   };
   time_from: string;
   time_to: string;
-  type: string;
+  date: string;
+  note: string;
   status: string;
   fee: number;
 };
 
-
-const mockAppointments = [
-  {
-    appointment_id: 1,
-    patient: { name: "Cindy Robertson", profile_picture: "/api/placeholder/32/32" },
-    time_from: "09:00",
-    time_to: "09:30",
-    type: "Annual Checkup",
-    status: "",
-    fee: 150.00
-  },
-  {
-    appointment_id: 2,
-    patient: { name: "Terrell Thompson", profile_picture: "/api/placeholder/32/32" },
-    time_from: "10:30",
-    time_to: "11:00",
-    type: "Heart Follow-up",
-    status: " ",
-    fee: 200.00
-  },
-  {
-    appointment_id: 3,
-    patient: { name: "Jordan Wu", profile_picture: "/api/placeholder/32/32" },
-    time_from: "12:00",
-    time_to: "12:30",
-    type: "Medication Review",
-    status: " ",
-    fee: 175.00
-  },
-  {
-    appointment_id: 4,
-    patient: { name: "Melissa Alfonso", profile_picture: "/api/placeholder/32/32" },
-    time_from: "14:15",
-    time_to: "14:45",
-    type: "Cardiology Consultation",
-    status: " ",
-    fee: 250.00
-  },
-  {
-    appointment_id: 5,
-    patient: { name: "Elizabeth Parker", profile_picture: "/api/placeholder/32/32" },
-    time_from: "15:30",
-    time_to: "16:00",
-    type: "Blood Pressure Check",
-    status: " ",
-    fee: 125.00
-  },
-  {
-    appointment_id: 6,
-    patient: { name: "Joseph Segal", profile_picture: "/api/placeholder/32/32" },
-    time_from: "16:45",
-    time_to: "17:15",
-    type: "Post-Surgery Follow-up",
-    status: "Pending",
-    fee: 300.00
-  }
-];
-
-const mockUpcomingAppointments = [
-  {
-    patient: { name: "Sarah Green", profile_picture: "/api/placeholder/32/32" },
-    type: "Initial Consultation",
-    time: "Tomorrow, 09:30 AM"
-  },
-  {
-    patient: { name: "Margaret Wilson", profile_picture: "/api/placeholder/32/32" },
-    type: "Medication Review",
-    time: "Tomorrow, 10:00 PM"
-  },
-  {
-    patient: { name: "David Martinez", profile_picture: "/api/placeholder/32/32" },
-    type: "Heart Examination",
-    time: "Tomorrow, 10:30 AM"
-  }
-];
-
 const DentalDashboard = () => {
 
   const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
-
-  const [doctorID,setDoctorID] = useState("dent123");
-
+  const {user, isLoggedIn, isLoadingAuth} = useContext(AuthContext);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isMobile, setIsMobile] = useState(false);
-  const [loadingAppointments, setLoadingAppointments] = useState(false);
+  const [loadingTodaysAppointments, setLoadingTodaysAppointments] = useState(false);
+  const [loadingUpcomingAppointments, setLoadingUpcomingAppointments] = useState(false);
   const [todaysAppointments, setTodaysAppointments] = useState <Appointment[]>([]);
   const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([]);
 
@@ -130,9 +54,10 @@ const DentalDashboard = () => {
   }, []);
 
   const fetchTodaysAppointments = async () => {
+    setLoadingTodaysAppointments(true);
     try{
       const response = await axios.get(
-        `${backendURL}/appointments/today/fordentist/${doctorID}`
+        `${backendURL}/appointments/today/fordentist/${user.id}`
       );
       if(response.status == 500){
         throw new Error("Internal Server Error");
@@ -143,9 +68,28 @@ const DentalDashboard = () => {
       window.alert(err.message);
     }
     finally{
-
+      setLoadingTodaysAppointments(false);
     }
-  }
+  };
+
+  const fetchUpcomingAppointments = async () => {
+    setLoadingUpcomingAppointments(true);
+    try{
+      const response = await axios.get(
+        `${backendURL}/appointments/fordentist/upcoming/${user.id}`
+      );
+      if(response.status == 500){
+        throw new Error("Internal Server Error");
+      }
+      setUpcomingAppointments(response.data);
+    }
+    catch(err: any){
+      window.alert(err.message);
+    }
+    finally{
+      setLoadingUpcomingAppointments(false);
+    }
+  };
 
   const getDaysInMonth = (date: any) => {
     const year = date.getFullYear();
@@ -222,8 +166,26 @@ const DentalDashboard = () => {
   const days = getDaysInMonth(currentDate);
 
   useEffect(()=>{
+    if(!user) return;
     fetchTodaysAppointments();
-  },[])
+    fetchUpcomingAppointments();
+  },[user]);
+
+  useEffect(() => {
+    if (isLoadingAuth) return;
+    if (!isLoggedIn) {
+      alert("Please log in");
+      window.location.href = "/";
+      return;
+    }
+  
+    if (user?.role !== "dentist") {
+      alert("Access Denied");
+      window.location.href = "/";
+      return;
+    }
+  }, [isLoadingAuth]);
+  
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
@@ -239,7 +201,6 @@ const DentalDashboard = () => {
             <div>
               <p className="text-purple-100 text-sm">Today's Appointments</p>
               <p className="text-2xl md:text-3xl font-bold">{todaysAppointmentsCount}</p>
-              <p className="text-purple-100 text-xs">3 remaining</p>
             </div>
           </div>
         </div>
@@ -287,7 +248,7 @@ const DentalDashboard = () => {
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                     <div className="mb-1 sm:mb-0">
                       <h3 className="font-medium text-gray-900 truncate">{appointment.patient.name}</h3>
-                      <p className="text-sm text-gray-600 truncate">{appointment.type}</p>
+                      <p className="text-sm text-gray-600 truncate">{appointment.note}</p>
                     </div>
                     <div className="flex items-center space-x-3">
                       <span className="text-sm font-medium text-gray-700">
@@ -415,7 +376,7 @@ const DentalDashboard = () => {
 
             <div className="flex-1 overflow-y-auto px-4 md:px-6 pb-4 md:pb-6">
               <div className="space-y-3">
-                {mockUpcomingAppointments.map((appointment, index) => (
+                {upcomingAppointments.map((appointment, index) => (
                   <div key={index} className="flex items-center p-3 bg-gray-50 rounded-lg">
                     <img
                       src={appointment.patient.profile_picture}
@@ -426,8 +387,14 @@ const DentalDashboard = () => {
                       <h3 className="font-medium text-gray-900 text-sm truncate">
                         {appointment.patient.name}
                       </h3>
-                      <p className="text-xs text-gray-600 truncate">{appointment.type}</p>
-                      <p className="text-xs text-gray-500">{appointment.time}</p>
+                      <p className="text-xs text-gray-600 truncate">{appointment.note}</p>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium text-gray-900 text-sm truncate">
+                        {appointment.date.split('T')[0]}
+                      </h3>
+                      <p className="text-xs text-gray-600 truncate">From: {appointment.time_from}</p>
+                      <p className="text-xs text-gray-600 truncate">To: {appointment.time_to}</p>
                     </div>
                   </div>
                 ))}

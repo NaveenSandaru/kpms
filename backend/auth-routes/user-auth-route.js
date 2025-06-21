@@ -65,8 +65,6 @@ router.post('/login', async (req, res) => {
       maxAge: checked ? 14 * 24 * 60 * 60 * 1000 : undefined,
     });
 
-    console.log(`Login successful as a ${role}`);
-
     return res.json({
       successful: true,
       message: 'Login successful',
@@ -94,18 +92,28 @@ router.get('/refresh_token', (req, res) => {
     jwt.verify(refreshToken, process.env.REFRESH_TOKEN_KEY, (error, user) => {
       if (error) return res.status(403).json({ error: error.message });
 
-      const { email, name, role } = user;
-      const accessToken = jwt.sign({ email, name, role }, process.env.ACCESS_TOKEN_KEY, {
+      const { id, name, role } = user;
+
+      const idKey = `${role}_id`;
+      const payload = {
+        [idKey]: id,
+        name,
+        role
+      };
+
+
+      const accessToken = jwt.sign(payload, process.env.ACCESS_TOKEN_KEY, {
         expiresIn: '15m',
       });
 
-      res.json({ accessToken, user: { email, name, role } });
+      res.json({ accessToken, user: {id: id, name: name, role: role} });
     });
   } catch (err) {
     console.error(err.message);
     return res.json(false);
   }
 });
+
 
 router.delete('/delete_token', (req, res) => {
   try {
