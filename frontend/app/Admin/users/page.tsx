@@ -9,7 +9,7 @@ import { AuthContext } from "@/context/auth-context";
 import { useRouter } from 'next/navigation';
 import {toast} from 'sonner';
 
-type Role = "Dentist" | "Receptionist";
+type Role = "Dentist" | "Receptionist" | "Rediologist";
 
 interface User {
   id: string;
