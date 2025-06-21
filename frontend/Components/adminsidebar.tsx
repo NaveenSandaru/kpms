@@ -55,10 +55,20 @@ const items = [
     url: "/admin/patients",
     icon: User2,
   },
-  {
+   {
+    title: "Rediologists",
+    url: "/admin/rediologists",
+    icon: Users,
+  },
+   {
     title: "Payments",
     url: "/admin/payments",
     icon: KanbanSquare,
+  },
+   {
+    title: "Studies",
+    url: "/admin/studies",
+    icon: ClipboardList,
   },
 ];
 
