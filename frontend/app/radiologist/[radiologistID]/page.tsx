@@ -1,14 +1,14 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
-import { Eye, Image, Activity } from 'lucide-react';
+import { Eye, Image as ImageIcon, Activity } from 'lucide-react';
 
-type Props = {
-  params: { radiologistID: string };
-};
-
+/* ────────────────────────────────────────
+   Types
+────────────────────────────────────────── */
 type Case = {
   id: string;
   patient: string;
@@ -33,101 +33,67 @@ type Scan = {
   url: string;
 };
 
-export default function RadiologistDashboard({ params }: Props) {
+/* ────────────────────────────────────────
+   Component
+────────────────────────────────────────── */
+export default function RadiologistDashboard() {
+  // Next.js 15: useParams() instead of props
+  const { radiologistID } = useParams() as { radiologistID: string };
+
+  /* state */
   const [stats, setStats] = useState({ assignedToday: 0, pendingReview: 0, reportedToday: 0 });
   const [cases, setCases] = useState<Case[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [todayScans, setTodayScans] = useState<Scan[]>([]);
   const [recentScans, setRecentScans] = useState<Scan[]>([]);
 
+  /* mock fetch */
   useEffect(() => {
-    // Simulate API calls with mock data
-    const timeout = setTimeout(() => {
-      // Set stats
+    const t = setTimeout(() => {
+      /* stats */
       setStats({ assignedToday: 24, pendingReview: 9, reportedToday: 15 });
 
-      // Set cases
+      /* cases – UNIQUE ids only */
       setCases([
         { id: '1', patient: 'James Davidson', study: 'Brain CT', referring: 'Dr. Michael Chen', status: 'URGENT' },
         { id: '2', patient: 'Emma Lewis', study: 'Chest X-Ray', referring: 'Dr. Sarah Johnson', status: 'REVISION' },
         { id: '3', patient: 'Robert Martinez', study: 'Abdominal MRI', referring: 'Dr. Jessica Lee', status: 'PENDING' },
         { id: '4', patient: 'Alice Peterson', study: 'Knee MRI', referring: 'Dr. Robert Wilson', status: 'PENDING' },
         { id: '5', patient: 'Thomas Nelson', study: 'Lumbar Spine CT', referring: 'Dr. Emily Parker', status: 'PENDING' },
-        { id: '1', patient: 'James Davidson', study: 'Brain CT', referring: 'Dr. Michael Chen', status: 'URGENT' },
-        { id: '2', patient: 'Emma Lewis', study: 'Chest X-Ray', referring: 'Dr. Sarah Johnson', status: 'REVISION' },
-        { id: '3', patient: 'Robert Martinez', study: 'Abdominal MRI', referring: 'Dr. Jessica Lee', status: 'PENDING' },
-        { id: '4', patient: 'Alice Peterson', study: 'Knee MRI', referring: 'Dr. Robert Wilson', status: 'PENDING' },
-        { id: '5', patient: 'Thomas Nelson', study: 'Lumbar Spine CT', referring: 'Dr. Emily Parker', status: 'PENDING' },
-        { id: '5', patient: 'Thomas Nelson', study: 'Lumbar Spine CT', referring: 'Dr. Emily Parker', status: 'PENDING' },
       ]);
 
-      // Set notifications
+      /* notifications */
       setNotifications([
-        { id: 'n1', title: 'Urgent study assigned', desc: 'Brain CT for James Davidson requires immediate attention', time: '6m', color: 'red' },
-        { id: 'n2', title: 'Revision requested', desc: 'Clarification requested on Emma Lewis study', time: '39m', color: 'amber' },
-        { id: 'n3', title: 'New studies assigned', desc: '3 new studies have been assigned to you', time: '1h', color: 'blue' },
-        { id: 'n4', title: 'System maintenance', desc: 'Scheduled maintenance tonight 2–4 AM', time: '2h', color: 'gray' },
+        { id: 'n1', title: 'Urgent study assigned', desc: 'Brain CT for James Davidson requires immediate attention', time: '6 m', color: 'red' },
+        { id: 'n2', title: 'Revision requested', desc: 'Clarification requested on Emma Lewis study', time: '39 m', color: 'amber' },
+        { id: 'n3', title: 'New studies assigned', desc: '3 new studies have been assigned to you', time: '1 h', color: 'blue' },
+        { id: 'n4', title: 'System maintenance', desc: 'Scheduled maintenance tonight 2–4 AM', time: '2 h', color: 'gray' },
       ]);
 
-      // Set today's scans
+      /* today’s scans */
       setTodayScans([
-        {
-          id: 'SCAN001',
-          patientName: 'John Doe',
-          type: 'MRI',
-          date: new Date().toISOString().split('T')[0],
-          url: 'https://via.placeholder.com/300x200/4F46E5/FFFFFF?text=MRI+Scan',
-        },
-        {
-          id: 'SCAN002',
-          patientName: 'Jane Smith',
-          type: 'CT',
-          date: new Date().toISOString().split('T')[0],
-          url: 'https://via.placeholder.com/300x200/059669/FFFFFF?text=CT+Scan',
-        },
-        {
-          id: 'SCAN003',
-          patientName: 'Mike Johnson',
-          type: 'X-Ray',
-          date: new Date().toISOString().split('T')[0],
-          url: 'https://via.placeholder.com/300x200/7C3AED/FFFFFF?text=X-Ray',
-        },
+        { id: 'SCAN001', patientName: 'John Doe',  type: 'MRI',  date: new Date().toISOString().split('T')[0], url: 'https://via.placeholder.com/300x200/4F46E5/FFFFFF?text=MRI+Scan' },
+        { id: 'SCAN002', patientName: 'Jane Smith', type: 'CT',   date: new Date().toISOString().split('T')[0], url: 'https://via.placeholder.com/300x200/059669/FFFFFF?text=CT+Scan' },
+        { id: 'SCAN003', patientName: 'Mike Johnson', type: 'X-Ray', date: new Date().toISOString().split('T')[0], url: 'https://via.placeholder.com/300x200/7C3AED/FFFFFF?text=X-Ray' },
       ]);
 
-      // Set recent scans
+      /* recent scans */
       setRecentScans([
-        {
-          id: 'SCAN004',
-          patientName: 'Sarah Wilson',
-          type: 'MRI',
-          date: '2025-06-20',
-          url: 'https://via.placeholder.com/300x200/DC2626/FFFFFF?text=MRI+Scan',
-        },
-        {
-          id: 'SCAN005',
-          patientName: 'David Brown',
-          type: 'CT',
-          date: '2025-06-19',
-          url: 'https://via.placeholder.com/300x200/EA580C/FFFFFF?text=CT+Scan',
-        },
-        {
-          id: 'SCAN006',
-          patientName: 'Lisa Davis',
-          type: 'X-Ray',
-          date: '2025-06-18',
-          url: 'https://via.placeholder.com/300x200/0891B2/FFFFFF?text=X-Ray',
-        },
+        { id: 'SCAN004', patientName: 'Sarah Wilson', type: 'MRI', date: '2025-06-20', url: 'https://via.placeholder.com/300x200/DC2626/FFFFFF?text=MRI+Scan' },
+        { id: 'SCAN005', patientName: 'David Brown',  type: 'CT',  date: '2025-06-19', url: 'https://via.placeholder.com/300x200/EA580C/FFFFFF?text=CT+Scan' },
+        { id: 'SCAN006', patientName: 'Lisa Davis',   type: 'X-Ray', date: '2025-06-18', url: 'https://via.placeholder.com/300x200/0891B2/FFFFFF?text=X-Ray' },
       ]);
     }, 250);
 
-    return () => clearTimeout(timeout);
-  }, [params.radiologistID]);
+    return () => clearTimeout(t);
+  }, [radiologistID]);
 
+  /* UI */
   return (
     <div className="p-4 md:p-6 space-y-6">
       <h1 className="text-2xl font-semibold text-gray-900 mb-4">Dashboard</h1>
 
-      {/* Stats */}
+      {/* ── stats ──────────────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
           { label: 'Assigned Today', value: stats.assignedToday, trend: '+12%', color: 'text-emerald-600' },
@@ -146,12 +112,12 @@ export default function RadiologistDashboard({ params }: Props) {
         ))}
       </div>
 
-      {/* Main grid */}
+      {/* ── main grid ──────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Quick Access */}
+        {/* quick access table */}
         <div className="lg:col-span-2">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex items-center justify-between">
               <CardTitle>Quick Access</CardTitle>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm">Filters</Button>
@@ -159,17 +125,14 @@ export default function RadiologistDashboard({ params }: Props) {
               </div>
             </CardHeader>
             <CardContent>
-              <input
-                className="w-full mb-4 px-3 py-2 border rounded text-sm"
-                placeholder="Search by patient name, ID, or study type…"
-              />
+              <input className="w-full mb-4 px-3 py-2 border rounded text-sm" placeholder="Search by patient name, ID, or study type…" />
               <div className="overflow-x-auto">
                 <table className="min-w-full text-sm">
                   <thead>
                     <tr className="text-left text-gray-500 uppercase border-b">
                       <th className="py-2 pr-4">Patient</th>
                       <th className="py-2 pr-4">Study</th>
-                      <th className="py-2 pr-4">Referring MD</th>
+                      <th className="py-2 pr-4">Referring&nbsp;MD</th>
                       <th className="py-2 pr-4">Status</th>
                       <th className="py-2">Actions</th>
                     </tr>
@@ -182,8 +145,8 @@ export default function RadiologistDashboard({ params }: Props) {
                         <td className="py-3 pr-4">{c.referring}</td>
                         <td className="py-3 pr-4">
                           <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                            c.status === 'URGENT' ? 'bg-red-100 text-red-700' : 
-                            c.status === 'REVISION' ? 'bg-amber-100 text-amber-700' : 
+                            c.status === 'URGENT' ? 'bg-red-100 text-red-700' :
+                            c.status === 'REVISION' ? 'bg-amber-100 text-amber-700' :
                             'bg-gray-100 text-gray-700'
                           }`}>
                             {c.status}
@@ -201,21 +164,24 @@ export default function RadiologistDashboard({ params }: Props) {
           </Card>
         </div>
 
-        {/* Notifications & Workload */}
+        {/* notifications + workload */}
         <div className="space-y-4">
+          {/* notifications */}
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex items-center justify-between">
               <CardTitle>Notifications</CardTitle>
               <a href="#" className="text-sm text-emerald-600 hover:underline">View all</a>
             </CardHeader>
             <CardContent className="space-y-3">
               {notifications.map((n) => (
-                <div key={n.id} className={`flex items-start gap-3 p-3 rounded border-l-4 bg-gray-50 ${
-                  n.color === 'red' ? 'border-red-500' : 
-                  n.color === 'amber' ? 'border-amber-500' : 
-                  n.color === 'blue' ? 'border-blue-500' : 
-                  'border-gray-300'
-                }`}>
+                <div
+                  key={n.id}
+                  className={`flex items-start gap-3 p-3 rounded border-l-4 bg-gray-50 ${
+                    n.color === 'red'   ? 'border-red-500'   :
+                    n.color === 'amber' ? 'border-amber-500' :
+                    n.color === 'blue'  ? 'border-blue-500'  : 'border-gray-300'
+                  }`}
+                >
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900">{n.title}</p>
                     <p className="text-xs text-gray-500">{n.desc}</p>
@@ -226,6 +192,7 @@ export default function RadiologistDashboard({ params }: Props) {
             </CardContent>
           </Card>
 
+          {/* workload */}
           <Card>
             <CardHeader>
               <CardTitle>Today's Workload</CardTitle>
@@ -234,12 +201,11 @@ export default function RadiologistDashboard({ params }: Props) {
               {[
                 { label: 'CT Studies', done: 6, total: 12, color: 'bg-indigo-500' },
                 { label: 'MRI Studies', done: 5, total: 9, color: 'bg-blue-500' },
-                { label: 'X-Ray', done: 2, total: 3, color: 'bg-violet-500' }
+                { label: 'X-Ray',      done: 2, total: 3, color: 'bg-violet-500' },
               ].map((w) => (
                 <div key={w.label} className="space-y-1">
                   <div className="flex justify-between text-xs text-gray-500">
-                    <span>{w.label}</span>
-                    <span>{w.done}/{w.total}</span>
+                    <span>{w.label}</span><span>{w.done}/{w.total}</span>
                   </div>
                   <div className="w-full h-2 rounded bg-gray-200 overflow-hidden">
                     <div className={`${w.color} h-full`} style={{ width: `${(w.done / w.total) * 100}%` }} />
@@ -248,8 +214,7 @@ export default function RadiologistDashboard({ params }: Props) {
               ))}
               <div className="space-y-1">
                 <div className="flex justify-between text-xs text-gray-500">
-                  <span>Overall completion</span>
-                  <span>15/24</span>
+                  <span>Overall completion</span><span>15/24</span>
                 </div>
                 <div className="w-full h-2 rounded bg-gray-200 overflow-hidden">
                   <div className="bg-emerald-500 h-full" style={{ width: `${(15 / 24) * 100}%` }} />
@@ -260,12 +225,11 @@ export default function RadiologistDashboard({ params }: Props) {
         </div>
       </div>
 
-      {/* Today's Scans */}
+      {/* ── today's scans ─────────────────────── */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Image className="h-5 w-5" />
-            Today's Scans
+            <ImageIcon className="h-5 w-5" /> Today's Scans
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -276,21 +240,17 @@ export default function RadiologistDashboard({ params }: Props) {
               {todayScans.map((scan) => (
                 <div key={scan.id} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
                   <div className="h-10 w-10 bg-gray-200 rounded flex items-center justify-center text-gray-500">
-                    <Image className="h-5 w-5" />
+                    <ImageIcon className="h-5 w-5" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 text-sm truncate">
-                      {scan.patientName}
-                    </p>
-                    <p className="text-xs text-gray-500 truncate">
-                      {scan.type} • {scan.date}
-                    </p>
+                    <p className="font-medium text-gray-900 text-sm truncate">{scan.patientName}</p>
+                    <p className="text-xs text-gray-500 truncate">{scan.type} • {scan.date}</p>
                   </div>
                   <a
                     href={scan.url}
-                    className="text-emerald-600 hover:underline text-sm flex items-center gap-1"
                     target="_blank"
                     rel="noopener noreferrer"
+                    className="text-emerald-600 hover:underline text-sm flex items-center gap-1"
                   >
                     <Eye className="h-4 w-4" /> View
                   </a>
