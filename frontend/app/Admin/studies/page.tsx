@@ -78,6 +78,25 @@ const MedicalStudyInterface: React.FC = () => {
   const [studies, setStudies] = useState<Study[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [todayCount, setTodayCount] = useState<number>(0);
+
+  // Fetch today's study count
+  useEffect(() => {
+    const fetchTodayCount = async () => {
+      try {
+        const res = await fetch('http://localhost:5000/studies/today/count');
+        if (res.ok) {
+          const data = await res.json();
+          setTodayCount(data.count);
+        } else {
+          console.error('Failed to fetch today count:', res.status);
+        }
+      } catch (err) {
+        console.error('Error fetching today count:', err);
+      }
+    };
+    fetchTodayCount();
+  }, []);
 
   // Fetch studies from the backend
   useEffect(() => {
@@ -286,7 +305,7 @@ const MedicalStudyInterface: React.FC = () => {
             <div className="flex justify-between items-start">
               <div>
                 <div className="text-sm font-medium text-gray-600 mb-1">Today's Scans</div>
-                <div className="text-3xl font-bold text-gray-900">0</div>
+                <div className="text-3xl font-bold text-gray-900">{todayCount}</div>
               </div>
               <Clock className="w-8 h-8 text-green-500" />
             </div>

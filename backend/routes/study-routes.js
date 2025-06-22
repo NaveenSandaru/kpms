@@ -32,11 +32,11 @@ router.get('/:study_id', /* authenticateToken, */ async (req, res) => {
         report: true
       }
     });
-    
+
     if (!study) {
       return res.status(404).json({ error: 'Study not found' });
     }
-    
+
     res.json(study);
   } catch (error) {
     console.error('Error fetching study:', error);
@@ -59,7 +59,7 @@ router.get('/patient/:patient_id', /* authenticateToken, */ async (req, res) => 
         { time: 'desc' }
       ]
     });
-    
+
     res.json(studies);
   } catch (error) {
     console.error('Error fetching patient studies:', error);
@@ -70,7 +70,7 @@ router.get('/patient/:patient_id', /* authenticateToken, */ async (req, res) => 
 // Create a new study
 router.post('/', /* authenticateToken, */ async (req, res) => {
   try {
-    const data = { ...req.body }; 
+    const data = { ...req.body };
     console.debug(data);
     const newStudy = await prisma.study.create({
       data,
@@ -80,7 +80,7 @@ router.post('/', /* authenticateToken, */ async (req, res) => {
         report: true
       }
     });
-    
+
     res.status(201).json(newStudy);
   } catch (error) {
     console.error('Error creating study:', error);
@@ -93,13 +93,13 @@ router.put('/:study_id', /* authenticateToken, */ async (req, res) => {
   try {
     const studyId = parseInt(req.params.study_id);
     const data = { ...req.body };
-    
+
     // Update study
     const updatedStudy = await prisma.study.update({
       where: { study_id: studyId },
       data
     });
-    
+
     res.json(updatedStudy);
   } catch (error) {
     console.error('Error updating study:', error);
@@ -116,7 +116,7 @@ router.delete('/:study_id', /* authenticateToken, */ async (req, res) => {
     const existingStudy = await prisma.study.findUnique({
       where: { study_id: studyId }
     });
-    
+
     if (!existingStudy) {
       return res.status(404).json({ error: 'Study not found' });
     }
@@ -131,5 +131,35 @@ router.delete('/:study_id', /* authenticateToken, */ async (req, res) => {
     res.status(500).json({ error: 'Failed to delete study', details: error.message });
   }
 });
+
+// Get count of today's studies
+router.get('/today/count', async (req, res) => {
+  try {
+    const now = new Date();
+    // Get UTC year/month/day:
+    const year = now.getUTCFullYear();
+    const month = now.getUTCMonth();   // 0-based
+    const day = now.getUTCDate();
+
+    // UTC midnight for today and tomorrow:
+    const startUtc = new Date(Date.UTC(year, month, day));         // e.g. 2025-06-22T00:00:00.000Z
+    const endUtc = new Date(Date.UTC(year, month, day + 1));     // next UTC midnight
+
+    const count = await prisma.study.count({
+      where: {
+        date: {
+          gte: startUtc,
+          lt: endUtc
+        }
+      }
+    });
+    res.json({ count });
+  } catch (error) {
+    console.error("Error fetching today's study count:", error);
+    res.status(500).json({ error: "Failed to fetch today's study count", details: error.message });
+  }
+});
+
+
 
 export default router;
