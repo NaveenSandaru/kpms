@@ -1,5 +1,5 @@
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
+import { Prisma,PrismaClient } from '@prisma/client';
 import { DateTime } from 'luxon';
 // import { authenticateToken } from '../middleware/authentication.js';
 
@@ -504,5 +504,72 @@ router.delete('/:appointment_id', /* authenticateToken, */ async (req, res) => {
     res.status(500).json({ error: 'Failed to delete appointment' });
   }
 });
+
+/*check*/ 
+// Get payment summary for patient dashboard
+router.get('/payment-summary/:patient_id', /* authenticateToken, */ async (req, res) => {
+  try {
+    const { patient_id } = req.params;
+
+    // Get paid and unpaid appointments separately for better clarity
+    const [paidAppointments, unpaidAppointments] = await Promise.all([
+      // Get all paid appointments (where payment_status is 'completed')
+      prisma.appointments.findMany({
+        where: { 
+          patient_id,
+          fee: { not: null },
+          status: { not: 'cancelled' },
+          OR : [
+            {payment_status: 'paid'},
+            {payment_status: 'Paid'}
+          ]
+        },
+        select: { fee: true }
+      }),
+      // Get all unpaid appointments (where payment_status is not 'completed' or missing)
+      prisma.appointments.findMany({
+        where: { 
+          patient_id,
+          fee: { not: null },
+          status: { not: 'cancelled' },
+          payment_status: {
+            notIn: ['paid', 'Paid']
+          }      
+        },
+        select: { fee: true }
+      })
+    ]);
+
+    // Calculate totals
+    const totalPaid = paidAppointments.reduce(
+      (sum, appt) => sum.plus(new Prisma.Decimal(appt.fee)), 
+      new Prisma.Decimal(0)
+    );
+    
+    const totalUnpaid = unpaidAppointments.reduce(
+      (sum, appt) => sum.plus(new Prisma.Decimal(appt.fee)), 
+      new Prisma.Decimal(0)
+    );
+    
+    const totalDue = totalUnpaid;
+    const total = parseInt(totalPaid) + parseInt(totalDue);
+    res.json({
+      success: true,
+      data: {
+        total_due: totalDue.toFixed(2),
+        total_paid: totalPaid.toFixed(2),
+        total: total.toFixed(2)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching payment summary:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch payment summary',
+      details: error.message
+    });
+  }
+});
+
 
 export default router;
