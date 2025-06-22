@@ -1,6 +1,7 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
+import { sendAccountCreationNotice } from '../utils/mailer.js';
 // import { authenticateToken } from '../middleware/authentication.js';
 
 const prisma = new PrismaClient();
@@ -60,19 +61,22 @@ router.get('/getworkinfo/:dentist_id', /* authenticateToken, */ async (req, res)
 
 router.post('/', /* authenticateToken, */ async (req, res) => {
   try {
-    const { dentist_id, password, ...rest } = req.body;
+    const { password, email, ...rest } = req.body;
 
     const existing = await prisma.dentists.findUnique({
-      where: { dentist_id },
+      where: { email: email },
     });
     if (existing) {
-      return res.status(409).json({ error: 'Dentist ID already exists' });
+      return res.status(409).json({ error: 'Dentist already exists' });
     }
+    const count = await prisma.dentists.count();
+    let new_dentist_id = `knrsdent${(count + 1).toString().padStart(3, '0')}`;
 
     const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
     const newDentist = await prisma.dentists.create({
-      data: { dentist_id, password: hashedPassword, ...rest },
+      data: { dentist_id :new_dentist_id, password: hashedPassword, ...rest },
     });
+    sendAccountCreationNotice(email, new_dentist_id);
     res.status(201).json(newDentist);
   } catch {
     res.status(500).json({ error: 'Failed to create dentist' });

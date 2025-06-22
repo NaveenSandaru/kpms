@@ -62,6 +62,7 @@ export default function DentistBookingPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isNoteDialogOpen, setIsNoteDialogOpen] = useState(false);
   const router = useRouter();
+  const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
   const bookedDates = useMemo(() => {
     return currentAppointments.map(app => new Date(app.date));
@@ -71,7 +72,7 @@ export default function DentistBookingPage() {
     try {
       setIsLoading(true);
       const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/dentists/${decodedEmail}`
+        `${backendURL}/dentists/${}`
       );
       if (response.data) {
         setDentist(response.data);

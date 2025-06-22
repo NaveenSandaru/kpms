@@ -47,7 +47,6 @@ const sendVerificationCode = async (email, code) => {
     }
 };
 
-
 const sendAppointmentConfirmation = async (email, date, start_time) => {
     const mailOptions = {
         from: `"Global Pearl Ventures" <${process.env.EMAIL_USER}>`,
@@ -157,4 +156,35 @@ const sendAppointmentCancelation = async (email, date, start_time, provider) => 
     }
   };
 
-export {sendVerificationCode, sendAppointmentConfirmation, sendAppointmentCancelation, sendAccountCreationInvite};
+  const sendAccountCreationNotice = async (email, ID) => {
+    const mailOptions = {
+      from: `"Global Pearl Ventures" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: 'Your simplyBooked Account Has Been Created',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e0e0e0; padding: 20px; border-radius: 10px;">
+          <h2 style="color: #43a047;">Welcome to simplyBooked</h2>
+          <p>Dear user,</p>
+          <p>Your account has been successfully created on <strong>simplyBooked</strong>.</p>
+          <p><strong>Your Account ID:</strong> ${ID}</p>
+          <p>You can now log in using your account ID and the password provided by your administrator.</p>
+          <p>If you have any questions or need help accessing your account, please contact our support team.</p>
+          <p>Best regards,<br><strong>simplyBooked Team</strong></p>
+          <hr style="margin-top: 40px;">
+          <p style="font-size: 12px; color: #888;">Global Pearl Ventures | simplyBooked</p>
+        </div>
+      `,
+    };
+  
+    try {
+      const info = await transporter.sendMail(mailOptions);
+      console.log(info);
+      return info;
+    } catch (error) {
+      console.error(`Error sending account creation notice to ${email}:`, error);
+      throw new Error(`Failed to send account creation notice: ${error.message}`);
+    }
+  };
+  
+
+export {sendVerificationCode, sendAppointmentConfirmation, sendAppointmentCancelation, sendAccountCreationInvite, sendAccountCreationNotice};

@@ -1,6 +1,7 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
+import { sendAccountCreationNotice } from '../utils/mailer.js';
 // import { authenticateToken } from '../middleware/authentication.js';
 
 const prisma = new PrismaClient();
@@ -66,9 +67,12 @@ router.post('/', /* authenticateToken, */ async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+    const count = await prisma.radiologists.count();
+    let new_radiologist_id = `knrsradio${(count + 1).toString().padStart(3, '0')}`;
 
     const newRadiologist = await prisma.radiologists.create({
       data: {
+        radiologist_id: new_radiologist_id,
         name,
         email,
         password: hashedPassword,
@@ -84,6 +88,7 @@ router.post('/', /* authenticateToken, */ async (req, res) => {
       }
     });
 
+    sendAccountCreationNotice(email, new_radiologist_id);
     res.status(201).json(newRadiologist);
   } catch (error) {
     console.error('Error creating radiologist:', error);

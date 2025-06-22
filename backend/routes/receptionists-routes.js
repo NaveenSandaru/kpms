@@ -1,6 +1,7 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
+import { sendAccountCreationNotice } from '../utils/mailer.js';
 // import { authenticateToken } from '../middleware/authentication.js';
 
 const prisma = new PrismaClient();
@@ -39,20 +40,19 @@ router.get('/:receptionist_id', /* authenticateToken, */ async (req, res) => {
 
 router.post('/', /* authenticateToken, */ async (req, res) => {
   try {
-    const { receptionist_id, password, name, email, phone_number } = req.body;
-
-    // Check duplicate receptionist_id or email
-    const existingId = await prisma.receptionists.findUnique({ where: { receptionist_id } });
-    if (existingId) return res.status(409).json({ error: 'Receptionist ID already exists' });
+    const { password, name, email, phone_number } = req.body;
 
     const existingEmail = await prisma.receptionists.findUnique({ where: { email } });
     if (existingEmail) return res.status(409).json({ error: 'Email already in use' });
 
     const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+    const count = await prisma.receptionists.count();
+    let new_receptionist_id = `knrsrecep${(count + 1).toString().padStart(3, '0')}`;
 
     const created = await prisma.receptionists.create({
-      data: { receptionist_id, password: hashedPassword, name, email, phone_number },
+      data: { receptionist_id: new_receptionist_id, password: hashedPassword, name, email, phone_number },
     });
+    sendAccountCreationNotice(email, new_receptionist_id);
     res.status(201).json(created);
   } catch {
     res.status(500).json({ error: 'Failed to create receptionist' });
