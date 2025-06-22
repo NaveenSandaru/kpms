@@ -41,8 +41,8 @@ interface Service {
 
 interface Appointment {
   appointment_id: string;
-  client_email: string;
-  dentist_email: string;
+  patient_id: string;
+  dentist_id: string;
   date: string;
   time_from: string;
   time_to: string;
@@ -136,74 +136,78 @@ export default function DentistBookingPage() {
   const pad = (n: number) => n.toString().padStart(2, '0');
 
   const isTimeSlotAvailable = (date: Date | undefined, timeSlot: string): boolean => {
-    if (!dentist || !date) return true;
-
-    // Get date string in YYYY-MM-DD format for comparison
-    const selectedDate = new Date(date);
-    selectedDate.setHours(0, 0, 0, 0);
-    const selectedDateStr = selectedDate.toISOString().split('T')[0];
+    if (!dentist || !date) return false;
 
     const [hours, minutes] = timeSlot.split(':').map(Number);
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const day = date.getDate();
 
-    // Calculate slot start and end times
-    const slotStart = new Date(selectedDate);
-    slotStart.setHours(hours, minutes, 0, 0);
+    const slotStart = new Date(year, month, day, hours, minutes, 0, 0);
+    const duration = parseInt(dentist.appointment_duration || '0');
+    const slotEnd = new Date(slotStart.getTime() + duration * 60000);
 
-    const slotEnd = new Date(slotStart);
-    const durationMatch = dentist.appointment_duration.match(/\d+/);
-    const durationInMinutes = durationMatch ? parseInt(durationMatch[0]) : 0;
-    slotEnd.setMinutes(slotEnd.getMinutes() + durationInMinutes);
+    // Check against appointments
+    const dateStr = date.toISOString().split('T')[0];
+    const sameDayAppointments = currentAppointments.filter(app => app.date === dateStr);
 
-    // Filter appointments for the selected date only
-    const appointmentsForDate = currentAppointments.filter(app => {
-      const appDate = new Date(app.date + 'T00:00:00');
-      appDate.setHours(0, 0, 0, 0);
-      const appDateStr = appDate.toISOString().split('T')[0];
-      return appDateStr === selectedDateStr;
-    });
+    for (const app of sameDayAppointments) {
+      const [appStartH, appStartM] = app.time_from.split(':').map(Number);
+      const [appEndH, appEndM] = app.time_to.split(':').map(Number);
+      const appStart = new Date(year, month, day, appStartH, appStartM);
+      const appEnd = new Date(year, month, day, appEndH, appEndM);
 
-    return !appointmentsForDate.some(app => {
-      // Parse appointment times (HH:MM:SS)
-      const [appHours, appMinutes] = app.time_from.split(':').map(Number);
-      const appStart = new Date(selectedDate);
-      appStart.setHours(appHours, appMinutes, 0, 0);
+      if (slotStart < appEnd && slotEnd > appStart) return false;
+    }
 
-      const [appEndHours, appEndMinutes] = app.time_to.split(':').map(Number);
-      const appEnd = new Date(selectedDate);
-      appEnd.setHours(appEndHours, appEndMinutes, 0, 0);
+    // Check against blocked dates
+    const sameDayBlocks = blockedDates.filter(b => b.date === dateStr);
+    for (const block of sameDayBlocks) {
+      const [blockStartH, blockStartM] = block.time_from.split(':').map(Number);
+      const [blockEndH, blockEndM] = block.time_to.split(':').map(Number);
+      const blockStart = new Date(year, month, day, blockStartH, blockStartM);
+      const blockEnd = new Date(year, month, day, blockEndH, blockEndM);
 
-      // Check for time overlap
-      const isOverlap = slotStart < appEnd && slotEnd > appStart;
+      if (slotStart < blockEnd && slotEnd > blockStart) return false;
+    }
 
-      // If it's a dentist blocked time (no client_email), return the overlap status
-      if (!app.client_email) {
-        return isOverlap;
-      }
-      // For client bookings, only block if there's an overlap
-      return isOverlap;
-    });
+    // Check if within working hours
+    const [workStartH, workStartM] = dentist.work_time_from.split(':').map(Number);
+    const [workEndH, workEndM] = dentist.work_time_to.split(':').map(Number);
+    const workStart = new Date(year, month, day, workStartH, workStartM);
+    const workEnd = new Date(year, month, day, workEndH, workEndM);
+
+    if (slotStart < workStart || slotEnd > workEnd) return false;
+
+    return true;
   };
 
   const isTimeSlotBooked = (date: Date | undefined, timeSlot: string): boolean => {
     if (!date) return false;
-
+  
     const selectedDate = new Date(date);
     selectedDate.setHours(0, 0, 0, 0);
     const selectedDateStr = selectedDate.toISOString().split('T')[0];
-
+  
     const [hours, minutes] = timeSlot.split(':').map(Number);
-    const slotTime = `${pad(hours)}:${pad(minutes)}:00`;
-
+    const slotTime = `${pad(hours)}:${pad(minutes)}`;
+  
     // Filter appointments for the selected date only
     const appointmentsForDate = currentAppointments.filter(app => {
-      const appDate = new Date(app.date + 'T00:00:00');
+      if (!app.date || !app.patient_id) return false;
+  
+      const appDate = new Date(app.date);
+      if (isNaN(appDate.getTime())) return false; // prevent invalid Date
+  
       appDate.setHours(0, 0, 0, 0);
       const appDateStr = appDate.toISOString().split('T')[0];
-      return appDateStr === selectedDateStr && app.client_email; // Only consider appointments with client_email
+  
+      return appDateStr === selectedDateStr;
     });
-
+  
     return appointmentsForDate.some(app => app.time_from === slotTime);
   };
+  
 
   const isTimeSlotBookedByUser = (date: Date | undefined, timeSlot: string): boolean => {
     try {
@@ -211,34 +215,34 @@ export default function DentistBookingPage() {
 
       const selectedDate = new Date(date);
       if (isNaN(selectedDate.getTime())) return false;
-      
+
       selectedDate.setHours(0, 0, 0, 0);
       const selectedDateStr = selectedDate.toISOString().split('T')[0];
       if (!selectedDateStr) return false;
 
       const timeParts = timeSlot.split(':');
       if (timeParts.length < 2) return false;
-      
+
       const hours = parseInt(timeParts[0], 10);
       const minutes = parseInt(timeParts[1], 10);
       if (isNaN(hours) || isNaN(minutes)) return false;
-      
-      const slotTime = `${pad(hours)}:${pad(minutes)}:00`;
+
+      const slotTime = `${pad(hours)}:${pad(minutes)}`;
 
       // Filter appointments for the selected date only
       const appointmentsForDate = currentAppointments.filter(app => {
-        if (!app.date) return false;
-        const appDate = new Date(app.date + 'T00:00:00');
+        const appDate = new Date(app.date);
         if (isNaN(appDate.getTime())) return false;
-        
+
         appDate.setHours(0, 0, 0, 0);
         const appDateStr = appDate.toISOString().split('T')[0];
-        return appDateStr === selectedDateStr && app.client_email;
+        console.log(appDateStr === selectedDateStr && app.patient_id)
+        return appDateStr === selectedDateStr && app.patient_id;
       });
 
-      return appointmentsForDate.some(app => 
+      return appointmentsForDate.some(app =>
         app.time_from === slotTime &&
-        app.client_email === user.email
+        app.patient_id === user.id
       );
     } catch (error) {
       console.error('Error in isTimeSlotBookedByUser:', error);
@@ -258,97 +262,19 @@ export default function DentistBookingPage() {
   };
 
   const getTimeSlotState = (date: Date | undefined, timeSlot: string): 'available' | 'booked' | 'blocked' | 'user-booked' => {
-    try {
-      // Validate input date
-      if (!date || isNaN(date.getTime())) {
-        console.warn('Invalid date provided to getTimeSlotState');
-        return 'blocked';
-      }
+    if (!date || isNaN(date.getTime())) return 'blocked';
 
-      // Create a local date copy to prevent timezone issues
-      const localDate = new Date(date);
-      if (isNaN(localDate.getTime())) {
-        console.warn('Invalid local date created in getTimeSlotState');
-        return 'blocked';
-      }
+    if (isPastTimeSlot(date, timeSlot)) return 'blocked';
 
-      // Check if it's a past time slot
-      if (isPastTimeSlot(localDate, timeSlot)) {
-        return 'blocked';
-      }
+    if (isTimeSlotBookedByUser(date, timeSlot)) return 'user-booked';
 
-      // Check if the user has already booked this slot
-      if (isTimeSlotBookedByUser(localDate, timeSlot)) {
-        return 'user-booked';
-      }
+    if (isTimeSlotBooked(date, timeSlot)) return 'booked';
 
-      // Check if this specific time slot is blocked by the dentist
-      const isDentistBlocked = currentAppointments.some(app => {
-        if (!app.client_email && app.date) {
-          try {
-            // Parse the appointment date in local timezone
-            const [year, month, day] = app.date.split('-').map(Number);
-            const appDate = new Date(Date.UTC(year, month - 1, day));
-            
-            if (isNaN(appDate.getTime())) return false;
-            
-            // Compare dates in local timezone
-            const isSameDay = appDate.getUTCFullYear() === localDate.getFullYear() &&
-                            appDate.getUTCMonth() === localDate.getMonth() &&
-                            appDate.getUTCDate() === localDate.getDate();
-            
-            if (!isSameDay) return false;
+    if (!isTimeSlotAvailable(date, timeSlot)) return 'blocked';
 
-            // Parse time slot
-            const [hours, minutes] = timeSlot.split(':').map(Number);
-            if (isNaN(hours) || isNaN(minutes)) return false;
-            
-            const slotTime = `${pad(hours)}:${pad(minutes)}:00`;
-
-            // Check exact match for blocked time_from
-            if (app.time_from === slotTime) {
-              return true;
-            }
-
-            // Parse appointment times
-            const [appStartHours, appStartMinutes] = app.time_from.split(':').map(Number);
-            const [appEndHours, appEndMinutes] = app.time_to.split(':').map(Number);
-
-            // Create date objects in local timezone
-            const slotTimeDate = new Date(localDate);
-            slotTimeDate.setHours(hours, minutes, 0, 0);
-
-            const appStart = new Date(localDate);
-            appStart.setHours(appStartHours, appStartMinutes, 0, 0);
-
-            const appEnd = new Date(localDate);
-            appEnd.setHours(appEndHours, appEndMinutes, 0, 0);
-
-            // Check if slot falls within the blocked range [appStart, appEnd)
-            return slotTimeDate >= appStart && slotTimeDate < appEnd;
-          } catch (e) {
-            console.error('Error checking dentist blocked time:', e);
-            return false;
-          }
-        }
-        return false;
-      });
-
-      if (isDentistBlocked) {
-        return 'blocked';
-      }
-
-      // Check general availability
-      if (!isTimeSlotAvailable(localDate, timeSlot)) {
-        return isTimeSlotBooked(localDate, timeSlot) ? 'booked' : 'blocked';
-      }
-      
-      return 'available';
-    } catch (error) {
-      console.error('Error in getTimeSlotState:', error);
-      return 'blocked';
-    }
+    return 'available';
   };
+
 
   const handleNoteSubmit = async (shouldBook: boolean) => {
     setIsNoteDialogOpen(false);
@@ -404,7 +330,7 @@ export default function DentistBookingPage() {
       const dateStr = `${year}-${month}-${day}`; // YYYY-MM-DD
 
       const [hours, minutes] = selectedTime.split(':').map(Number);
-      const timeFromStr = `${pad(hours)}:${pad(minutes)}:00`;
+      const timeFromStr = `${pad(hours)}:${pad(minutes)}`;
 
       const durationMatch = dentist.appointment_duration.match(/\d+/);
       const durationInMinutes = durationMatch ? parseInt(durationMatch[0]) : 0;
@@ -418,17 +344,20 @@ export default function DentistBookingPage() {
 
       // Calculate end time using the selected date components
       const endTime = new Date(year, selectedDate.getMonth(), selectedDate.getDate(), hours, minutes + durationInMinutes);
-      const timeToStr = `${pad(endTime.getHours())}:${pad(endTime.getMinutes())}:00`;
+      const timeToStr = `${pad(endTime.getHours())}:${pad(endTime.getMinutes())}`;
 
       const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/appointments`,
+        `${backendURL}/appointments`,
         {
-          client_email: user.email,
-          dentist_email: dentist.email,
+          patient_id: user.id,
+          dentist_id: dentist_id,
           date: dateStr,
           time_from: timeFromStr,
           time_to: timeToStr,
-          note: note || undefined
+          fee: dentist.appointment_fee,
+          note: note || undefined,
+          status: "pending",
+          payment_status: "not-paid"
         }
       );
 
