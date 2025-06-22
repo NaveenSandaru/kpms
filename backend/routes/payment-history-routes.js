@@ -146,6 +146,7 @@ router.get('/:appointment_id', /* authenticateToken, */ async (req, res) => {
   }
 });
 
+
 router.post('/', /* authenticateToken, */ async (req, res) => {
   try {
     const { appointment_id, payment_date, payment_time, reference_number } = req.body;

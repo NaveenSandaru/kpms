@@ -1,264 +1,422 @@
 "use client";
-
-import React, { useState, useEffect, use, useContext } from "react";
-import { Card } from "@/Components/ui/card";
-import { Button } from "@/Components/ui/button";
-import { Filter, Search, MapPin, Clock, DollarSign } from "lucide-react";
-import { useRouter } from "next/navigation";
-import axios from "axios";
+import React, { useState, useEffect, useContext } from 'react';
+import { Calendar, DollarSign, MessageSquare, Clock, Edit2, X, Check, User } from 'lucide-react';
+import axios from 'axios';
 import { AuthContext } from '@/context/auth-context';
-import { toast } from "sonner";
 
+interface Patient {
+  patient_id: string;
+  name: string;
+  profile_picture: string;
+  email: string;
+  phone_number: string;
+}
 
-export default function ServiceProviderPage() {
+interface Dentist {
+  dentist_id: string;
+  name: string;
+  profile_picture: string;
+  email: string;
+  phone_number: string;
+  language: string;
+  service_types: string;
+  work_days_from: string;
+  work_days_to: string;
+  work_time_from: string;
+  work_time_to: string;
+  appointment_duration: string;
+  appointment_fee: number;
+}
 
-  const { isLoggedIn, user, isLoadingAuth } = useContext(AuthContext);
+interface Appointment {
+  appointment_id: number;
+  dentist: Dentist;
+  patient: Patient;
+  time_from: string;
+  time_to: string;
+  date: string;
+  note: string;
+  status: string;
+  fee: number;
+}
+
+interface Message {
+  message_id: number;
+  sender_name: string;
+  content: string;
+  timestamp: string;
+  is_read: boolean;
+}
+
+const HealthcareDashboard: React.FC = () => {
   const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
+  const { user, isLoggedIn, isLoadingAuth } = useContext(AuthContext);
+  
+  const [activeTab, setActiveTab] = useState<'today' | 'upcoming'>('today');
+  const [loadingTodaysAppointments, setLoadingTodaysAppointments] = useState(false);
+  const [loadingUpcomingAppointments, setLoadingUpcomingAppointments] = useState(false);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [changingStatus, setChangingStatus] = useState(false);
+  
+  const [todaysAppointments, setTodaysAppointments] = useState<Appointment[]>([]);
+  const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [totalCosts, setTotalCosts] = useState(0);
+  const [lastVisitDate, setLastVisitDate] = useState<string>('');
+  
+  const [status, setStatus] = useState("");
+  const [appointment_id, setAppointment_id] = useState("");
 
-  const [providers, setProviders] = useState<any[]>([]);
-  const [filteredProviders, setFilteredProviders] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-  const router = useRouter();
-
-
-  const getProviders = async () => {
-    setLoading(true);
+  // Fetch today's appointments
+  const fetchTodaysAppointments = async () => {
+    setLoadingTodaysAppointments(true);
     try {
       const response = await axios.get(
-        `${backendURL}/dentists`
+        `${backendURL}/appointments/today/forpatient/${user.id}`,
+        { withCredentials: true }
       );
-      if (response.data) {
-        setProviders(response.data);
+      if (response.status === 500) {
+        throw new Error("Internal Server Error");
+      }
+      setTodaysAppointments(response.data);
+    } catch (err: any) {
+      console.error("Error fetching today's appointments:", err.message);
+    } finally {
+      setLoadingTodaysAppointments(false);
+    }
+  };
+
+  // Fetch upcoming appointments
+  const fetchUpcomingAppointments = async () => {
+    setLoadingUpcomingAppointments(true);
+    try {
+      const response = await axios.get(
+        `${backendURL}/appointments/forpatient/upcoming/${user.id}`,
+        { withCredentials: true }
+      );
+      if (response.status === 500) {
+        throw new Error("Internal Server Error");
+      }
+      setUpcomingAppointments(response.data);
+    } catch (err: any) {
+      console.error("Error fetching upcoming appointments:", err.message);
+    } finally {
+      setLoadingUpcomingAppointments(false);
+    }
+  };
+
+  // Fetch total costs (from completed/paid appointments or bills)
+  const fetchTotalCosts = async () => {
+    try {
+      const response = await axios.get(
+        `${backendURL}/bills/total/forpatient/${user.id}`,
+        { withCredentials: true }
+      );
+      if (response.data && response.data.total) {
+        setTotalCosts(response.data.total);
+      }
+    } catch (err: any) {
+      console.error("Error fetching total costs:", err.message);
+      // Fallback: calculate from completed appointments if bills endpoint doesn't exist
+      try {
+        const completedResponse = await axios.get(
+          `${backendURL}/appointments/completed/forpatient/${user.id}`,
+          { withCredentials: true }
+        );
+        const total = completedResponse.data.reduce((sum: number, apt: Appointment) => sum + apt.fee, 0);
+        setTotalCosts(total);
+      } catch (fallbackErr: any) {
+        console.error("Error fetching completed appointments for total costs:", fallbackErr.message);
       }
     }
-    catch (error: any) {
-      toast.error("Failed to load providers", {
-        description: error.message
-      });
-    }
-    finally {
-      setLoading(false);
-    }
-  }
+  };
 
+ 
+
+
+ 
+
+  // Update appointment status
+  const updateStatusChange = async () => {
+    setChangingStatus(true);
+    try {
+      const response = await axios.put(
+        `${backendURL}/appointments/${appointment_id}`,
+        { status: status },
+        {
+          withCredentials: true,
+          headers: {
+            "Content-type": "application/json"
+          }
+        }
+      );
+      if (response.status !== 202) {
+        throw new Error("Error updating status");
+      }
+      // Refresh appointments after status change
+      fetchTodaysAppointments();
+      fetchUpcomingAppointments();
+    } catch (err: any) {
+      window.alert(err.message);
+    } finally {
+      setChangingStatus(false);
+      setAppointment_id('');
+      setStatus('');
+    }
+  };
+
+  const getInitials = (name: string): string => {
+    return name.split(' ').map(n => n[0]).join('');
+  };
+
+  const getStatusColor = (status: string): string => {
+    switch (status.toLowerCase()) {
+      case 'confirmed':
+        return 'bg-green-100 text-green-700';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-700';
+      case 'cancelled':
+        return 'bg-red-100 text-red-700';
+      case 'completed':
+        return 'bg-blue-100 text-blue-700';
+      default:
+        return 'bg-gray-100 text-gray-700';
+    }
+  };
+
+  const handleStatusChange = (appointmentId: number, newStatus: string) => {
+    setStatus(newStatus);
+    setAppointment_id(appointmentId.toString());
+  };
+
+  // Calculate stats
+  const newMessagesCount = messages.filter(msg => !msg.is_read).length;
+  const upcomingCount = upcomingAppointments.length;
+
+  // Stats cards data
+  const statsCards = [
+    {
+      title: 'Upcoming Appointments',
+      value: upcomingCount.toString(),
+      icon: Calendar,
+      bgColor: 'bg-blue-50',
+      iconColor: 'text-blue-600'
+    },
+    {
+      title: 'Total Costs',
+      value: `RS:${totalCosts}`,
+      icon: DollarSign,
+      bgColor: 'bg-red-50',
+      iconColor: 'text-red-600'
+    },
+    
+    
+  ];
+
+  // Auth check effect
   useEffect(() => {
-    if(isLoadingAuth) return;
-    if(!isLoggedIn){
-      window.alert("Please log in");
+    if (isLoadingAuth) return;
+    if (!isLoggedIn) {
+      alert("Please log in");
       window.location.href = "/";
       return;
     }
-    if(user){
-      getProviders();
-    }
-  }, [isLoadingAuth, user]);
 
-  // Filter providers based on search query
-  useEffect(() => {
-    if (!searchQuery.trim()) {
-      setFilteredProviders(providers);
-    } else {
-      const filtered = providers.filter((provider) =>
-        provider.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        provider.specialty?.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-      setFilteredProviders(filtered);
-    }
-  }, [searchQuery, providers]);
-
-  const handleBookAppointment = (provider: any) => {
-    if(!isLoggedIn){
-      toast.error("Authentication Required", {
-        description: "Please log in to book an appointment"
-      });
+    if (user?.role !== "patient") {
+      alert("Access Denied");
+      window.location.href = "/";
       return;
     }
-    router.push(`/patient/book/${provider.dentist_id}`);
-  };
+  }, [isLoadingAuth, isLoggedIn, user]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-        <p className="text-gray-600">Loading Dentists...</p>
-      </div>
-    );
-  }
+  // Data fetching effect
+  useEffect(() => {
+    if (!user) return;
+    fetchTodaysAppointments();
+    fetchUpcomingAppointments();
+    
+    fetchTotalCosts();
+  }, [user]);
+
+  // Status update effect
+  useEffect(() => {
+    if (!status || !appointment_id) return;
+    updateStatusChange();
+  }, [status, appointment_id]);
+
+  // Display current appointments based on active tab
+  const displayedAppointments = activeTab === 'today' ? todaysAppointments : upcomingAppointments;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
-        {/* Search Bar */}
-        <div className="mb-4 sm:mb-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Search by name, clinic, specialty, or location..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm sm:text-base"
-            />
-          </div>
-        </div>
-
-        {/* Top Filters */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between mb-4 sm:mb-6 gap-3 sm:gap-0">
-          <select className="border border-gray-300 p-2 rounded text-sm text-gray-600 bg-white w-full sm:w-auto">
-            <option>Select Speciality</option>
-          </select>
-          <div className="flex items-center justify-center gap-2 border border-gray-300 p-2 rounded text-sm text-gray-600 bg-white cursor-pointer w-full sm:w-auto">
-            <span>Filtering options</span>
-            <Filter className="w-4 h-4" />
-          </div>
-        </div>
-
-        {/* Results Counter */}
-        {searchQuery && (
-          <div className="mb-4">
-            <p className="text-sm text-gray-600">
-              {filteredProviders.length} provider{filteredProviders.length !== 1 ? 's' : ''} found for "{searchQuery}"
+    <div className="min-h-screen bg-gray-50 p-4 md:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+              Hello, {user?.name || 'Emily'}!
+            </h1>
+            <p className="text-gray-600 text-sm md:text-base">
+              Here's what's happening with your dental health today.
             </p>
           </div>
-        )}
+          <div className="mt-4 sm:mt-0">
+            <p className="text-sm text-gray-500">Today's Date</p>
+            <p className="text-lg font-semibold text-gray-900">
+              {new Date().toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })}
+            </p>
+          </div>
+        </div>
 
-        {/* Provider Cards */}
-        <div className="space-y-3 sm:space-y-4">
-          {filteredProviders.map((provider, index) => (
-            <Card
-              key={`${provider.email}-${index}`}
-              className="bg-white border border-gray-200 hover:shadow-md transition-shadow"
-            >
-              {/* Mobile Layout */}
-              <div className="block sm:hidden p-4">
-                <div className="flex items-start gap-3 mb-3">
-                  <img
-                    src={`${backendURL}${provider.profile_picture}`}
-                    alt={provider.name}
-                    className="w-16 h-16 rounded-full object-cover flex-shrink-0"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-gray-900 text-base mb-1">
-                      {provider.name}
-                    </h3>
-                    <p className="text-sm text-emerald-600 font-semibold mb-1">
-                      {provider.specialty}
-                    </p>
-                  </div>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-2 gap-4 md:gap-6 mb-8">
+          {statsCards.map((card, index) => (
+            <div key={index} className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">{card.title}</p>
+                  <p className="text-2xl font-bold text-gray-900">{card.value}</p>
                 </div>
-
-                <div className="space-y-2 mb-4">
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Clock className="w-4 h-4 flex-shrink-0" />
-                    <span>
-                      {provider.work_days_from.charAt(0).toUpperCase() + provider.work_days_from.slice(1)} to{" "}{provider.work_days_to.charAt(0).toUpperCase() + provider.work_days_to.slice(1)},
-                      {provider.work_time_from - provider.work_time_to}
-                    </span>
-
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <DollarSign className="w-4 h-4 flex-shrink-0" />
-                    <span>Appointment Fee: Rs. {provider.appointment_fee}</span>
-                  </div>
-                </div>
-
-                <Button
-                  onClick={() => handleBookAppointment(provider)}
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white w-full py-2 text-sm"
-                >
-                  Book Now
-                </Button>
-              </div>
-
-              {/* Desktop/Tablet Layout */}
-              <div className="hidden sm:flex items-center p-4 lg:p-6">
-                {/* Profile Image */}
-                <div className="flex-shrink-0 mr-4 lg:mr-6">
-                  <img
-                    src={`${backendURL}${provider.profile_picture}`}
-                    alt={provider.name}
-                    className="w-12 h-12 lg:w-16 lg:h-16 rounded-full object-cover"
-                  />
-                </div>
-
-                {/* Provider Info */}
-                <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4 lg:gap-6 items-center">
-                  {/* Name, Company and Specialty */}
-                  <div className="md:col-span-1">
-                    <h3 className="font-semibold text-gray-900 text-sm lg:text-base mb-1">
-                      {provider.name}
-                    </h3>
-                    <p className="text-sm lg:text-base text-emerald-600 font-semibold mb-1">
-                      {provider.specialty}
-                    </p>
-                    <p className="text-xs lg:text-sm text-gray-600">
-                      Appointment Fee: Rs. {provider.appointment_fee}
-                    </p>
-                  </div>
-
-                  {/* Address */}
-                  <div className="md:col-span-1">
-                  </div>
-
-                  {/* Availability */}
-                  <div className="md:col-span-1">
-                    <div className="flex items-start gap-2 text-xs lg:text-sm text-gray-600">
-                      <Clock className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p>
-                          {provider.work_days_from.charAt(0).toUpperCase() + provider.work_days_from.slice(1)} to{" "}
-                          {provider.work_days_to.charAt(0).toUpperCase() + provider.work_days_to.slice(1)}
-                        </p>
-
-                        <p>
-                          {provider.work_time_from} - {provider.work_time_to}
-                        </p>
-
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Book Now Button */}
-                  <div className="md:col-span-1 md:text-right">
-                    <Button
-                      onClick={() => handleBookAppointment(provider)}
-                      className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 lg:px-6 py-2 text-xs lg:text-sm w-full md:w-auto"
-                      size="sm"
-                    >
-                      Book Now
-                    </Button>
-                  </div>
+                <div className={`p-3 rounded-lg ${card.bgColor}`}>
+                  <card.icon className={`w-6 h-6 ${card.iconColor}`} />
                 </div>
               </div>
-            </Card>
+            </div>
           ))}
         </div>
 
-        {/* No providers found */}
-        {filteredProviders.length === 0 && !loading && (
-          <div className="text-center mt-8 px-4">
-            {searchQuery ? (
-              <div>
-                <p className="text-gray-600 mb-4 text-sm sm:text-base">
-                  No providers found matching "{searchQuery}"
-                </p>
-                <Button
-                  onClick={() => setSearchQuery("")}
-                  variant="outline"
-                  size="sm"
-                  className="w-full sm:w-auto"
-                >
-                  Clear search
-                </Button>
+        {/* Appointments Section */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+          {/* Tab Navigation */}
+          <div className="border-b border-gray-200">
+            <div className="flex">
+              <button
+                onClick={() => setActiveTab('today')}
+                className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === 'today'
+                    ? 'border-emerald-600 text-emerald-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Today
+                {loadingTodaysAppointments && (
+                  <span className="ml-2 inline-block w-4 h-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin"></span>
+                )}
+              </button>
+              <button
+                onClick={() => setActiveTab('upcoming')}
+                className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === 'upcoming'
+                    ? 'border-emerald-600 text-emerald-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Upcoming
+                {loadingUpcomingAppointments && (
+                  <span className="ml-2 inline-block w-4 h-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin"></span>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Appointments List */}
+          <div className="divide-y divide-gray-100">
+            {displayedAppointments.length === 0 ? (
+              <div className="p-8 text-center text-gray-500">
+                <Calendar className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                <p>No appointments {activeTab === 'today' ? 'today' : 'upcoming'}</p>
               </div>
             ) : (
-              <p className="text-gray-600 text-sm sm:text-base">
-                No providers found for this service.
-              </p>
+              displayedAppointments.map((appointment) => (
+                <div key={appointment.appointment_id} className="p-4 md:p-6 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      {/* Dentist Avatar */}
+                      <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        {appointment.dentist?.profile_picture ? (
+                          <img 
+                            src={appointment.dentist.profile_picture} 
+                            alt={appointment.dentist?.name || 'Dentist'}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-sm font-medium text-gray-700">
+                            {appointment.dentist?.name ? getInitials(appointment.dentist.name) : <User className="w-6 h-6" />}
+                          </span>
+                        )}
+                      </div>
+                      
+                      {/* Appointment Details */}
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-lg font-semibold text-gray-900 truncate">
+                          Dr. {appointment.dentist?.name || 'Dentist Name Not Available'}
+                        </h3>
+                        <p className="text-sm text-gray-600">
+                          {appointment.dentist?.service_types || 'General Dentistry'}
+                        </p>
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 mt-1">
+                          <p className="text-sm text-gray-500">
+                            📅 {appointment.date ? new Date(appointment.date).toLocaleDateString() : 'Date TBD'}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            ⏰ {appointment.time_from || 'TBD'} {appointment.time_to ? `- ${appointment.time_to}` : ''}
+                          </p>
+                          {appointment.fee && (
+                            <p className="text-sm text-gray-500">💰 ${appointment.fee}</p>
+                          )}
+                        </div>
+                        {appointment.note && (
+                          <p className="text-sm text-gray-600 mt-1">📝 {appointment.note}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Status and Actions */}
+                    <div className="flex items-center space-x-2 ml-4">
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(appointment.status)}`}>
+                        {appointment.status}
+                      </span>
+                      
+                      {/* Action buttons for patient */}
+                      <div className="flex items-center space-x-1">
+                        {appointment.status.toLowerCase() === 'pending' && (
+                          <>
+                            <button 
+                              className="p-2 text-green-600 hover:text-green-800 transition-colors"
+                              onClick={() => handleStatusChange(appointment.appointment_id, 'confirmed')}
+                              disabled={changingStatus}
+                              title="Confirm appointment"
+                            >
+                              <Check className="w-4 h-4" />
+                            </button>
+                            <button 
+                              className="p-2 text-red-600 hover:text-red-800 transition-colors"
+                              onClick={() => handleStatusChange(appointment.appointment_id, 'cancelled')}
+                              disabled={changingStatus}
+                              title="Cancel appointment"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+                        <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))
             )}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
-}
+};
+
+export default HealthcareDashboard;
