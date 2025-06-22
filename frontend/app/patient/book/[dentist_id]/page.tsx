@@ -325,7 +325,7 @@ export default function DentistBookingPage() {
   };
 
   const handleConfirmBooking = () => {
-    if (!selectedDate || !selectedTime || !dentist?.email || !user?.email) {
+    if (!selectedDate || !selectedTime || !dentist?.dentist_id || !user?.id) {
       toast.error("Missing Information", {
         description: "Please select a date and time for your appointment."
       });

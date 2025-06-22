@@ -144,12 +144,6 @@ const DoctorSidebar = () => {
           <p className="text-sm text-gray-600 text-center mt-1">
             Doctor Dashboard
           </p>
-          <p className="text-xs text-gray-500 text-center mt-1">
-            ID: {user?.id}
-          </p>
-          <p className="text-xs text-gray-500 text-center mt-1">
-            Name: {user?.name}
-          </p>
         </SidebarHeader>
 
         <SidebarContent className="p-4">
@@ -218,12 +212,6 @@ const DoctorSidebar = () => {
           </div>
           <p className="text-xs text-gray-600 text-center mt-1">
             Doctor Dashboard
-          </p>
-          <p className="text-xs text-gray-500 text-center">
-            ID: {user?.id}
-          </p>
-          <p className="text-xs text-gray-500 text-center mt-1">
-            Name: {user?.name}
           </p>
         </div>
 

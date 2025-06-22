@@ -1,35 +1,28 @@
 "use client";
 import { Bell } from "lucide-react";
-import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { useMemo, useState, useEffect } from "react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/Components/ui/avatar";
+import { Button } from "@/Components/ui/button";
+import { useState, useEffect, useContext } from "react";
+import { AuthContext } from "@/context/auth-context";
+import axios from "axios";
 
 interface DoctorInfo {
-  id: string;
+  dentist_id: string;
   name: string;
-  specialty: string;
-  avatar?: string;
+  service_types: string;
+  profile_picture?: string;
 }
 
 const DoctorHeader = () => {
   const router = useRouter();
-  const pathname = usePathname();
   const [doctorInfo, setDoctorInfo] = useState<DoctorInfo | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const {user, isLoadingAuth, isLoggedIn} = useContext(AuthContext);
+  const [loadingDentist, setLoadingDentist] = useState(false);
 
-  // Extract doctorID from pathname
-  const doctorId = useMemo(() => {
-    const pathSegments = pathname.split('/');
-    const doctorIndex = pathSegments.findIndex(segment => segment === 'doctor');
-    if (doctorIndex !== -1 && pathSegments[doctorIndex + 1]) {
-      return pathSegments[doctorIndex + 1];
-    }
-    return null;
-  }, [pathname]);
+  const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
-  // Get current date
+
   const getCurrentDate = () => {
     const options: Intl.DateTimeFormatOptions = { 
       weekday: 'long', 
@@ -40,7 +33,6 @@ const DoctorHeader = () => {
     return new Date().toLocaleDateString('en-US', options);
   };
 
-  // Generate doctor initials from name
   const getDoctorInitials = (name: string) => {
     return name
       .split(' ')
@@ -50,75 +42,52 @@ const DoctorHeader = () => {
       .slice(0, 2);
   };
 
-  // Fetch doctor info based on doctorId
+  const fetchDoctorInfo = async () => {
+    setLoadingDentist(true);
+    try{
+      const response = await axios.get(
+        `${backendURL}/dentists/${user.id}`
+      );
+      if(response.status == 500){
+        throw new Error("Error Fetching Doctor Info");
+      }
+      setDoctorInfo({dentist_id:response.data.dentist_id, name: response.data.name, service_types: response.data.service_types, profile_picture: response.data.profile_picture});
+    }
+    catch(err: any){
+      window.alert(err.message);
+    }
+    finally{
+      setLoadingDentist(false);
+    }
+  }
+
   useEffect(() => {
-    const fetchDoctorInfo = async () => {
-      if (!doctorId) {
-        setIsLoading(false);
-        return;
-      }
-
-      setIsLoading(true);
-      try {
-        // Replace this with your actual API call
-        // const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/doctors/${doctorId}`);
-        // const data = await response.json();
-        
-        // Mock data for demonstration - replace with actual API call
-        const mockDoctorData: Record<string, DoctorInfo> = {
-          '123': { id: '123', name: 'Dr. Sarah Chen', specialty: 'Cardiologist', avatar: '/avatar-chen.jpg' },
-          '456': { id: '456', name: 'Dr. Michael Smith', specialty: 'Neurologist', avatar: '/avatar-smith.jpg' },
-          '789': { id: '789', name: 'Dr. Emily Johnson', specialty: 'Pediatrician', avatar: '/avatar-johnson.jpg' },
-        };
-
-        const doctor = mockDoctorData[doctorId] || {
-          id: doctorId,
-          name: `Dr. User ${doctorId}`,
-          specialty: 'Physician',
-        };
-
-        setDoctorInfo(doctor);
-      } catch (error) {
-        console.error('Error fetching doctor info:', error);
-        // Fallback doctor info
-        setDoctorInfo({
-          id: doctorId,
-          name: `Dr. User ${doctorId}`,
-          specialty: 'Physician',
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
+    if(isLoadingAuth) return;
+    if(!isLoggedIn) return;
     fetchDoctorInfo();
-  }, [doctorId]);
+  }, [user]);
+
 
   // Handle profile navigation
   const handleProfileClick = () => {
-    if (doctorId) {
-      router.push(`/doctor/${doctorId}/profile`);
+    if (user.id) {
+      router.push(`/doctor/profile`);
     }
   };
 
   // Handle notification click
   const handleNotificationClick = () => {
-    if (doctorId) {
-      router.push(`/doctor/${doctorId}/notifications`);
+    if (user.id) {
+      router.push(`/doctor/notifications`);
     }
   };
-
-  // Don't render if no doctorId is found
-  if (!doctorId) {
-    return null;
-  }
 
   return (
     <header className="flex items-center justify-between px-4 sm:px-6 py-4 bg-white">
       {/* Left side: Welcome message and date - hidden on mobile */}
       <div className="hidden sm:flex flex-col min-w-0 flex-1">
         <h1 className="text-2xl font-semibold text-gray-900 mb-1 truncate">
-          {isLoading ? (
+          {loadingDentist ? (
             <span className="animate-pulse bg-gray-200 h-8 w-64 rounded"></span>
           ) : (
             `Welcome back, ${doctorInfo?.name || 'Doctor'}`
@@ -128,20 +97,6 @@ const DoctorHeader = () => {
           {getCurrentDate()}
         </p>
       </div>
-
-      {/* Mobile: Welcome message - shown only on mobile 
-      <div className="sm:hidden flex flex-col min-w-0 flex-1">
-        <h1 className="text-lg font-semibold text-gray-900 truncate">
-          {isLoading ? (
-            <span className="animate-pulse bg-gray-200 h-6 w-32 rounded"></span>
-          ) : (
-            `Hello, ${doctorInfo?.name?.split(' ')[1] || 'Doctor'}`
-          )}
-        </h1>
-        <p className="text-xs text-gray-500">
-          {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-        </p>
-      </div>*/}
 
       {/* Right side: Notification + Profile */}
       <div className="flex items-center gap-2 sm:gap-4 ml-auto sm:ml-4">
@@ -161,14 +116,14 @@ const DoctorHeader = () => {
 
         {/* User Profile */}
         <div className="flex items-center gap-3">
-          {isLoading ? (
+          {loadingDentist ? (
             <div className="h-8 w-8 sm:h-10 sm:w-10 bg-gray-200 rounded-full animate-pulse"></div>
           ) : (
             <Avatar 
               className="h-8 w-8 sm:h-10 sm:w-10 cursor-pointer hover:ring-2 hover:ring-emerald-300 transition-all duration-200" 
               onClick={handleProfileClick}
             >
-              <AvatarImage src={doctorInfo?.avatar} alt={doctorInfo?.name} />
+              <AvatarImage src={doctorInfo?.profile_picture} alt={doctorInfo?.name} />
               <AvatarFallback className="text-xs sm:text-sm font-semibold bg-emerald-100 text-emerald-800">
                 {doctorInfo ? getDoctorInitials(doctorInfo.name) : 'DR'}
               </AvatarFallback>
@@ -177,7 +132,7 @@ const DoctorHeader = () => {
           
           {/* Profile details - hidden on mobile */}
           <div className="hidden sm:flex flex-col text-right leading-tight">
-            {isLoading ? (
+            {loadingDentist ? (
               <div className="space-y-1">
                 <div className="animate-pulse bg-gray-200 h-4 w-20 rounded"></div>
                 <div className="animate-pulse bg-gray-200 h-3 w-16 rounded"></div>
@@ -185,10 +140,10 @@ const DoctorHeader = () => {
             ) : (
               <>
                 <p className="text-sm font-medium text-gray-900">
-                  {doctorInfo?.name || 'Doctor'}
+                  {doctorInfo?.name }
                 </p>
                 <p className="text-xs text-gray-500">
-                  {doctorInfo?.specialty || 'Physician'}
+                  {doctorInfo?.service_types}
                 </p>
               </>
             )}
