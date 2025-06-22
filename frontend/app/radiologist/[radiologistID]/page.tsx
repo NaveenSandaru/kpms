@@ -1,265 +1,885 @@
-'use client';
+"use client";
+import React, { useState, useEffect } from 'react';
+import { Calendar, Clock, Plus, Search, MoreHorizontal, X, Upload, FileText, Edit, Trash2, UserPlus, User, Users } from 'lucide-react';
 
-import React, { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
-import { Button } from '@/Components/ui/button';
-import { Eye, Image as ImageIcon, Activity } from 'lucide-react';
+// Types based on the database structure
+interface Doctor {
+  id: number;
+  name: string;
+  specialization: string;
+}
 
-/* ────────────────────────────────────────
-   Types
-────────────────────────────────────────── */
-type Case = {
-  id: string;
-  patient: string;
-  study: string;
-  referring: string;
-  status: 'URGENT' | 'REVISION' | 'PENDING';
-};
+interface Radiologist {
+  id: number;
+  name: string;
+  specialization: string;
+}
 
-type Notification = {
-  id: string;
-  title: string;
-  desc: string;
-  time: string;
-  color: 'red' | 'amber' | 'blue' | 'gray';
-};
-
-type Scan = {
-  id: string;
-  patientName: string;
-  type: string;
+interface Study {
+  study_id: number;
+  patient_id: string;
+  radiologist_id?: number;
+  radiologist?: Radiologist;
+  doctors?: Doctor[];
   date: string;
-  url: string;
-};
+  time: string;
+  modality?: string;
+  report_id?: number;
+  assertion_number?: number;
+  description?: string;
+  source?: string;
+  isurgent: boolean;
+  dicom_file_url?: string;
+  body_part?: string;
+  reason?: string;
+}
 
-/* ────────────────────────────────────────
-   Component
-────────────────────────────────────────── */
-export default function RadiologistDashboard() {
-  // Next.js 15: useParams() instead of props
-  const { radiologistID } = useParams() as { radiologistID: string };
+interface NewStudyForm {
+  patient_id: string;
+  patient_name: string;
+  modality: string;
+  server_type: string;
+  assertion_number: string;
+  description: string;
+  dicom_files: File[];
+  report_files: File[];
+}
 
-  /* state */
-  const [stats, setStats] = useState({ assignedToday: 0, pendingReview: 0, reportedToday: 0 });
-  const [cases, setCases] = useState<Case[]>([]);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [todayScans, setTodayScans] = useState<Scan[]>([]);
-  const [recentScans, setRecentScans] = useState<Scan[]>([]);
+interface AssignmentForm {
+  radiologist_id: string;
+  doctor_ids: string[];
+}
 
-  /* mock fetch */
+const MedicalStudyInterface: React.FC = () => {
+  const [isAddStudyOpen, setIsAddStudyOpen] = useState(false);
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [selectedStudyId, setSelectedStudyId] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState('ALL');
+  const [activeModality, setActiveModality] = useState('All');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const [newStudy, setNewStudy] = useState<NewStudyForm>({
+    patient_id: '',
+    patient_name: '',
+    modality: '',
+    server_type: '',
+    assertion_number: '',
+    description: '',
+    dicom_files: [],
+    report_files: []
+  });
+
+  const [assignmentForm, setAssignmentForm] = useState<AssignmentForm>({
+    radiologist_id: '',
+    doctor_ids: []
+  });
+
+  const [studies, setStudies] = useState<Study[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [todayCount, setTodayCount] = useState<number>(0);
+  const [radiologists, setRadiologists] = useState<Radiologist[]>([]);
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
+
+  // Helper to convert API study payload into UI-friendly shape
+  const normalizeStudy = (raw: any): Study => {
+    const doctorsList: Doctor[] = (raw.dentistAssigns ?? []).map((da: any) => ({
+      id: da.dentist?.dentist_id 
+          ? (typeof da.dentist.dentist_id === 'string' ? da.dentist.dentist_id : da.dentist.dentist_id.toString())
+          : (da.dentist_id ?? '0'),
+      name: da.dentist?.name ?? da.dentist?.email ?? 'Dentist',
+      specialization: da.dentist?.specialization ?? ''
+    }));
+    return {
+      ...raw,
+      doctors: doctorsList.length ? doctorsList : undefined
+    } as Study;
+  };
+
+  // Fetch today's study count
   useEffect(() => {
-    const t = setTimeout(() => {
-      /* stats */
-      setStats({ assignedToday: 24, pendingReview: 9, reportedToday: 15 });
+    const fetchTodayCount = async () => {
+      try {
+        const res = await fetch('http://localhost:5000/studies/today/count');
+        if (res.ok) {
+          const data = await res.json();
+          setTodayCount(data.count);
+        } else {
+          console.error('Failed to fetch today count:', res.status);
+        }
+      } catch (err) {
+        console.error('Error fetching today count:', err);
+      }
+    };
+    fetchTodayCount();
+  }, []);
 
-      /* cases – UNIQUE ids only */
-      setCases([
-        { id: '1', patient: 'James Davidson', study: 'Brain CT', referring: 'Dr. Michael Chen', status: 'URGENT' },
-        { id: '2', patient: 'Emma Lewis', study: 'Chest X-Ray', referring: 'Dr. Sarah Johnson', status: 'REVISION' },
-        { id: '3', patient: 'Robert Martinez', study: 'Abdominal MRI', referring: 'Dr. Jessica Lee', status: 'PENDING' },
-        { id: '4', patient: 'Alice Peterson', study: 'Knee MRI', referring: 'Dr. Robert Wilson', status: 'PENDING' },
-        { id: '5', patient: 'Thomas Nelson', study: 'Lumbar Spine CT', referring: 'Dr. Emily Parker', status: 'PENDING' },
-      ]);
+  // Fetch studies from the backend
+  useEffect(() => {
+    const fetchStudies = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await fetch('http://localhost:5000/studies');
+        if (!response.ok) {
+          throw new Error(`Error: ${response.status}`);
+        }
+        const data = await response.json();
+        const normalized = data.map((s: any) => normalizeStudy(s));
+        setStudies(normalized);
+        console.log(normalized);
+      } catch (err) {
+        console.error('Failed to fetch studies:', err);
+        setError('Failed to load studies. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-      /* notifications */
-      setNotifications([
-        { id: 'n1', title: 'Urgent study assigned', desc: 'Brain CT for James Davidson requires immediate attention', time: '6 m', color: 'red' },
-        { id: 'n2', title: 'Revision requested', desc: 'Clarification requested on Emma Lewis study', time: '39 m', color: 'amber' },
-        { id: 'n3', title: 'New studies assigned', desc: '3 new studies have been assigned to you', time: '1 h', color: 'blue' },
-        { id: 'n4', title: 'System maintenance', desc: 'Scheduled maintenance tonight 2–4 AM', time: '2 h', color: 'gray' },
-      ]);
+    fetchStudies();
+  }, []);
 
-      /* today’s scans */
-      setTodayScans([
-        { id: 'SCAN001', patientName: 'John Doe',  type: 'MRI',  date: new Date().toISOString().split('T')[0], url: 'https://via.placeholder.com/300x200/4F46E5/FFFFFF?text=MRI+Scan' },
-        { id: 'SCAN002', patientName: 'Jane Smith', type: 'CT',   date: new Date().toISOString().split('T')[0], url: 'https://via.placeholder.com/300x200/059669/FFFFFF?text=CT+Scan' },
-        { id: 'SCAN003', patientName: 'Mike Johnson', type: 'X-Ray', date: new Date().toISOString().split('T')[0], url: 'https://via.placeholder.com/300x200/7C3AED/FFFFFF?text=X-Ray' },
-      ]);
+  useEffect(() => {
+    const fetchStaff = async () => {
+      try {
+        // Radiologists
+        const radRes = await fetch('http://localhost:5000/radiologists');
+        if (radRes.ok) {
+          const data = await radRes.json();
+          const mapped = data.map((r: any) => ({
+            id: r.radiologist_id ?? r.id,
+            name: r.name ?? `${r.first_name ?? ''} ${r.last_name ?? ''}`.trim(),
+            specialization: r.specialization ?? r.email ?? ''
+          }));
+          setRadiologists(mapped);
+        }
 
-      /* recent scans */
-      setRecentScans([
-        { id: 'SCAN004', patientName: 'Sarah Wilson', type: 'MRI', date: '2025-06-20', url: 'https://via.placeholder.com/300x200/DC2626/FFFFFF?text=MRI+Scan' },
-        { id: 'SCAN005', patientName: 'David Brown',  type: 'CT',  date: '2025-06-19', url: 'https://via.placeholder.com/300x200/EA580C/FFFFFF?text=CT+Scan' },
-        { id: 'SCAN006', patientName: 'Lisa Davis',   type: 'X-Ray', date: '2025-06-18', url: 'https://via.placeholder.com/300x200/0891B2/FFFFFF?text=X-Ray' },
-      ]);
-    }, 250);
+        // Doctors (dentists)
+        const docRes = await fetch('http://localhost:5000/dentists');
+        if (docRes.ok) {
+          const data = await docRes.json();
+          const mapped = data.map((d: any) => ({
+            id: d.dentist_id ?? d.id,
+            name: d.name ?? `${d.first_name ?? ''} ${d.last_name ?? ''}`.trim(),
+            specialization: d.specialization ?? d.email ?? ''
+          }));
+          setDoctors(mapped);
+        }
+      } catch (err) {
+        console.error('Error fetching staff:', err);
+      }
+    };
 
-    return () => clearTimeout(t);
-  }, [radiologistID]);
+    fetchStaff();
+  }, []);
 
-  /* UI */
+  const tabs = ['1D', '3D', '1W', '1M', '1Y', 'ALL'];
+  const modalities = ['All', 'CT', 'MRI', 'DX', 'IO', 'CR'];
+
+  const handleFileUpload = (files: FileList | null, type: 'dicom' | 'report') => {
+    if (!files) return;
+
+    const fileArray = Array.from(files);
+    setNewStudy(prev => ({
+      ...prev,
+      [type === 'dicom' ? 'dicom_files' : 'report_files']: fileArray
+    }));
+  };
+
+  const handleSubmitStudy = () => {
+    console.log('Submitting study:', newStudy);
+
+    // Create new study object
+    const newStudyRecord: Study = {
+      study_id: studies.length + 1,
+      patient_id: newStudy.patient_id,
+      date: new Date().toISOString().split('T')[0],
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      modality: newStudy.modality,
+      assertion_number: parseInt(newStudy.assertion_number) || Math.floor(Math.random() * 1000000),
+      description: newStudy.description,
+      source: 'MANUAL-UPLOAD',
+      isurgent: false
+    };
+
+    // Add to studies list
+    setStudies(prev => [newStudyRecord, ...prev]);
+
+    setIsAddStudyOpen(false);
+    // Reset form
+    setNewStudy({
+      patient_id: '',
+      patient_name: '',
+      modality: '',
+      server_type: '',
+      assertion_number: '',
+      description: '',
+      dicom_files: [],
+      report_files: []
+    });
+  };
+
+  const handleAssignStaff = async () => {
+    if (!selectedStudyId) return;
+
+    try {
+      const payload: any = {
+        radiologist_id: assignmentForm.radiologist_id ? parseInt(assignmentForm.radiologist_id) : null,
+        doctor_ids: assignmentForm.doctor_ids
+      };
+
+      const res = await fetch(`http://localhost:5000/studies/${selectedStudyId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to assign staff');
+      }
+
+      const updatedRaw = await res.json();
+      const updatedStudy: Study = normalizeStudy(updatedRaw);
+
+      setStudies(prev => prev.map(study =>
+        study.study_id === updatedStudy.study_id ? updatedStudy : study
+      ));
+
+      // Close modal and reset form
+      setIsAssignModalOpen(false);
+      setSelectedStudyId(null);
+      setAssignmentForm({
+        radiologist_id: '',
+        doctor_ids: []
+      });
+    } catch (error) {
+      console.error('Error assigning staff:', error);
+      alert('Failed to assign staff. Please try again.');
+    }
+  };
+
+  const handleDeleteStudy = (studyId: number) => {
+    if (confirm('Are you sure you want to delete this study?')) {
+      setStudies(prev => prev.filter(study => study.study_id !== studyId));
+    }
+  };
+
+  const handleEditStudy = (studyId: number) => {
+    // This would typically open an edit modal
+    console.log('Edit study:', studyId);
+    alert('Edit functionality would be implemented here');
+  };
+
+  const openAssignModal = (studyId: number) => {
+    setSelectedStudyId(studyId);
+    setIsAssignModalOpen(true);
+
+    // Pre-populate form with existing assignments
+    const study = studies.find(s => s.study_id === studyId);
+    if (study) {
+      setAssignmentForm({
+        radiologist_id: study.radiologist_id?.toString() || '',
+        doctor_ids: study.doctors?.map(d => d.id.toString()) || []
+      });
+    }
+  };
+
+  const handleDoctorSelection = (doctorId: string) => {
+    setAssignmentForm(prev => ({
+      ...prev,
+      doctor_ids: prev.doctor_ids.includes(doctorId)
+        ? prev.doctor_ids.filter(id => id !== doctorId)
+        : [...prev.doctor_ids, doctorId]
+    }));
+  };
+
+  // Filter studies based on time period, modality, and search term
+  const filteredStudies = studies.filter(study => {
+    // Filter by time period based on selected tab
+    const studyDate = new Date(study.date);
+    const now = new Date();
+    let dateMatch = true;
+    if (activeTab !== 'ALL') {
+      const diffMs = now.getTime() - studyDate.getTime();
+      const diffDays = diffMs / (1000 * 60 * 60 * 24);
+      if (activeTab.endsWith('D')) {
+        const days = parseInt(activeTab, 10);
+        dateMatch = diffDays <= days;
+      } else if (activeTab.endsWith('W')) {
+        const weeks = parseInt(activeTab, 10);
+        dateMatch = diffDays <= weeks * 7;
+      } else if (activeTab.endsWith('M')) {
+        const months = parseInt(activeTab, 10);
+        dateMatch = diffDays <= months * 30;
+      } else if (activeTab.endsWith('Y')) {
+        const years = parseInt(activeTab, 10);
+        dateMatch = diffDays <= years * 365;
+      }
+    }
+
+    // Filter by modality if not 'All'
+    const modalityMatch = activeModality === 'All' || study.modality === activeModality;
+
+    // Filter by search term
+    const searchMatch = searchTerm === '' ||
+      (study.patient_id && study.patient_id.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (study.description && study.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (study.assertion_number && study.assertion_number.toString().includes(searchTerm));
+
+    return dateMatch && modalityMatch && searchMatch;
+  });
+
+  const displayedStudies = filteredStudies.slice((currentPage - 1) * 10, currentPage * 10);
+  const totalPages = Math.ceil(filteredStudies.length / 10);
+
   return (
-    <div className="p-4 md:p-6 space-y-6">
-      <h1 className="text-2xl font-semibold text-gray-900 mb-4">Dashboard</h1>
+    <div className="min-h-screen bg-gray-50 p-6 overflow-auto">
+      {loading && (
+        <div className="bg-blue-50 p-4 rounded-lg text-center">
+          <p className="text-blue-700">Loading studies...</p>
+        </div>
+      )}
+      <div className="max-w-7xl mx-auto space-y-8">
+        {/* Header */}
+        {/*<div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl mt-6 md:mt-0 font-bold tracking-tight text-gray-900">
+              DICOM studies
+            </h1>
+            <p className="text-gray-600 mt-2">
+              Welcome back! Here's what's happening with DICOM studies.
+            </p>
+          </div>
+        </div>*/}
 
-      {/* ── stats ──────────────────────────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {[
-          { label: 'Assigned Today', value: stats.assignedToday, trend: '+12%', color: 'text-emerald-600' },
-          { label: 'Pending Review', value: stats.pendingReview, trend: '-3%', color: 'text-orange-600' },
-          { label: 'Reported Today', value: stats.reportedToday, trend: '+5%', color: 'text-emerald-600' },
-        ].map((s) => (
-          <Card key={s.label}>
-            <CardContent className="p-4">
-              <p className="text-sm text-gray-500 mb-2">{s.label}</p>
-              <div className="flex items-end gap-2">
-                <span className="text-2xl font-bold text-gray-900">{s.value}</span>
-                <span className={`text-xs ${s.color}`}>{s.trend}</span>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div className="bg-white rounded-lg p-6 shadow-sm">
+            <div className="flex justify-between items-start">
+              <div>
+                <div className="text-sm font-medium text-gray-600 mb-1">Total Studies</div>
+                <div className="text-3xl font-bold text-gray-900">{studies.length}</div>
               </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              <Calendar className="w-8 h-8 text-blue-500" />
+            </div>
+          </div>
 
-      {/* ── main grid ──────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* quick access table */}
-        <div className="lg:col-span-2">
-          <Card>
-            <CardHeader className="flex items-center justify-between">
-              <CardTitle>Quick Access</CardTitle>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm">Filters</Button>
-                <Button variant="outline" size="sm">Refresh</Button>
+          <div className="bg-white rounded-lg p-6 shadow-sm">
+            <div className="flex justify-between items-start">
+              <div>
+                <div className="text-sm font-medium text-gray-600 mb-1">Today's Scans</div>
+                <div className="text-3xl font-bold text-gray-900">{todayCount}</div>
               </div>
-            </CardHeader>
-            <CardContent>
-              <input className="w-full mb-4 px-3 py-2 border rounded text-sm" placeholder="Search by patient name, ID, or study type…" />
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-gray-500 uppercase border-b">
-                      <th className="py-2 pr-4">Patient</th>
-                      <th className="py-2 pr-4">Study</th>
-                      <th className="py-2 pr-4">Referring&nbsp;MD</th>
-                      <th className="py-2 pr-4">Status</th>
-                      <th className="py-2">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {cases.map((c) => (
-                      <tr key={c.id} className="border-b hover:bg-gray-50">
-                        <td className="py-3 pr-4 font-medium text-gray-900">{c.patient}</td>
-                        <td className="py-3 pr-4">{c.study}</td>
-                        <td className="py-3 pr-4">{c.referring}</td>
-                        <td className="py-3 pr-4">
-                          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                            c.status === 'URGENT' ? 'bg-red-100 text-red-700' :
-                            c.status === 'REVISION' ? 'bg-amber-100 text-amber-700' :
-                            'bg-gray-100 text-gray-700'
-                          }`}>
-                            {c.status}
-                          </span>
-                        </td>
-                        <td className="py-3">
-                          <a href="#" className="text-emerald-600 hover:underline">Open</a>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
+              <Clock className="w-8 h-8 text-green-500" />
+            </div>
+          </div>
         </div>
 
-        {/* notifications + workload */}
-        <div className="space-y-4">
-          {/* notifications */}
-          <Card>
-            <CardHeader className="flex items-center justify-between">
-              <CardTitle>Notifications</CardTitle>
-              <a href="#" className="text-sm text-emerald-600 hover:underline">View all</a>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {notifications.map((n) => (
-                <div
-                  key={n.id}
-                  className={`flex items-start gap-3 p-3 rounded border-l-4 bg-gray-50 ${
-                    n.color === 'red'   ? 'border-red-500'   :
-                    n.color === 'amber' ? 'border-amber-500' :
-                    n.color === 'blue'  ? 'border-blue-500'  : 'border-gray-300'
-                  }`}
+        {/* Filters and Search */}
+        <div className="bg-white rounded-lg shadow-sm mb-6">
+          <div className="p-4">
+            {/* Time Period Tabs */}
+            <div className="flex flex-wrap gap-2 items-center mb-4">
+              <Calendar className="w-5 h-5 text-emerald-700 mr-2" />
+              {tabs.map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-3 py-1 rounded text-sm font-medium transition-colors ${activeTab === tab
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-emerald-100 text-emerald-600 hover:bg-emerald-200'
+                    }`}
                 >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900">{n.title}</p>
-                    <p className="text-xs text-gray-500">{n.desc}</p>
-                  </div>
-                  <span className="text-xs text-gray-400 whitespace-nowrap">{n.time}</span>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
-          {/* workload */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Today's Workload</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {[
-                { label: 'CT Studies', done: 6, total: 12, color: 'bg-indigo-500' },
-                { label: 'MRI Studies', done: 5, total: 9, color: 'bg-blue-500' },
-                { label: 'X-Ray',      done: 2, total: 3, color: 'bg-violet-500' },
-              ].map((w) => (
-                <div key={w.label} className="space-y-1">
-                  <div className="flex justify-between text-xs text-gray-500">
-                    <span>{w.label}</span><span>{w.done}/{w.total}</span>
-                  </div>
-                  <div className="w-full h-2 rounded bg-gray-200 overflow-hidden">
-                    <div className={`${w.color} h-full`} style={{ width: `${(w.done / w.total) * 100}%` }} />
-                  </div>
-                </div>
-              ))}
-              <div className="space-y-1">
-                <div className="flex justify-between text-xs text-gray-500">
-                  <span>Overall completion</span><span>15/24</span>
-                </div>
-                <div className="w-full h-2 rounded bg-gray-200 overflow-hidden">
-                  <div className="bg-emerald-500 h-full" style={{ width: `${(15 / 24) * 100}%` }} />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {/* ── today's scans ─────────────────────── */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ImageIcon className="h-5 w-5" /> Today's Scans
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {todayScans.length === 0 ? (
-            <p className="text-sm text-gray-500">No scans scheduled for today.</p>
-          ) : (
-            <div className="space-y-3">
-              {todayScans.map((scan) => (
-                <div key={scan.id} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
-                  <div className="h-10 w-10 bg-gray-200 rounded flex items-center justify-center text-gray-500">
-                    <ImageIcon className="h-5 w-5" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 text-sm truncate">{scan.patientName}</p>
-                    <p className="text-xs text-gray-500 truncate">{scan.type} • {scan.date}</p>
-                  </div>
-                  <a
-                    href={scan.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-emerald-600 hover:underline text-sm flex items-center gap-1"
-                  >
-                    <Eye className="h-4 w-4" /> View
-                  </a>
-                </div>
+                  {tab}
+                </button>
               ))}
             </div>
-          )}
-        </CardContent>
-      </Card>
+
+            {/* Modality Filters */}
+            <div className="flex flex-wrap gap-2 items-center mb-4">
+              <span className="text-sm text-emerald-600 mr-2">Modality:</span>
+              {modalities.map((modality) => (
+                <button
+                  key={modality}
+                  onClick={() => setActiveModality(modality)}
+                  className={`px-3 py-1 rounded text-sm font-medium transition-colors ${activeModality === modality
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-emerald-100 text-emerald-600 hover:bg-emerald-200'
+                    }`}
+                >
+                  {modality}
+                </button>
+              ))}
+            </div>
+
+            {/* Search and Actions */}
+            <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-emerald-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    setActiveTab('ALL');
+                    setActiveModality('All');
+                    setSearchTerm('');
+                  }}
+                  className="px-4 py-2 text-emerald-600 border border-emerald-300 rounded-lg hover:bg-emerald-50"
+                >Reset
+                </button>
+                <button className="px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600">
+                  Search
+                </button>
+                {/*<button
+                  onClick={() => setIsAddStudyOpen(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600"
+                >
+                  <Plus className="w-4 h-4" />
+                  New Study
+                </button>*/}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Patient Studies Table */}
+        <div className="bg-white rounded-lg shadow-sm">
+          <div className="p-4 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <FileText className="w-5 h-5 text-teal-600" />
+              Patient Studies
+            </h2>
+          </div>
+
+          {/* Desktop Table */}
+          <div className="hidden lg:block overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-green-50 border-b">
+                <tr>
+                  <th className="px-4 py-3 text-left text-sm font-medium">ID</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Name</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Status</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Accession</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Modality</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Description</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Date</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Time</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Report</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Source AE</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Doctors</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {displayedStudies.map((study) => (
+                  <tr key={study.study_id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-sm text-gray-900">{study.patient_id}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">John Doe</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">{study.status}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">ACC-{study.assertion_number}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">{study.modality}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">{study.description}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">{study.date}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">{study.time}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">{study.report?.status ?? 'No status'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">{study.source}</td>
+                    <td className="px-4 py-3 text-sm">
+                      {study.doctors && study.doctors.length > 0 ? (
+                        <div className="flex items-center gap-1 text-blue-600">
+                          <Users className="w-3 h-3" />
+                          <span className="text-xs">{study.doctors.length} doctor(s)</span>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 text-xs">Not assigned</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleEditStudy(study.study_id)}
+                          className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                          title="Edit Study"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteStudy(study.study_id)}
+                          className="p-1 text-red-600 hover:bg-red-50 rounded"
+                          title="Delete Study"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => openAssignModal(study.study_id)}
+                          className="p-1 text-green-600 hover:bg-green-50 rounded"
+                          title="Assign Staff"
+                        >
+                          <UserPlus className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile Cards */}
+          <div className="lg:hidden divide-y divide-gray-200">
+            {displayedStudies.map((study) => (
+              <div key={study.study_id} className="p-4">
+                <div className="flex justify-between items-start mb-2">
+                  <div className="font-medium text-gray-900">{study.patient_id} - John Doe</div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleEditStudy(study.study_id)}
+                      className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteStudy(study.study_id)}
+                      className="p-1 text-red-600 hover:bg-red-50 rounded"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => openAssignModal(study.study_id)}
+                      className="p-1 text-green-600 hover:bg-green-50 rounded"
+                    >
+                      <UserPlus className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+                <div className="text-sm text-gray-600 space-y-1">
+                  <div>Modality: {study.modality}</div>
+                  <div>Description: {study.description}</div>
+                  <div>Date: {study.date} at {study.time}</div>
+                  <div>Accession: ACC-{study.assertion_number}</div>
+                  <div className="text-blue-600 underline cursor-pointer">Report_001.pdf</div>
+                  {study.radiologist && (
+                    <div className="text-green-600">Radiologist: {study.radiologist.name}</div>
+                  )}
+                  {study.doctors && study.doctors.length > 0 && (
+                    <div className="text-blue-600">Doctors: {study.doctors.map(d => d.name).join(', ')}</div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Add New Study Modal */}
+      {isAddStudyOpen && (
+        <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold text-gray-900">Add New Study</h2>
+                <button
+                  onClick={() => setIsAddStudyOpen(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                {/* Patient Information */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Patient ID
+                    </label>
+                    <input
+                      type="text"
+                      value={newStudy.patient_id}
+                      onChange={(e) => setNewStudy(prev => ({ ...prev, patient_id: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Patient Name
+                    </label>
+                    <input
+                      type="text"
+                      value={newStudy.patient_name}
+                      onChange={(e) => setNewStudy(prev => ({ ...prev, patient_name: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                {/* Study Details */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Modality
+                    </label>
+                    <select
+                      value={newStudy.modality}
+                      onChange={(e) => setNewStudy(prev => ({ ...prev, modality: e.target.value }))}
+                      className="w-full px-3 py-2 border border-emerald-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    >
+                      <option value="">Select Modality</option>
+                      <option value="CT">CT</option>
+                      <option value="MRI">MRI</option>
+                      <option value="DX">DX</option>
+                      <option value="CR">CR</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Server Type
+                    </label>
+                    <select
+                      value={newStudy.server_type}
+                      onChange={(e) => setNewStudy(prev => ({ ...prev, server_type: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    >
+                      <option value="">Select Server Type</option>
+                      <option value="PACS">PACS</option>
+                      <option value="DICOM">DICOM</option>
+                      <option value="CLOUD">CLOUD</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Accession Number
+                  </label>
+                  <input
+                    type="text"
+                    value={newStudy.assertion_number}
+                    onChange={(e) => setNewStudy(prev => ({ ...prev, assertion_number: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Description
+                  </label>
+                  <textarea
+                    value={newStudy.description}
+                    onChange={(e) => setNewStudy(prev => ({ ...prev, description: e.target.value }))}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  />
+                </div>
+
+                {/* File Uploads */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    DICOM Files
+                  </label>
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                    <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                    <p className="text-sm text-gray-600 mb-2">
+                      <span className="text-blue-600 underline cursor-pointer">Upload a file</span> or drag and drop
+                    </p>
+                    <p className="text-xs text-gray-500">DCM, DOC, DOCX files up to 10MB</p>
+                    <input
+                      type="file"
+                      multiple
+                      accept=".dcm,.doc,.docx"
+                      onChange={(e) => handleFileUpload(e.target.files, 'dicom')}
+                      className="hidden"
+                      id="dicom-upload"
+                    />
+                    <label htmlFor="dicom-upload" className="cursor-pointer">
+                      <div className="mt-2">
+                        {newStudy.dicom_files.length > 0 && (
+                          <p className="text-sm text-green-600">
+                            {newStudy.dicom_files.length} file(s) selected
+                          </p>
+                        )}
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Report Files
+                  </label>
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                    <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                    <p className="text-sm text-gray-600 mb-2">
+                      <span className="text-blue-600 underline cursor-pointer">Upload a file</span> or drag and drop
+                    </p>
+                    <p className="text-xs text-gray-500">PDF, DOC, DOCX files up to 10MB</p>
+                    <input
+                      type="file"
+                      multiple
+                      accept=".pdf,.doc,.docx"
+                      onChange={(e) => handleFileUpload(e.target.files, 'report')}
+                      className="hidden"
+                      id="report-upload"
+                    />
+                    <label htmlFor="report-upload" className="cursor-pointer">
+                      <div className="mt-2">
+                        {newStudy.report_files.length > 0 && (
+                          <p className="text-sm text-green-600">
+                            {newStudy.report_files.length} file(s) selected
+                          </p>
+                        )}
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-gray-200">
+                  <button
+                    onClick={() => setIsAddStudyOpen(false)}
+                    className="px-6 py-2 border border-emerald-300 text-gray-700 rounded-lg hover:bg-emerald-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSubmitStudy}
+                    className="px-6 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600"
+                  >
+                    Upload Study
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Assign Staff Modal */}
+      {isAssignModalOpen && (
+        <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold text-gray-900">Assign Staff to Study</h2>
+                <button
+                  onClick={() => setIsAssignModalOpen(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                {/* Radiologist Selection */}
+                {/*<div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    <User className="w-4 h-4 inline mr-2" />
+                    Assign Radiologist (Required - One Only)
+                  </label>
+                  <div className="space-y-2">
+                    {radiologists.map((radiologist) => (
+                      <label key={radiologist.id} className="flex items-center p-3 border rounded-lg hover:bg-gray-50">
+                        <input
+                          type="radio"
+                          name="radiologist"
+                          value={radiologist.id.toString()}
+                          checked={assignmentForm.radiologist_id === radiologist.id.toString()}
+                          onChange={(e) => setAssignmentForm(prev => ({
+                            ...prev,
+                            radiologist_id: e.target.value
+                          }))}
+                          className="mr-3"
+                        />
+                        <div>
+                          <div className="font-medium text-gray-900">{radiologist.name}</div>
+                          <div className="text-sm text-gray-600">{radiologist.specialization}</div>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>*/}
+
+                {/* Doctor Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    <Users className="w-4 h-4 inline mr-2" />
+                    Assign Doctors (Optional - Multiple Allowed)
+                  </label>
+                  <div className="space-y-2">
+                    {doctors.map((doctor) => (
+                      <label key={doctor.id} className="flex items-center p-3 border rounded-lg hover:bg-gray-50">
+                        <input
+                          type="checkbox"
+                          value={doctor.id.toString()}
+                          checked={assignmentForm.doctor_ids.includes(doctor.id.toString())}
+                          onChange={(e) => handleDoctorSelection(e.target.value)}
+                          className="mr-3"
+                        />
+                        <div>
+                          <div className="font-medium text-gray-900">{doctor.name}</div>
+                          <div className="text-sm text-gray-600">{doctor.specialization}</div>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Current Assignments Summary */}
+                {(assignmentForm.radiologist_id || assignmentForm.doctor_ids.length > 0) && (
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <h4 className="font-medium text-blue-900 mb-2">Assignment Summary:</h4>
+                    {assignmentForm.radiologist_id && (
+                      <div className="text-sm text-blue-800 mb-1">
+                        <User className="w-3 h-3 inline mr-1" />
+                        Radiologist: {radiologists.find(r => r.id.toString() === assignmentForm.radiologist_id)?.name}
+                      </div>
+                    )}
+                    {assignmentForm.doctor_ids.length > 0 && (
+                      <div className="text-sm text-blue-800">
+                        <Users className="w-3 h-3 inline mr-1" />
+                        Doctors ({assignmentForm.doctor_ids.length}): {
+                          assignmentForm.doctor_ids
+                            .map(id => doctors.find(d => d.id.toString() === id)?.name)
+                            .join(', ')
+                        }
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-gray-200">
+                  <button
+                    onClick={() => setIsAssignModalOpen(false)}
+                    className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleAssignStaff}
+                    disabled={!assignmentForm.radiologist_id}
+                    className="px-6 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  >
+                    Assign Staff
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
-}
+};
+
+export default MedicalStudyInterface;
