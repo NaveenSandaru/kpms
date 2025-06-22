@@ -108,6 +108,7 @@ router.put('/:study_id', /* authenticateToken, */ async (req, res) => {
   try {
     const studyId = parseInt(req.params.study_id);
     console.debug("put method called");
+    console.debug(req.body);
     // Extract custom assignment fields
     const { radiologist_id, doctor_ids, ...rest } = req.body;
 
@@ -121,7 +122,7 @@ router.put('/:study_id', /* authenticateToken, */ async (req, res) => {
         updateData.radiologist = { disconnect: true };
       } else {
         updateData.radiologist = {
-          connect: { radiologist_id: Number(radiologist_id) }
+          connect: { radiologist_id } // ✅ no conversion
         };
       }
     }

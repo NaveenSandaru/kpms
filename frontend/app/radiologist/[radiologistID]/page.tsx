@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, Plus, Search, MoreHorizontal, X, Upload, FileText, Edit, Trash2, UserPlus, User, Users } from 'lucide-react';
+import { Calendar, Clock, Plus, Search, MoreHorizontal, X, Upload, FileText, Edit, Trash2, UserPlus, User, Users, Check } from 'lucide-react';
 
 // Types based on the database structure
 interface Doctor {
@@ -356,7 +356,7 @@ const MedicalStudyInterface: React.FC = () => {
         </div>*/}
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="bg-white rounded-lg p-6 shadow-sm">
             <div className="flex justify-between items-start">
               <div>
@@ -373,10 +373,21 @@ const MedicalStudyInterface: React.FC = () => {
                 <div className="text-sm font-medium text-gray-600 mb-1">Today's Scans</div>
                 <div className="text-3xl font-bold text-gray-900">{todayCount}</div>
               </div>
-              <Clock className="w-8 h-8 text-green-500" />
+              <Clock className="w-8 h-8 text-yellow-500" />
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg p-6 shadow-sm">
+            <div className="flex justify-between items-start">
+              <div>
+                <div className="text-sm font-medium text-gray-600 mb-1">Reported Today</div>
+                <div className="text-3xl font-bold text-gray-900">3</div>
+              </div>
+              <Check className="w-8 h-8 text-green-500" />
             </div>
           </div>
         </div>
+
 
         {/* Filters and Search */}
         <div className="bg-white rounded-lg shadow-sm mb-6">
