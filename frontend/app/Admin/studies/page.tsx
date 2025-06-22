@@ -18,7 +18,7 @@ interface Radiologist {
 interface Study {
   study_id: number;
   patient_id: string;
-  radiologist_id?: number;
+  radiologist_id: string;
   radiologist?: Radiologist;
   doctors?: Doctor[];
   date: string;
@@ -277,7 +277,6 @@ const MedicalStudyInterface: React.FC = () => {
         if (!studyResponse.ok) {
           throw new Error(`Study creation failed with status: ${studyResponse.status}`);
         }
-
         const newStudyData = await studyResponse.json();
         console.log('Study created successfully:', newStudyData);
 
@@ -296,6 +295,46 @@ const MedicalStudyInterface: React.FC = () => {
           dicom_files: [],
           report_files: []
         });
+
+        // Step 4: Create new report reocrd in reports table
+        const ReportResponse = await fetch('http://localhost:5000/reports', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(
+            {
+              report_file_url: reportFileUrl,
+              status: 'new',
+              study_id: newStudyData.study_id,
+            }
+          )
+        });
+
+        if (!ReportResponse.ok) {
+          throw new Error(`Report creation failed with status: ${ReportResponse.status}`);
+        }
+        const reportData = await ReportResponse.json();
+        console.log('Report created successfully:', reportData);
+
+        // Step 5: Update study with report ID
+        const updateStudyResponse = await fetch(`http://localhost:5000/studies/${newStudyData.study_id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(
+            {
+              report_id: reportData.report_id,
+            }
+          )
+        });
+
+        if (!updateStudyResponse.ok) {
+          throw new Error(`Study update failed with status: ${updateStudyResponse.status}`);
+        }
+        const updatedStudyData = await updateStudyResponse.json();
+        console.log('Study updated successfully:', updatedStudyData);
       } catch (error) {
         console.error('Error creating study:', error);
         setError('Failed to create study. Please try again.');
@@ -303,19 +342,19 @@ const MedicalStudyInterface: React.FC = () => {
     } catch (error) {
       console.error('Unexpected error in study submission:', error);
       setError('An unexpected error occurred. Please try again.');
-    } finally {
-      setLoading(false);
     }
   };
 
   const handleAssignStaff = async () => {
     if (!selectedStudyId) return;
-
+    console.log(assignmentForm);
     try {
       const payload: any = {
-        radiologist_id: assignmentForm.radiologist_id ? parseInt(assignmentForm.radiologist_id) : null,
+        radiologist_id: assignmentForm.radiologist_id,
         doctor_ids: assignmentForm.doctor_ids
       };
+
+      console.log(payload);
 
       const res = await fetch(`http://localhost:5000/studies/${selectedStudyId}`, {
         method: 'PUT',
