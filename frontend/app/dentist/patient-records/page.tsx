@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useContext } from 'react'
 import { Search, User, FileText, Calendar, Phone, Mail, Download, Upload, AlertCircle, Activity, X, ArrowLeft, Plus } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card'
@@ -11,6 +11,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/Components/ui/tabs'
 import { Textarea } from '@/Components/ui/textarea'
 import { Label } from '@/Components/ui/label'
 import axios from 'axios'
+import { AuthContext } from '@/context/auth-context'
+import { useRouter } from 'next/navigation'
 
 interface Patient {
   patient_id: string
@@ -116,8 +118,7 @@ export default function DentistDashboard({ params }: DashboardProps) {
 
   const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const [doctorID, setDoctorID] = useState("dent123");
+  const {user} = useContext(AuthContext);
 
   const [searchTerm, setSearchTerm] = useState('')
   const [dentist, setDentist] = useState<Dentist | null>(null)
@@ -147,7 +148,7 @@ export default function DentistDashboard({ params }: DashboardProps) {
     setLoadingPatients(true);
     try{
       const response = await axios.get(
-        `${backendURL}/appointments/fordentist/patients/${doctorID}`
+        `${backendURL}/appointments/fordentist/patients/${user?.id}`
       );
       if(response.status == 500){
         throw new Error("Internal Server Error");
@@ -229,9 +230,9 @@ export default function DentistDashboard({ params }: DashboardProps) {
     setIsSubmittingNote(true);
     try {
       const response = await axios.post(`${backendURL}/soap-notes`, {
+        dentist_id: user?.id,
         patient_id: selectedPatient.patient_id,
         note: newNoteText.trim(),
-        date: new Date().toISOString().split('T')[0] // Current date in YYYY-MM-DD format
       });
 
       if (response.status === 200 || response.status === 201) {
@@ -324,32 +325,10 @@ export default function DentistDashboard({ params }: DashboardProps) {
     }
   },[selectedPatient]);
 
-  useEffect(() => {
-    // Simulate API call to fetch dentist data
-    const fetchDentistData = async () => {
-      try {
-        setDentist(mockDentist)
-        setLoading(false)
-      } catch (error) {
-        console.error('Error fetching dentist data:', error)
-        setLoading(false)
-      }
-    }
-
-    fetchDentistData()
-  }, [params.dentistId]);
-
   useEffect(()=>{
+    if(!user) return;
     fetchPatients();
-  },[]);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-emerald-600"></div>
-      </div>
-    )
-  }
+  },[user]);
 
   const PatientDetailsContent = () => (
     <div className="h-full flex flex-col">
