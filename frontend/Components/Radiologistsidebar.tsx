@@ -51,16 +51,6 @@ const RadiologistSidebar = () => {
         url: `/radiologist/${radiologistId}`,
         icon: LayoutGrid,
       },
-      {
-        title: "Scans",
-        url: `/radiologist/${radiologistId}/scans`,
-        icon: ImageIcon,
-      },
-      {
-        title: "Reports",
-        url: `/radiologist/${radiologistId}/reports`,
-        icon: FileText,
-      },
     ];
   }, [radiologistId]);
 
