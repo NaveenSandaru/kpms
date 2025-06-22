@@ -4,8 +4,8 @@ import { usePathname } from "next/navigation";
 import { useState, useContext, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { BarChart3, LogOut, Settings, User2, Menu, X } from "lucide-react";
-//import { AuthContext } from "@/context/auth-context";
-//import { toast } from "sonner";
+import { AuthContext } from "@/context/auth-context";
+import { toast } from "sonner";
 
 import {
   Sidebar,
@@ -19,7 +19,6 @@ import {
   SidebarFooter,
 } from "@/Components/ui/sidebar";
 
-import Image from "next/image";
 import {
   LayoutGrid,
   KanbanSquare,
@@ -30,48 +29,37 @@ import {
   UserCheck,
   Calendar,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-//import axios from "axios";
+import { Button } from "@/Components/ui/button";
+import axios from "axios";
 
 const PatientSidebar = () => {
-  //const {setUser, setAccessToken} = useContext(AuthContext);
+  const {setUser, setAccessToken, user} = useContext(AuthContext);
   const router = useRouter();
   const pathname = usePathname();
   const [isLoading, setIsLoading] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Extract receptionistID from pathname
-  const patinetId = useMemo(() => {
-    const pathSegments = pathname.split('/');
-    const patientIndex = pathSegments.findIndex(segment => segment === 'patient');
-    if (patientIndex !== -1 && pathSegments[patientIndex + 1]) {
-      return pathSegments[patientIndex + 1];
-    }
-    return null;
-  }, [pathname]);
 
-  // Generate dynamic menu items based on receptionistId
   const items = useMemo(() => {
-    if (!patinetId) return [];
-    
     return [
-    {
+     {
     title: "Dashboard",
-    url: `/patient/${patinetId}`,
+    url: "/patient",
     icon: LayoutGrid,
   },
   {
-    title: "Appointments",
-    url: `/patient/${patinetId}/appointments`,
+    title: "Make Appointments",
+    url: "/patient/makeappointments",
     icon: Calendar,
   },
   {
     title: "Billing & Payments",
-    url: `/patient//${patinetId}/billing`,
+    url: "/patient/billing",
     icon: UserCheck,
   },
+
     ];
-  }, [patinetId]);
+  }, []);
 
   // Close mobile menu when route changes
   useEffect(() => {
@@ -106,11 +94,6 @@ const PatientSidebar = () => {
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
-
-  // Don't render if no receptionistId is found
-  if (!patinetId) {
-    return null;
-  }
 
   return (
     <>
@@ -152,7 +135,12 @@ const PatientSidebar = () => {
           <p className="text-sm text-gray-600 text-center mt-1">
             Patient Dashboard
           </p>
-         
+          <p className="text-xs text-gray-500 text-center mt-1">
+            ID: {user?.id}
+          </p>
+          <p className="text-xs text-gray-500 text-center mt-1">
+            Name: {user?.name}
+          </p>
         </SidebarHeader>
 
         <SidebarContent className="p-4">
@@ -220,9 +208,14 @@ const PatientSidebar = () => {
             />*/}
           </div>
           <p className="text-xs text-gray-600 text-center mt-1">
-            Doctor Dashboard
+            Patient Dashboard
           </p>
-        
+          <p className="text-xs text-gray-500 text-center">
+            ID: {user?.id}
+          </p>
+          <p className="text-xs text-gray-500 text-center mt-1">
+            Name: {user?.name}
+          </p>
         </div>
 
         {/* Mobile Content */}
