@@ -1,18 +1,34 @@
 import express from 'express';
 import multer from 'multer';
 import path from 'path';
+import fs from 'fs';
 
 const router = express.Router();
 
-// Storage config for general files
+const UPLOAD_DIR = path.join('uploads', 'files');
+
+// Ensure upload directory exists
+if (!fs.existsSync(UPLOAD_DIR)) {
+  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+}
+
+// Storage config
 const storage = multer.diskStorage({
-  destination: 'uploads/files/',
+  destination: (req, file, cb) => {
+    cb(null, UPLOAD_DIR);
+  },
   filename: (req, file, cb) => {
-    cb(null, `${Date.now()}-${file.originalname}`);
+    const filePath = path.join(UPLOAD_DIR, file.originalname);
+
+    // Check and delete if file already exists
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath); // Delete the existing file
+    }
+
+    cb(null, file.originalname); // Keep original name, so it overwrites
   },
 });
 
-// No file type restriction – accepts any file
 const upload = multer({ storage });
 
 router.post('/', upload.single('file'), (req, res) => {
