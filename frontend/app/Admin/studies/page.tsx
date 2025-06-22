@@ -347,14 +347,11 @@ const MedicalStudyInterface: React.FC = () => {
 
   const handleAssignStaff = async () => {
     if (!selectedStudyId) return;
-    console.log(assignmentForm);
     try {
       const payload: any = {
         radiologist_id: assignmentForm.radiologist_id,
         doctor_ids: assignmentForm.doctor_ids
       };
-
-      console.log(payload);
 
       const res = await fetch(`http://localhost:5000/studies/${selectedStudyId}`, {
         method: 'PUT',
