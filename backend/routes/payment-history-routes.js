@@ -191,4 +191,61 @@ router.delete('/:appointment_id', /* authenticateToken, */ async (req, res) => {
   }
 });
 
+// Get payment history by patient ID
+router.get('/patient/:patient_id', /* authenticateToken, */ async (req, res) => {
+  try {
+    const patientId = req.params.patient_id;
+    // First, get all appointments for the patient
+    const appointments = await prisma.appointments.findMany({
+      where: { patient_id: patientId },
+      select: { appointment_id: true }
+    });
+
+    if (appointments.length === 0) {
+      return res.json([]);
+    }
+
+    // Get payment histories for these appointments
+    const paymentHistories = await prisma.payment_history.findMany({
+      where: {
+        appointment_id: {
+          in: appointments.map(a => a.appointment_id)
+        }
+      },
+      include: {
+        appointment: {
+          include: {
+            patient: {
+              select: {
+                patient_id: true,
+                name: true,
+                email: true,
+                phone_number: true,
+                profile_picture: true
+              }
+            },
+            dentist: {
+              select: {
+                dentist_id: true,
+                name: true,
+                email: true,
+                phone_number: true,
+                profile_picture: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: {
+        payment_date: 'desc' // Most recent payments first
+      }
+    });
+
+    res.json(paymentHistories);
+  } catch (error) {
+    console.error('Error fetching payment history for patient:', error);
+    res.status(500).json({ error: 'Failed to fetch payment history' });
+  }
+});
+
 export default router;
