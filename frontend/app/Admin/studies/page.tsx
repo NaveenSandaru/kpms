@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, Plus, Search, MoreHorizontal, X, Upload, FileText, Edit, Trash2, UserPlus, User, Users } from 'lucide-react';
 
 // Types based on the database structure
@@ -54,11 +54,11 @@ const MedicalStudyInterface: React.FC = () => {
   const [isAddStudyOpen, setIsAddStudyOpen] = useState(false);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [selectedStudyId, setSelectedStudyId] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState('1D');
+  const [activeTab, setActiveTab] = useState('ALL');
   const [activeModality, setActiveModality] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  
+
   const [newStudy, setNewStudy] = useState<NewStudyForm>({
     patient_id: '',
     patient_name: '',
@@ -75,46 +75,40 @@ const MedicalStudyInterface: React.FC = () => {
     doctor_ids: []
   });
 
-  // Mock data for radiologists and doctors
-  const mockRadiologists: Radiologist[] = [
-    { id: 1, name: 'Dr. Sarah Johnson', specialization: 'Neuroradiology' },
-    { id: 2, name: 'Dr. Michael Chen', specialization: 'Cardiothoracic Radiology' },
-    { id: 3, name: 'Dr. Emily Rodriguez', specialization: 'Musculoskeletal Radiology' }
-  ];
+  const [studies, setStudies] = useState<Study[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const mockDoctors: Doctor[] = [
-    { id: 1, name: 'Dr. John Smith', specialization: 'Cardiology' },
-    { id: 2, name: 'Dr. Lisa Wang', specialization: 'Neurology' },
-    { id: 3, name: 'Dr. David Brown', specialization: 'Orthopedics' },
-    { id: 4, name: 'Dr. Maria Garcia', specialization: 'Internal Medicine' },
-    { id: 5, name: 'Dr. Robert Taylor', specialization: 'Emergency Medicine' }
-  ];
+  // Fetch studies from the backend
+  useEffect(() => {
+    const fetchStudies = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await fetch('http://localhost:5000/studies');
+        console.log(response);
+        if (!response.ok) {
+          throw new Error(`Error: ${response.status}`);
+        }
+        const data = await response.json();
+        setStudies(data);
+      } catch (err) {
+        console.error('Failed to fetch studies:', err);
+        setError('Failed to load studies. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  // Mock data with some studies having assigned radiologists and doctors
-  const [studies, setStudies] = useState<Study[]>(
-    Array.from({ length: 77 }, (_, i) => ({
-      study_id: i + 1,
-      patient_id: 'PID001',
-      date: '2024-12-01',
-      time: '10:15AM',
-      modality: 'CT',
-      assertion_number: 203948 + i,
-      description: 'Head CT Scan',
-      source: 'CT-SOURCE-AE',
-      isurgent: false,
-      // Add some mock assignments for demonstration
-      radiologist_id: i % 3 === 0 ? mockRadiologists[0].id : undefined,
-      radiologist: i % 3 === 0 ? mockRadiologists[0] : undefined,
-      doctors: i % 4 === 0 ? [mockDoctors[0], mockDoctors[1]] : undefined
-    }))
-  );
+    fetchStudies();
+  }, []);
 
   const tabs = ['1D', '3D', '1W', '1M', '1Y', 'ALL'];
   const modalities = ['All', 'CT', 'MRI', 'DX', 'IO', 'CR'];
 
   const handleFileUpload = (files: FileList | null, type: 'dicom' | 'report') => {
     if (!files) return;
-    
+
     const fileArray = Array.from(files);
     setNewStudy(prev => ({
       ...prev,
@@ -124,7 +118,7 @@ const MedicalStudyInterface: React.FC = () => {
 
   const handleSubmitStudy = () => {
     console.log('Submitting study:', newStudy);
-    
+
     // Create new study object
     const newStudyRecord: Study = {
       study_id: studies.length + 1,
@@ -140,7 +134,7 @@ const MedicalStudyInterface: React.FC = () => {
 
     // Add to studies list
     setStudies(prev => [newStudyRecord, ...prev]);
-    
+
     setIsAddStudyOpen(false);
     // Reset form
     setNewStudy({
@@ -197,7 +191,7 @@ const MedicalStudyInterface: React.FC = () => {
   const openAssignModal = (studyId: number) => {
     setSelectedStudyId(studyId);
     setIsAssignModalOpen(true);
-    
+
     // Pre-populate form with existing assignments
     const study = studies.find(s => s.study_id === studyId);
     if (study) {
@@ -217,13 +211,32 @@ const MedicalStudyInterface: React.FC = () => {
     }));
   };
 
-  const displayedStudies = studies.slice((currentPage - 1) * 10, currentPage * 10);
-  const totalPages = Math.ceil(studies.length / 10);
+  // Filter studies based on search and modality
+  const filteredStudies = studies.filter(study => {
+    // Filter by modality if not 'All'
+    const modalityMatch = activeModality === 'All' || study.modality === activeModality;
+
+    // Filter by search term
+    const searchMatch = searchTerm === '' ||
+      (study.patient_id && study.patient_id.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (study.description && study.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (study.assertion_number && study.assertion_number.toString().includes(searchTerm));
+
+    return modalityMatch && searchMatch;
+  });
+
+  const displayedStudies = filteredStudies.slice((currentPage - 1) * 10, currentPage * 10);
+  const totalPages = Math.ceil(filteredStudies.length / 10);
 
   return (
     <div className="min-h-screen bg-gray-50 p-6 overflow-auto">
+    {loading && (
+          <div className="bg-blue-50 p-4 rounded-lg text-center">
+            <p className="text-blue-700">Loading studies...</p>
+          </div>
+        )}
       <div className="max-w-7xl mx-auto space-y-8">
-       {/* Header */}
+        {/* Header */}
         <div className="flex justify-between items-start">
           <div>
             <h1 className="text-3xl mt-6 md:mt-0 font-bold tracking-tight text-gray-900">
@@ -246,7 +259,7 @@ const MedicalStudyInterface: React.FC = () => {
               <Calendar className="w-8 h-8 text-blue-500" />
             </div>
           </div>
-          
+
           <div className="bg-white rounded-lg p-6 shadow-sm">
             <div className="flex justify-between items-start">
               <div>
@@ -268,11 +281,10 @@ const MedicalStudyInterface: React.FC = () => {
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                    activeTab === tab
+                  className={`px-3 py-1 rounded text-sm font-medium transition-colors ${activeTab === tab
                       ? 'bg-emerald-600 text-white'
                       : 'bg-emerald-100 text-emerald-600 hover:bg-emerald-200'
-                  }`}
+                    }`}
                 >
                   {tab}
                 </button>
@@ -286,11 +298,10 @@ const MedicalStudyInterface: React.FC = () => {
                 <button
                   key={modality}
                   onClick={() => setActiveModality(modality)}
-                  className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                    activeModality === modality
+                  className={`px-3 py-1 rounded text-sm font-medium transition-colors ${activeModality === modality
                       ? 'bg-emerald-600 text-white'
                       : 'bg-emerald-100 text-emerald-600 hover:bg-emerald-200'
-                  }`}
+                    }`}
                 >
                   {modality}
                 </button>
@@ -309,7 +320,7 @@ const MedicalStudyInterface: React.FC = () => {
                   className="w-full pl-10 pr-4 py-2 border border-emerald-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 />
               </div>
-              
+
               <div className="flex items-center gap-2">
                 <button className="px-4 py-2 text-emerald-600 border border-emerald-300 rounded-lg hover:bg-emerald-50">
                   Reset
@@ -679,9 +690,9 @@ const MedicalStudyInterface: React.FC = () => {
                           name="radiologist"
                           value={radiologist.id.toString()}
                           checked={assignmentForm.radiologist_id === radiologist.id.toString()}
-                          onChange={(e) => setAssignmentForm(prev => ({ 
-                            ...prev, 
-                            radiologist_id: e.target.value 
+                          onChange={(e) => setAssignmentForm(prev => ({
+                            ...prev,
+                            radiologist_id: e.target.value
                           }))}
                           className="mr-3"
                         />
