@@ -1,11 +1,10 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { ChevronDown, ArrowLeft, User, Mail, Phone, Clock, DollarSign, Calendar, Globe, Upload, X, Camera } from 'lucide-react';
+import { ArrowLeft, User, Mail, Phone, Upload, X, Camera } from 'lucide-react';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/Components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/Components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Progress } from '@/Components/ui/progress';
 import { Alert, AlertDescription } from '@/Components/ui/alert';
@@ -21,44 +20,28 @@ interface SecurityQuestionAnswer {
   answer: string;
 }
 
-interface DentistFormData {
+interface RadiologistFormData {
   name: string;
   email: string;
   password: string;
   confirmPassword: string;
   phoneNumber: string;
-  language: string;
-  serviceTypes: string;
-  workDaysFrom: string;
-  workDaysTo: string;
-  workTimeFrom: string;
-  workTimeTo: string;
-  appointmentDuration: string;
-  appointmentFee: string;
   profilePicture: File | null;
   securityQuestions: SecurityQuestionAnswer[];
 }
 
-const DentistSignUp: React.FC = () => {
+const RadiologistSignUp: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadError, setUploadError] = useState<string>('');
   
-  const [formData, setFormData] = useState<DentistFormData>({
+  const [formData, setFormData] = useState<RadiologistFormData>({
     name: '',
     email: '',
     password: '',
     confirmPassword: '',
     phoneNumber: '',
-    language: '',
-    serviceTypes: '',
-    workDaysFrom: '',
-    workDaysTo: '',
-    workTimeFrom: '',
-    workTimeTo: '',
-    appointmentDuration: '',
-    appointmentFee: '',
     profilePicture: null,
     securityQuestions: [
       { questionId: '', answer: '' },
@@ -67,7 +50,7 @@ const DentistSignUp: React.FC = () => {
     ]
   });
 
-  // Mock security questions (would come from database)
+  // Security questions for account recovery
   const securityQuestions: SecurityQuestion[] = [
     { id: 1, question: "What was the name of your first pet?" },
     { id: 2, question: "In what city were you born?" },
@@ -79,9 +62,7 @@ const DentistSignUp: React.FC = () => {
     { id: 8, question: "In what city did you meet your spouse/significant other?" }
   ];
 
-  const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-
-  const handleInputChange = (field: keyof DentistFormData, value: string) => {
+  const handleInputChange = (field: keyof RadiologistFormData, value: string) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -148,27 +129,14 @@ const DentistSignUp: React.FC = () => {
   };
 
   const validateStep1 = (): boolean => {
-    const required: (keyof DentistFormData)[] = ['name', 'email', 'password', 'confirmPassword'];
-    const hasRequiredFields = required.every(field => formData[field].trim() !== '');
-    const passwordsMatch = formData.password === formData.confirmPassword;
-    const passwordLengthValid = formData.password.length >= 8;
-    
-    return hasRequiredFields && passwordsMatch && passwordLengthValid;
+    const required: (keyof RadiologistFormData)[] = ['name', 'email', 'password', 'confirmPassword', 'phoneNumber'];
+    return required.every(field => formData[field].trim() !== '') && 
+           formData.password === formData.confirmPassword &&
+           formData.password.length >= 8;
   };
 
   const validateStep2 = (): boolean => {
     return formData.securityQuestions.every(sq => sq.questionId && sq.answer.trim() !== '');
-  };
-
-  const getPasswordErrors = (): string[] => {
-    const errors: string[] = [];
-    if (formData.password && formData.password.length < 8) {
-      errors.push('Password must be at least 8 characters long');
-    }
-    if (formData.password !== formData.confirmPassword && formData.confirmPassword) {
-      errors.push('Passwords do not match');
-    }
-    return errors;
   };
 
   const handleNext = () => {
@@ -187,26 +155,29 @@ const DentistSignUp: React.FC = () => {
         // Create FormData object to handle file upload
         const formDataToSend = new FormData();
         
-        // Append all form fields
-        Object.entries(formData).forEach(([key, value]) => {
-          if (key === 'securityQuestions') {
-            formDataToSend.append(key, JSON.stringify(value));
-          } else if (key === 'profilePicture' && value) {
-            formDataToSend.append(key, value as File);
-          } else if (key !== 'profilePicture') {
-            formDataToSend.append(key, value as string);
-          }
-        });
+        // Append all form fields according to radiologist table schema
+        formDataToSend.append('name', formData.name);
+        formDataToSend.append('email', formData.email);
+        formDataToSend.append('password', formData.password);
+        formDataToSend.append('phone_number', formData.phoneNumber);
         
-        console.log('Form submitted with file:', formData);
+        // Handle profile picture - convert to base64 string or file path as needed
+        if (formData.profilePicture) {
+          formDataToSend.append('profile_picture', formData.profilePicture);
+        }
+        
+        // Security questions for additional security (you may want to store these separately)
+        formDataToSend.append('security_questions', JSON.stringify(formData.securityQuestions));
+        
+        console.log('Radiologist registration data:', formData);
         
         // Example API call structure:
-        // const response = await fetch('/api/dentists/register', {
+        // const response = await fetch('/api/radiologists/register', {
         //   method: 'POST',
-        //   body: formDataToSend // Don't set Content-Type header, let browser set it
+        //   body: formDataToSend
         // });
         
-        alert('Registration completed successfully!');
+        alert('Radiologist registration completed successfully!');
       } catch (error) {
         console.error('Registration failed:', error);
         alert('Registration failed. Please try again.');
@@ -223,7 +194,6 @@ const DentistSignUp: React.FC = () => {
   };
 
   const progressValue = (currentStep / 2) * 100;
-  const passwordErrors = getPasswordErrors();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-100 py-8 px-4">
@@ -247,9 +217,9 @@ const DentistSignUp: React.FC = () => {
               // Step 1: Basic Information
               <div>
                 <CardHeader className="px-0 pt-0">
-                  <CardTitle className="text-3xl font-bold text-center">Create Your Account</CardTitle>
+                  <CardTitle className="text-3xl font-bold text-center text-emerald-900">Create Radiologist Account</CardTitle>
                   <CardDescription className="text-center mb-8">
-                    Enter your professional information to get started
+                    Enter your information to join as a radiologist
                   </CardDescription>
                 </CardHeader>
 
@@ -257,8 +227,8 @@ const DentistSignUp: React.FC = () => {
                   {/* Profile Picture Upload */}
                   <div className="space-y-4">
                     <Label className="flex items-center">
-                      <Camera className="w-4 h-4 mr-2" />
-                      Profile Picture
+                      <Camera className="w-4 h-4 mr-2 te" />
+                      Profile Picture (Optional)
                     </Label>
                     <div className="flex flex-col items-center space-y-4">
                       {/* Image Preview */}
@@ -323,7 +293,7 @@ const DentistSignUp: React.FC = () => {
                   <div className="space-y-2">
                     <Label htmlFor="name" className="flex items-center">
                       <User className="w-4 h-4 mr-2" />
-                      Full Name <span className="text-red-500 ml-1">*</span>
+                      Full Name <span className="text-red-500 font-bold">*</span>
                     </Label>
                     <Input
                       id="name"
@@ -340,7 +310,7 @@ const DentistSignUp: React.FC = () => {
                   <div className="space-y-2">
                     <Label htmlFor="email" className="flex items-center">
                       <Mail className="w-4 h-4 mr-2" />
-                      Email Address <span className="text-red-500 ml-1">*</span>
+                      Email Address <span className="text-red-500 font-bold">*</span>
                     </Label>
                     <Input
                       id="email"
@@ -348,7 +318,24 @@ const DentistSignUp: React.FC = () => {
                       required
                       value={formData.email}
                       onChange={(e) => handleInputChange('email', e.target.value)}
-                      placeholder="john.smith@email.com"
+                      placeholder="dr.smith@hospital.com"
+                      className="focus-visible:ring-emerald-200"
+                    />
+                  </div>
+
+                  {/* Phone */}
+                  <div className="space-y-2">
+                    <Label htmlFor="phone" className="flex items-center">
+                      <Phone className="w-4 h-4 mr-2" />
+                      Phone Number <span className="text-red-500 font-bold">*</span>
+                    </Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      required
+                      value={formData.phoneNumber}
+                      onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
+                      placeholder="+1 (555) 123-4567"
                       className="focus-visible:ring-emerald-200"
                     />
                   </div>
@@ -356,9 +343,7 @@ const DentistSignUp: React.FC = () => {
                   {/* Password */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="password">
-                        Password <span className="text-red-500 ml-1">*</span>
-                      </Label>
+                      <Label htmlFor="password">Password <span className="text-red-500 font-bold">*</span></Label>
                       <Input
                         id="password"
                         required
@@ -368,12 +353,10 @@ const DentistSignUp: React.FC = () => {
                         placeholder="••••••••"
                         className="focus-visible:ring-emerald-200"
                       />
-                      <p className="text-sm text-gray-500">Minimum 8 characters</p>
+                      <p className="text-xs text-gray-500">Minimum 8 characters</p>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="confirmPassword">
-                        Confirm Password <span className="text-red-500 ml-1">*</span>
-                      </Label>
+                      <Label htmlFor="confirmPassword">Confirm Password <span className="text-red-500 font-bold">*</span></Label>
                       <Input
                         id="confirmPassword"
                         type="password"
@@ -386,150 +369,16 @@ const DentistSignUp: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Phone */}
-                  <div className="space-y-2">
-                    <Label htmlFor="phone" className="flex items-center">
-                      <Phone className="w-4 h-4 mr-2" />
-                      Phone Number
-                    </Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      value={formData.phoneNumber}
-                      onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
-                      placeholder="+1 (555) 123-4567"
-                      className="focus-visible:ring-emerald-200"
-                    />
-                  </div>
-
-                  {/* Language & Service Types */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="language" className="flex items-center">
-                        <Globe className="w-4 h-4 mr-2" />
-                        Language
-                      </Label>
-                      <Input
-                        id="language"
-                        type="text"
-                        value={formData.language}
-                        onChange={(e) => handleInputChange('language', e.target.value)}
-                        placeholder="English, Spanish, French..."
-                        className="focus-visible:ring-emerald-200"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="serviceTypes">Service Types</Label>
-                      <Input
-                        id="serviceTypes"
-                        type="text"
-                        value={formData.serviceTypes}
-                        onChange={(e) => handleInputChange('serviceTypes', e.target.value)}
-                        placeholder="General, Orthodontics, etc."
-                        className="focus-visible:ring-emerald-200"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Work Days */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="flex items-center">
-                        <Calendar className="w-4 h-4 mr-2" />
-                        Work Days From
-                      </Label>
-                      <Select value={formData.workDaysFrom} onValueChange={(value) => handleInputChange('workDaysFrom', value)}>
-                        <SelectTrigger className="focus:ring-emerald-200">
-                          <SelectValue placeholder="Select Day" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {daysOfWeek.map(day => (
-                            <SelectItem key={day} value={day}>{day}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Work Days To</Label>
-                      <Select value={formData.workDaysTo} onValueChange={(value) => handleInputChange('workDaysTo', value)}>
-                        <SelectTrigger className="focus:ring-emerald-200">
-                          <SelectValue placeholder="Select Day" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {daysOfWeek.map(day => (
-                            <SelectItem key={day} value={day}>{day}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  {/* Work Time */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="workTimeFrom" className="flex items-center">
-                        <Clock className="w-4 h-4 mr-2" />
-                        Work Time From
-                      </Label>
-                      <Input
-                        id="workTimeFrom"
-                        type="time"
-                        value={formData.workTimeFrom}
-                        onChange={(e) => handleInputChange('workTimeFrom', e.target.value)}
-                        className="focus-visible:ring-emerald-200"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="workTimeTo">Work Time To</Label>
-                      <Input
-                        id="workTimeTo"
-                        type="time"
-                        value={formData.workTimeTo}
-                        onChange={(e) => handleInputChange('workTimeTo', e.target.value)}
-                        className="focus-visible:ring-emerald-200"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Appointment Duration & Fee */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="duration">Appointment Duration (minutes)</Label>
-                      <Input
-                        id="duration"
-                        type="number"
-                        value={formData.appointmentDuration}
-                        onChange={(e) => handleInputChange('appointmentDuration', e.target.value)}
-                        placeholder="30"
-                        className="focus-visible:ring-emerald-200"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="fee" className="flex items-center">
-                        <DollarSign className="w-4 h-4 mr-2" />
-                        Appointment Fee
-                      </Label>
-                      <Input
-                        id="fee"
-                        type="number"
-                        step="0.01"
-                        value={formData.appointmentFee}
-                        onChange={(e) => handleInputChange('appointmentFee', e.target.value)}
-                        placeholder="100.00"
-                        className="focus-visible:ring-emerald-200"
-                      />
-                    </div>
-                  </div>
-
-                  {passwordErrors.length > 0 && (
+                  {/* Validation Alerts */}
+                  {formData.password && formData.password.length < 8 && (
                     <Alert variant="destructive">
-                      <AlertDescription>
-                        <ul className="list-disc list-inside space-y-1">
-                          {passwordErrors.map((error, index) => (
-                            <li key={index}>{error}</li>
-                          ))}
-                        </ul>
-                      </AlertDescription>
+                      <AlertDescription>Password must be at least 8 characters long</AlertDescription>
+                    </Alert>
+                  )}
+
+                  {formData.password !== formData.confirmPassword && formData.confirmPassword && (
+                    <Alert variant="destructive">
+                      <AlertDescription>Passwords do not match</AlertDescription>
                     </Alert>
                   )}
 
@@ -547,7 +396,7 @@ const DentistSignUp: React.FC = () => {
               // Step 2: Security Questions
               <div>
                 <CardHeader className="px-0 pt-0">
-                  <CardTitle className="text-3xl font-bold text-center">Security Questions</CardTitle>
+                  <CardTitle className="text-3xl font-bold text-center text-emerald-900">Security Questions</CardTitle>
                   <CardDescription className="text-center">
                     Please select and answer three security questions. These will help protect your account.
                   </CardDescription>
@@ -557,34 +406,25 @@ const DentistSignUp: React.FC = () => {
                   {formData.securityQuestions.map((securityQuestion, index) => (
                     <Card key={index} className="bg-emerald-50 border-emerald-100">
                       <CardHeader>
-                        <CardTitle className="text-lg text-emerald-900">
-                          Question {index + 1} <span className="text-red-500 ml-1">*</span>
-                        </CardTitle>
+                        <CardTitle className="text-lg text-emerald-900">Question {index + 1}</CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-4">
                         <div className="space-y-2">
-                          <Label>
-                            Select a security question <span className="text-red-500 ml-1">*</span>
-                          </Label>
-                          <Select 
-                            value={securityQuestion.questionId} 
-                            onValueChange={(value) => handleSecurityQuestionChange(index, 'questionId', value)}
+                          <Label>Select a security question</Label>
+                          <select
+                            value={securityQuestion.questionId}
+                            onChange={(e) => handleSecurityQuestionChange(index, 'questionId', e.target.value)}
+                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                           >
-                            <SelectTrigger className="focus:ring-emerald-500">
-                              <SelectValue placeholder="Select a security question" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {getAvailableQuestions(index).map(q => (
-                                <SelectItem key={q.id} value={q.id.toString()}>{q.question}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                            <option value="">Select a security question</option>
+                            {getAvailableQuestions(index).map(q => (
+                              <option key={q.id} value={q.id.toString()}>{q.question}</option>
+                            ))}
+                          </select>
                         </div>
 
                         <div className="space-y-2">
-                          <Label>
-                            Your Answer <span className="text-red-500 ml-1">*</span>
-                          </Label>
+                          <Label>Your Answer</Label>
                           <Input
                             type="text"
                             value={securityQuestion.answer}
@@ -627,4 +467,4 @@ const DentistSignUp: React.FC = () => {
   );
 };
 
-export default DentistSignUp;
+export default RadiologistSignUp;

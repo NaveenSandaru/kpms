@@ -291,7 +291,7 @@ const ReceptionistSignUp: React.FC = () => {
                   <div className="space-y-2">
                     <Label htmlFor="name" className="flex items-center">
                       <User className="w-4 h-4 mr-2" />
-                      Full Name *
+                      Full Name <span className="text-red-500 font-bold">*</span>
                     </Label>
                     <Input
                       id="name"
@@ -308,7 +308,7 @@ const ReceptionistSignUp: React.FC = () => {
                   <div className="space-y-2">
                     <Label htmlFor="email" className="flex items-center">
                       <Mail className="w-4 h-4 mr-2" />
-                      Email Address *
+                      Email Address <span className="text-red-500 font-bold">*</span>
                     </Label>
                     <Input
                       id="email"
@@ -325,7 +325,7 @@ const ReceptionistSignUp: React.FC = () => {
                   <div className="space-y-2">
                     <Label htmlFor="phone" className="flex items-center">
                       <Phone className="w-4 h-4 mr-2" />
-                      Phone Number *
+                      Phone Number <span className="text-red-500 font-bold">*</span>
                     </Label>
                     <Input
                       id="phone"
@@ -341,7 +341,7 @@ const ReceptionistSignUp: React.FC = () => {
                   {/* Password */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="password">Password *</Label>
+                      <Label htmlFor="password">Password <span className="text-red-500 font-bold">*</span></Label>
                       <Input
                         id="password"
                         required
@@ -354,7 +354,7 @@ const ReceptionistSignUp: React.FC = () => {
                       <p className="text-xs text-gray-500">Minimum 8 characters</p>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="confirmPassword">Confirm Password *</Label>
+                      <Label htmlFor="confirmPassword">Confirm Password <span className="text-red-500 font-bold">*</span></Label>
                       <Input
                         id="confirmPassword"
                         type="password"
