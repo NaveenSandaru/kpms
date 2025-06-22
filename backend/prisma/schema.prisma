@@ -245,6 +245,7 @@ model study {
   dicom_file_url    String?
   body_part         String?
   reason            String?
+  status            String?
 
   // Relations
   patient           patients      @relation(fields: [patient_id], references: [patient_id])
