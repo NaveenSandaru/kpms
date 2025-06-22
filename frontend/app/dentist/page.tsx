@@ -40,8 +40,11 @@ const DentalDashboard = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [loadingTodaysAppointments, setLoadingTodaysAppointments] = useState(false);
   const [loadingUpcomingAppointments, setLoadingUpcomingAppointments] = useState(false);
+  const [changingStatus, setChangingStatus] = useState(false);
   const [todaysAppointments, setTodaysAppointments] = useState <Appointment[]>([]);
   const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([]);
+  const [status, setStatus] = useState("");
+  const [appointment_id, setAppointment_id] = useState("");
 
   useEffect(() => {
     const checkMobile = () => {
@@ -90,6 +93,34 @@ const DentalDashboard = () => {
       setLoadingUpcomingAppointments(false);
     }
   };
+
+  const updateStatusChange = async() => {
+    setChangingStatus(true);
+    try{
+      const response = await axios.put(
+        `${backendURL}/appointments/${appointment_id}`,
+        {
+          status: status
+        },{
+          withCredentials: true,
+          headers:{
+            "Content-type":"application/json"
+          }
+        }
+      );
+      if(response.status != 202){
+        throw new Error("Error updating status");
+      }
+    }
+    catch(err: any){
+      window.alert(err.message);
+    }
+    finally{
+      setChangingStatus(false);
+      setAppointment_id('');
+      setStatus('');
+    }
+  }
 
   const getDaysInMonth = (date: any) => {
     const year = date.getFullYear();
@@ -144,6 +175,8 @@ const DentalDashboard = () => {
 
   // Handle status change
   const handleStatusChange = (appointmentId: any, newStatus: any) => {
+    setStatus(newStatus);
+    setAppointment_id(appointmentId);
     setTodaysAppointments(prevAppointments =>
       prevAppointments.map(appointment =>
         appointment.appointment_id === appointmentId
@@ -187,6 +220,12 @@ const DentalDashboard = () => {
       return;
     }
   }, [isLoadingAuth]);
+
+  useEffect(() => {
+    if (!status || !appointment_id) return;
+    updateStatusChange();
+  }, [status, appointment_id]);
+  
   
 
   return (

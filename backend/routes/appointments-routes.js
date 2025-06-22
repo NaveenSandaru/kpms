@@ -462,7 +462,7 @@ router.put('/:appointment_id', /* authenticateToken, */ async (req, res) => {
       where: { appointment_id: Number(req.params.appointment_id) },
       data,
     });
-    res.json(updated);
+    res.status(202).json(updated);
   } catch {
     res.status(500).json({ error: 'Failed to update appointment' });
   }
