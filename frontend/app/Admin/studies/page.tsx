@@ -85,9 +85,9 @@ const MedicalStudyInterface: React.FC = () => {
   // Helper to convert API study payload into UI-friendly shape
   const normalizeStudy = (raw: any): Study => {
     const doctorsList: Doctor[] = (raw.dentistAssigns ?? []).map((da: any) => ({
-      id: da.dentist?.dentist_id 
-          ? (typeof da.dentist.dentist_id === 'string' ? da.dentist.dentist_id : da.dentist.dentist_id.toString())
-          : (da.dentist_id ?? '0'),
+      id: da.dentist?.dentist_id
+        ? (typeof da.dentist.dentist_id === 'string' ? da.dentist.dentist_id : da.dentist.dentist_id.toString())
+        : (da.dentist_id ?? '0'),
       name: da.dentist?.name ?? da.dentist?.email ?? 'Dentist',
       specialization: da.dentist?.specialization ?? ''
     }));
@@ -187,37 +187,125 @@ const MedicalStudyInterface: React.FC = () => {
     }));
   };
 
-  const handleSubmitStudy = () => {
-    console.log('Submitting study:', newStudy);
+  const handleSubmitStudy = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      console.log('Submitting study:', newStudy);
 
-    // Create new study object
-    const newStudyRecord: Study = {
-      study_id: studies.length + 1,
-      patient_id: newStudy.patient_id,
-      date: new Date().toISOString().split('T')[0],
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      modality: newStudy.modality,
-      assertion_number: parseInt(newStudy.assertion_number) || Math.floor(Math.random() * 1000000),
-      description: newStudy.description,
-      source: 'MANUAL-UPLOAD',
-      isurgent: false
-    };
+      // Step 1: Validate required DICOM file
+      if (newStudy.dicom_files.length === 0) {
+        setError('DICOM file is required');
+        setLoading(false);
+        return;
+      }
 
-    // Add to studies list
-    setStudies(prev => [newStudyRecord, ...prev]);
+      // Step 2: Upload DICOM file first
+      let dicomFileUrl = '';
+      try {
+        const dicomFormData = new FormData();
+        dicomFormData.append('file', newStudy.dicom_files[0]);
 
-    setIsAddStudyOpen(false);
-    // Reset form
-    setNewStudy({
-      patient_id: '',
-      patient_name: '',
-      modality: '',
-      server_type: '',
-      assertion_number: '',
-      description: '',
-      dicom_files: [],
-      report_files: []
-    });
+        const dicomResponse = await fetch('http://localhost:5000/files', {
+          method: 'POST',
+          body: dicomFormData
+        });
+
+        if (!dicomResponse.ok) {
+          throw new Error(`DICOM file upload failed with status: ${dicomResponse.status}`);
+        }
+
+        const dicomData = await dicomResponse.json();
+        dicomFileUrl = dicomData.url;
+        console.log('DICOM file uploaded successfully:', dicomFileUrl);
+      } catch (error) {
+        console.error('Error uploading DICOM file:', error);
+        setError('Failed to upload DICOM file. Please try again.');
+        setLoading(false);
+        return;
+      }
+
+      // Step 3: Upload report file if available
+      let reportFileUrl = '';
+      if (newStudy.report_files.length > 0) {
+        try {
+          const reportFormData = new FormData();
+          reportFormData.append('file', newStudy.report_files[0]);
+
+          const reportResponse = await fetch('http://localhost:5000/files', {
+            method: 'POST',
+            body: reportFormData
+          });
+
+          if (!reportResponse.ok) {
+            throw new Error(`Report file upload failed with status: ${reportResponse.status}`);
+          }
+
+          const reportData = await reportResponse.json();
+          reportFileUrl = reportData.url;
+          console.log('Report file uploaded successfully:', reportFileUrl);
+        } catch (error) {
+          console.error('Error uploading report file:', error);
+          // Report is optional, so we can continue without it
+          console.warn('Continuing without report file');
+        }
+      }
+
+      // Step 4: Create new study object with file URLs
+      const studyPayload = {
+        patient_id: newStudy.patient_id,
+        date: new Date().toISOString(), // Use full ISO string for Prisma DateTime
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        modality: newStudy.modality,
+        assertion_number: parseInt(newStudy.assertion_number) || Math.floor(Math.random() * 1000000),
+        description: newStudy.description,
+        dicom_file_url: dicomFileUrl,
+        source: newStudy.server_type || 'MANUAL-UPLOAD', // Use selected Source AE if available
+        isurgent: false
+      };
+
+      // Step 5: Submit study to backend
+      try {
+        const studyResponse = await fetch('http://localhost:5000/studies', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(studyPayload)
+        });
+
+        if (!studyResponse.ok) {
+          throw new Error(`Study creation failed with status: ${studyResponse.status}`);
+        }
+
+        const newStudyData = await studyResponse.json();
+        console.log('Study created successfully:', newStudyData);
+
+        // Update studies list with the new study
+        setStudies(prev => [normalizeStudy(newStudyData), ...prev]);
+
+        // Close modal and reset form
+        setIsAddStudyOpen(false);
+        setNewStudy({
+          patient_id: '',
+          patient_name: '',
+          modality: '',
+          server_type: '',
+          assertion_number: '',
+          description: '',
+          dicom_files: [],
+          report_files: []
+        });
+      } catch (error) {
+        console.error('Error creating study:', error);
+        setError('Failed to create study. Please try again.');
+      }
+    } catch (error) {
+      console.error('Unexpected error in study submission:', error);
+      setError('An unexpected error occurred. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleAssignStaff = async () => {
@@ -609,29 +697,16 @@ const MedicalStudyInterface: React.FC = () => {
 
               <div className="space-y-6">
                 {/* Patient Information */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Patient ID
-                    </label>
-                    <input
-                      type="text"
-                      value={newStudy.patient_id}
-                      onChange={(e) => setNewStudy(prev => ({ ...prev, patient_id: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Patient Name
-                    </label>
-                    <input
-                      type="text"
-                      value={newStudy.patient_name}
-                      onChange={(e) => setNewStudy(prev => ({ ...prev, patient_name: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                    />
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Patient ID
+                  </label>
+                  <input
+                    type="text"
+                    value={newStudy.patient_id}
+                    onChange={(e) => setNewStudy(prev => ({ ...prev, patient_id: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  />
                 </div>
 
                 {/* Study Details */}
@@ -654,7 +729,7 @@ const MedicalStudyInterface: React.FC = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Server Type
+                      Source AE
                     </label>
                     <select
                       value={newStudy.server_type}
@@ -698,10 +773,17 @@ const MedicalStudyInterface: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     DICOM Files
                   </label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                  <div
+                    className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center relative"
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      handleFileUpload(e.dataTransfer.files, 'dicom');
+                    }}
+                  >
                     <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
                     <p className="text-sm text-gray-600 mb-2">
-                      <span className="text-blue-600 underline cursor-pointer">Upload a file</span> or drag and drop
+                      <label htmlFor="dicom-upload" className="text-blue-600 underline cursor-pointer">Upload a file</label> or drag and drop
                     </p>
                     <p className="text-xs text-gray-500">DCM, DOC, DOCX files up to 10MB</p>
                     <input
@@ -709,18 +791,21 @@ const MedicalStudyInterface: React.FC = () => {
                       multiple
                       accept=".dcm,.doc,.docx"
                       onChange={(e) => handleFileUpload(e.target.files, 'dicom')}
-                      className="hidden"
+                      className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
                       id="dicom-upload"
                     />
-                    <label htmlFor="dicom-upload" className="cursor-pointer">
-                      <div className="mt-2">
-                        {newStudy.dicom_files.length > 0 && (
-                          <p className="text-sm text-green-600">
-                            {newStudy.dicom_files.length} file(s) selected
-                          </p>
-                        )}
-                      </div>
-                    </label>
+                    <div className="mt-2">
+                      {newStudy.dicom_files.length > 0 && (
+                        <div className="text-sm text-green-600">
+                          <p>{newStudy.dicom_files.length} file(s) selected</p>
+                          <ul className="text-left mt-2">
+                            {Array.from(newStudy.dicom_files).map((file, index) => (
+                              <li key={index} className="truncate">{file.name}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -728,10 +813,17 @@ const MedicalStudyInterface: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Report Files
                   </label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                  <div
+                    className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center relative"
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      handleFileUpload(e.dataTransfer.files, 'report');
+                    }}
+                  >
                     <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
                     <p className="text-sm text-gray-600 mb-2">
-                      <span className="text-blue-600 underline cursor-pointer">Upload a file</span> or drag and drop
+                      <label htmlFor="report-upload" className="text-blue-600 underline cursor-pointer">Upload a file</label> or drag and drop
                     </p>
                     <p className="text-xs text-gray-500">PDF, DOC, DOCX files up to 10MB</p>
                     <input
@@ -739,18 +831,21 @@ const MedicalStudyInterface: React.FC = () => {
                       multiple
                       accept=".pdf,.doc,.docx"
                       onChange={(e) => handleFileUpload(e.target.files, 'report')}
-                      className="hidden"
+                      className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
                       id="report-upload"
                     />
-                    <label htmlFor="report-upload" className="cursor-pointer">
-                      <div className="mt-2">
-                        {newStudy.report_files.length > 0 && (
-                          <p className="text-sm text-green-600">
-                            {newStudy.report_files.length} file(s) selected
-                          </p>
-                        )}
-                      </div>
-                    </label>
+                    <div className="mt-2">
+                      {newStudy.report_files.length > 0 && (
+                        <div className="text-sm text-green-600">
+                          <p>{newStudy.report_files.length} file(s) selected</p>
+                          <ul className="text-left mt-2">
+                            {Array.from(newStudy.report_files).map((file, index) => (
+                              <li key={index} className="truncate">{file.name}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 
