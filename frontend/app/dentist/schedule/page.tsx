@@ -1,17 +1,19 @@
 // app/dentist/[dentistId]/schedule/page.tsx
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Calendar, Clock, User, Search, Plus, X, Edit } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/Components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/Components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/Components/ui/dialog';
+import { Label } from '@/Components/ui/label';
+import { Textarea } from '@/Components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/Components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/Components/ui/tabs';
+import { AuthContext } from '@/context/auth-context';
+import axios from 'axios';
 
 interface Appointment {
   appointment_id: number;
@@ -24,8 +26,12 @@ interface Appointment {
   note: string;
   status: string;
   payment_status: string;
-  patient_name?: string;
-  patient_email?: string;
+  patient: {
+    patient_id: string,
+    name: string,
+    email: string,
+    profile_picture: string
+  };
 }
 
 interface BlockedDate {
@@ -42,48 +48,6 @@ interface DentistScheduleProps {
   };
 }
 
-// Mock data - replace with actual API calls
-const mockAppointments: Appointment[] = [
-  {
-    appointment_id: 1,
-    patient_id: "P001",
-    dentist_id: "D001",
-    date: "2025-06-12",
-    time_from: "10:00",
-    time_to: "10:30",
-    fee: 150.00,
-    note: "Routine checkup",
-    status: "confirmed",
-    payment_status: "paid",
-    patient_name: "John Doe",
-    patient_email: "john@example.com"
-  },
-  {
-    appointment_id: 2,
-    patient_id: "P002",
-    dentist_id: "D001",
-    date: "2025-06-12",
-    time_from: "14:00",
-    time_to: "15:00",
-    fee: 300.00,
-    note: "Root canal treatment",
-    status: "confirmed",
-    payment_status: "pending",
-    patient_name: "Jane Smith",
-    patient_email: "jane@example.com"
-  }
-];
-
-const mockBlockedDates: BlockedDate[] = [
-  {
-    blocked_date_id: 1,
-    dentist_id: "D001",
-    date: "2025-06-12",
-    time_from: "11:00",
-    time_to: "13:00"
-  }
-];
-
 const timeSlots = [
   "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
   "12:00", "12:30", "13:00", "13:30", "14:00", "14:30",
@@ -91,19 +55,61 @@ const timeSlots = [
 ];
 
 export default function DentistSchedulePage({ params }: DentistScheduleProps) {
+  const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
+  const { user, isLoadingAuth, isLoggedIn } = useContext(AuthContext);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [appointments, setAppointments] = useState<Appointment[]>(mockAppointments);
-  const [blockedDates, setBlockedDates] = useState<BlockedDate[]>(mockBlockedDates);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [blockedDates, setBlockedDates] = useState<BlockedDate[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("today");
   const [isNewAppointmentOpen, setIsNewAppointmentOpen] = useState(false);
   const [isBlockTimeOpen, setIsBlockTimeOpen] = useState(false);
+  const [loadingAppointments, setLoadingAppointments] = useState(false);
+  const [loadingBlockedSlots, setLoadingBlockedSlots] = useState(false);
+
+  const fetchAppointments = async () => {
+    setLoadingAppointments(true);
+    try {
+      const response = await axios.get(
+        `${backendURL}/appointments/fordentist/${user.id}`
+      );
+      if (response.status == 500) {
+        throw new Error("Internal server error");
+      }
+      setAppointments(response.data);
+    }
+    catch (err: any) {
+      window.alert(err.message);
+    }
+    finally {
+      setLoadingAppointments(false);
+    }
+  };
+
+  const fetchBlockedSlots = async () => {
+    setLoadingBlockedSlots(true);
+    try {
+      const response = await axios.get(
+        `${backendURL}/blocked-dates/fordentist/${user.id}`
+      );
+      if (response.status == 500) {
+        throw new Error("Internal Server Error");
+      }
+      setBlockedDates(response.data);
+    }
+    catch (err: any) {
+      window.alert(err.message);
+    }
+    finally {
+      setLoadingBlockedSlots(false);
+    }
+  };
 
   // Filter appointments based on selected date and search term
   const filteredAppointments = appointments.filter(apt => {
     const matchesDate = apt.date === selectedDate;
-    const matchesSearch = apt.patient_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         apt.note?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = apt.patient.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      apt.note?.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesDate && matchesSearch;
   });
 
@@ -140,6 +146,19 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
       return time >= apt.time_from && time < apt.time_to;
     });
   };
+
+  useEffect(() => {
+    if (isLoadingAuth) return;
+    if (!isLoggedIn) {
+      window.alert("Please login");
+      window.location.href = "/";
+      return;
+    }
+    if (user) {
+      fetchAppointments();
+      fetchBlockedSlots();
+    }
+  }, [user, isLoadingAuth]);
 
   const NewAppointmentForm = () => (
     <DialogContent className="max-w-md max-h-screen overflow-y-auto">
@@ -245,7 +264,7 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            
+
           </div>
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
             <Dialog open={isNewAppointmentOpen} onOpenChange={setIsNewAppointmentOpen}>
@@ -257,7 +276,7 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
               </DialogTrigger>
               <NewAppointmentForm />
             </Dialog>
-            
+
           </div>
         </div>
 
@@ -279,7 +298,7 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
               <CardContent>
                 <div className="space-y-2 max-h-[calc(100vh-20rem)] overflow-y-auto">
                   {timeSlots.map((time) => {
-                    const appointment = filteredAppointments.find(apt => 
+                    const appointment = filteredAppointments.find(apt =>
                       apt.time_from <= time && apt.time_to > time
                     );
                     const isBlocked = isTimeSlotBlocked(time);
@@ -295,7 +314,7 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-2 sm:space-y-0 ">
                               <div className="flex items-center space-x-2">
                                 <User className="w-4 h-4 text-gray-400" />
-                                <span className="font-medium">{appointment.patient_name}</span>
+                                <span className="font-medium">{appointment.patient.name}</span>
                                 <Badge className={getStatusColor(appointment.status)}>
                                   {appointment.status}
                                 </Badge>
@@ -334,23 +353,25 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
               <CardHeader className="pb-3 ">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base font-medium">
-                    Schedule for June 12, 2025
+                    Schedule for {new Date().toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                    })}
                   </CardTitle>
-                   <Dialog open={isBlockTimeOpen} onOpenChange={setIsBlockTimeOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="w-auto">
-                  
-                  Block Time
-                </Button>
-              </DialogTrigger>
-              <BlockTimeForm />
-            </Dialog>
+
+                  <Dialog open={isBlockTimeOpen} onOpenChange={setIsBlockTimeOpen}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" className="w-auto">
+
+                        Block Time
+                      </Button>
+                    </DialogTrigger>
+                    <BlockTimeForm />
+                  </Dialog>
                 </div>
                 <div className="text-sm text-gray-500">
-                  Appointments today: 25
-                </div>
-                <div className="text-sm text-gray-500">
-                  Changed to: 12
+                  Appointments today: {appointments.length}
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -423,7 +444,7 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
                         <tr key={appointment.appointment_id} className="border-b">
                           <td className="p-2">
                             <div>
-                              <div className="font-medium">{appointment.patient_name}</div>
+                              <div className="font-medium">{appointment.patient.name}</div>
                               <div className="text-sm text-gray-600 sm:hidden">
                                 {appointment.note}
                               </div>

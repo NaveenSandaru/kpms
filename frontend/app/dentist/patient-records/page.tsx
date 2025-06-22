@@ -52,13 +52,13 @@ interface MedicalHistory {
   patient_id: string
   medical_question_id: number
   medical_question_answer: string
-  question: {question_id: string, question: string}
+  question: { question_id: string, question: string }
 }
 
 interface MedicalReport {
   report_id: number
   patient_id: string
-  record_URL: string
+  record_url: string
   record_name?: string
 }
 
@@ -71,7 +71,7 @@ interface DashboardProps {
 // Dialog Component
 const Dialog = ({ open, onOpenChange, children }: { open: boolean, onOpenChange: (open: boolean) => void, children: React.ReactNode }) => {
   if (!open) return null;
-  
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="fixed inset-0 bg-black/50" onClick={() => onOpenChange(false)} />
@@ -118,7 +118,7 @@ export default function DentistDashboard({ params }: DashboardProps) {
 
   const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const {user} = useContext(AuthContext);
+  const { user } = useContext(AuthContext);
 
   const [searchTerm, setSearchTerm] = useState('')
   const [dentist, setDentist] = useState<Dentist | null>(null)
@@ -146,76 +146,76 @@ export default function DentistDashboard({ params }: DashboardProps) {
 
   const fetchPatients = async () => {
     setLoadingPatients(true);
-    try{
+    try {
       const response = await axios.get(
         `${backendURL}/appointments/fordentist/patients/${user?.id}`
       );
-      if(response.status == 500){
+      if (response.status == 500) {
         throw new Error("Internal Server Error");
       }
       setFetchedPatients(response.data);
     }
-    catch(err: any){
+    catch (err: any) {
       window.alert(err.message);
     }
-    finally{
+    finally {
       setLoadingPatients(false);
     }
   };
 
   const fetchPatientMedicalHistory = async (patient_id: string) => {
     setLoadingMedicalHistory(true);
-    try{
+    try {
       const response = await axios.get(
         `${backendURL}/medical-history/${patient_id}`
       );
-      if(response.status == 500){
+      if (response.status == 500) {
         throw new Error("Internal Server Error");
       }
       setMedicalHistory(response.data);
     }
-    catch(err:any){
+    catch (err: any) {
       window.alert(err.message);
     }
-    finally{
+    finally {
       setLoadingMedicalHistory(false);
     }
   };
 
   const fetchPatientMedicalReports = async (patient_id: string) => {
     setLoadingMedicalReports(true);
-    try{
+    try {
       const response = await axios.get(
         `${backendURL}/medical-reports/forpatient/${patient_id}`
       );
-      if(response.status == 500){
+      if (response.status == 500) {
         throw new Error("Internal Server Error");
       }
       setMedicalReport(response.data);
     }
-    catch(err: any){
+    catch (err: any) {
       window.alert(err.message);
     }
-    finally{
+    finally {
       setLoadingMedicalReports(false);
     }
   };
 
-  const fetchPatientSOAPNotes = async(patient_id: string) => {
+  const fetchPatientSOAPNotes = async (patient_id: string) => {
     setLoadingSOAPNotes(true);
-    try{
+    try {
       const response = await axios.get(
         `${backendURL}/soap-notes/forpatient/${patient_id}`
       );
-      if(response.status == 500){
+      if (response.status == 500) {
         throw new Error("Internal Server Error");
       }
       setSoapNote(response.data);
     }
-    catch(err: any){
+    catch (err: any) {
       window.alert(err.message);
     }
-    finally{
+    finally {
       setLoadingSOAPNotes(false);
     }
   }
@@ -254,7 +254,6 @@ export default function DentistDashboard({ params }: DashboardProps) {
     const file = event.target.files?.[0];
     if (file) {
       setSelectedFile(file);
-      // Auto-fill report name with filename (without extension)
       const nameWithoutExtension = file.name.replace(/\.[^/.]+$/, "");
       setReportName(nameWithoutExtension);
     }
@@ -270,31 +269,55 @@ export default function DentistDashboard({ params }: DashboardProps) {
     setIsUploadingReport(true);
     try {
       const formData = new FormData();
-      formData.append('file', selectedFile);
-      formData.append('patient_id', selectedPatient.patient_id);
-      formData.append('record_name', reportName.trim());
+      formData.append("file", selectedFile);
 
-      const response = await axios.post(`${backendURL}/medical-reports/upload`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-
-      if (response.status === 200 || response.status === 201) {
-        // Refresh medical reports
-        fetchPatientMedicalReports(selectedPatient.patient_id);
-        setSelectedFile(null);
-        setReportName('');
-        setIsUploadReportDialogOpen(false);
-        if (fileInputRef.current) {
-          fileInputRef.current.value = '';
+      const responseurl = await axios.post(
+        `${backendURL}/files`,
+        formData,
+        {
+          withCredentials: true,
         }
-        window.alert('Report uploaded successfully');
+      );
+
+      if (responseurl.status != 201) {
+        throw new Error("Error Uploading File");
       }
+
+      const response = await axios.post(
+        `${backendURL}/medical-reports`,
+        {
+          patient_id: selectedPatient.patient_id,
+          record_url: responseurl.data.url,
+          record_name: reportName || selectedFile.name.split(".")[0]
+        }
+      );
+      if (response.status != 201) {
+        throw new Error("Error Creating Record");
+      }
+      window.alert("Uploaded Successfully");
+
+
     } catch (err: any) {
       window.alert(err.message || 'Failed to upload report');
     } finally {
       setIsUploadingReport(false);
+      setIsUploadReportDialogOpen(false);
+    }
+  };
+
+  const handleFileDownload = async (record_url: string) => {
+    try {
+      const fileUrl = `${backendURL}${record_url}`;
+      const link = document.createElement('a');
+
+      link.href = fileUrl;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Error downloading file:', error);
+      alert('Failed to open/download the file.');
     }
   };
 
@@ -312,23 +335,23 @@ export default function DentistDashboard({ params }: DashboardProps) {
     setIsMobileOverlayOpen(false)
   }
 
-  useEffect(()=>{
-    if(selectedPatient){
+  useEffect(() => {
+    if (selectedPatient) {
       fetchPatientMedicalHistory(selectedPatient.patient_id);
       fetchPatientMedicalReports(selectedPatient.patient_id);
       fetchPatientSOAPNotes(selectedPatient.patient_id);
     }
-    else{
+    else {
       setMedicalHistory([]);
       setMedicalReport([]);
       setSoapNote([]);
     }
-  },[selectedPatient]);
+  }, [selectedPatient]);
 
-  useEffect(()=>{
-    if(!user) return;
+  useEffect(() => {
+    if (!user) return;
     fetchPatients();
-  },[user]);
+  }, [user]);
 
   const PatientDetailsContent = () => (
     <div className="h-full flex flex-col">
@@ -422,10 +445,10 @@ export default function DentistDashboard({ params }: DashboardProps) {
                             <p className="font-medium text-gray-900">{history.question?.question}</p>
                             <p className="text-gray-600 mt-1">{history.medical_question_answer}</p>
                           </div>
-                          {history.medical_question_answer.toLowerCase().includes('yes') && 
-                           history.question?.question.toLowerCase().includes('disease') && (
-                            <AlertCircle className="h-5 w-5 text-orange-500 flex-shrink-0" />
-                          )}
+                          {history.medical_question_answer.toLowerCase().includes('yes') &&
+                            history.question?.question.toLowerCase().includes('disease') && (
+                              <AlertCircle className="h-5 w-5 text-orange-500 flex-shrink-0" />
+                            )}
                         </div>
                       </div>
                     ))}
@@ -446,8 +469,8 @@ export default function DentistDashboard({ params }: DashboardProps) {
                   <FileText className="h-5 w-5" />
                   Medical Reports
                 </h3>
-                <Button 
-                  className='bg-emerald-500 hover:bg-emerald-600' 
+                <Button
+                  className='bg-emerald-500 hover:bg-emerald-600'
                   size="sm"
                   onClick={() => setIsUploadReportDialogOpen(true)}
                 >
@@ -468,11 +491,11 @@ export default function DentistDashboard({ params }: DashboardProps) {
                             <h4 className="font-medium text-gray-900">{report.record_name}</h4>
                           </div>
                         </div>
-                        <Button className=' hover:bg-emerald-100' variant="outline" size="sm" asChild>
-                          <a href={report.record_URL} target="_blank" rel="noopener noreferrer">
+                        <Button className=' hover:bg-emerald-100' variant="outline" size="sm" asChild onClick={() => { handleFileDownload(report.record_url) }}>
+                          <div>
                             <Download className="h-4 w-4 mr-2" />
                             View
-                          </a>
+                          </div>
                         </Button>
                       </div>
                     </CardContent>
@@ -483,9 +506,9 @@ export default function DentistDashboard({ params }: DashboardProps) {
                     <CardContent className="p-8 text-center">
                       <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                       <p className="text-gray-500 mb-4">No medical reports available</p>
-                      <Button 
-                        className='bg-emerald-500 hover:bg-emerald-600' 
-                        variant="outline" 
+                      <Button
+                        className='bg-emerald-500 hover:bg-emerald-600'
+                        variant="outline"
                         size="sm"
                         onClick={() => setIsUploadReportDialogOpen(true)}
                       >
@@ -501,8 +524,8 @@ export default function DentistDashboard({ params }: DashboardProps) {
             <TabsContent value="notes" className="space-y-4 mt-0">
               <div className="flex justify-between items-center">
                 <h3 className="text-lg font-semibold">SOAP Notes</h3>
-                <Button 
-                  className='bg-emerald-500 hover:bg-emerald-600' 
+                <Button
+                  className='bg-emerald-500 hover:bg-emerald-600'
                   size="sm"
                   onClick={() => setIsAddNoteDialogOpen(true)}
                 >
@@ -556,15 +579,14 @@ export default function DentistDashboard({ params }: DashboardProps) {
               />
             </div>
           </div>
-          
+
           <div className="flex-1 overflow-y-auto">
             <div className="p-2">
               {filteredPatients.map((patient) => (
-                <Card 
+                <Card
                   key={patient.patient_id}
-                  className={`mb-2 cursor-pointer transition-colors hover:bg-gray-50 ${
-                    selectedPatient?.patient_id === patient.patient_id ? 'ring-2 ring-emerald-500' : ''
-                  }`}
+                  className={`mb-2 cursor-pointer transition-colors hover:bg-gray-50 ${selectedPatient?.patient_id === patient.patient_id ? 'ring-2 ring-emerald-500' : ''
+                    }`}
                   onClick={() => handlePatientSelect(patient)}
                 >
                   <CardContent className="p-4">
@@ -646,7 +668,7 @@ export default function DentistDashboard({ params }: DashboardProps) {
               <X className="h-5 w-5" />
             </Button>
           </div>
-          
+
           {/* Mobile Content */}
           <div className="flex-1 overflow-hidden p-4">
             <PatientDetailsContent />

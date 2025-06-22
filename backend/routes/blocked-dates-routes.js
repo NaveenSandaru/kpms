@@ -14,6 +14,15 @@ router.get('/', /* authenticateToken, */ async (req, res) => {
   }
 });
 
+router.get('/fordentist/:dentist_id', /* authenticateToken, */ async (req, res) => {
+  try {
+    const blockedDates = await prisma.blocked_dates.findMany({where: {dentist_id: req.params.dentist_id}});
+    res.json(blockedDates);
+  } catch {
+    res.status(500).json({ error: 'Failed to fetch blocked dates' });
+  }
+});
+
 router.get('/:blocked_date_id', /* authenticateToken, */ async (req, res) => {
   try {
     const blockedDate = await prisma.blocked_dates.findUnique({
