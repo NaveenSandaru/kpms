@@ -11,7 +11,12 @@ router.get('/', /* authenticateToken, */ async (req, res) => {
       include: {
         patient: true,
         radiologist: true,
-        report: true
+        report: true,
+        dentistAssigns: {
+          include: {
+            dentist: true
+          }
+        }
       }
     });
     res.json(studies);
@@ -29,7 +34,12 @@ router.get('/:study_id', /* authenticateToken, */ async (req, res) => {
       include: {
         patient: true,
         radiologist: true,
-        report: true
+        report: true,
+        dentistAssigns: {
+          include: {
+            dentist: true
+          }
+        }
       }
     });
 
@@ -52,7 +62,12 @@ router.get('/patient/:patient_id', /* authenticateToken, */ async (req, res) => 
       include: {
         radiologist: true,
         report: true,
-        status: true
+        status: true,
+        dentistAssigns: {
+          include: {
+            dentist: true
+          }
+        }
       },
       orderBy: [
         { date: 'desc' },

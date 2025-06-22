@@ -85,7 +85,9 @@ const MedicalStudyInterface: React.FC = () => {
   // Helper to convert API study payload into UI-friendly shape
   const normalizeStudy = (raw: any): Study => {
     const doctorsList: Doctor[] = (raw.dentistAssigns ?? []).map((da: any) => ({
-      id: da.dentist?.dentist_id ? parseInt(da.dentist.dentist_id) : parseInt(da.dentist_id ?? '0'),
+      id: da.dentist?.dentist_id 
+          ? (typeof da.dentist.dentist_id === 'string' ? da.dentist.dentist_id : da.dentist.dentist_id.toString())
+          : (da.dentist_id ?? '0'),
       name: da.dentist?.name ?? da.dentist?.email ?? 'Dentist',
       specialization: da.dentist?.specialization ?? ''
     }));
