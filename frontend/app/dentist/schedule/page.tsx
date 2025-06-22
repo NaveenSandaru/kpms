@@ -77,6 +77,7 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
   const [creatingAppointment, setCreatingAppointment] = useState(false);
   const [creatingBlockSlot, setCreatingBlockSlot] = useState(false);
   const [deletingBlock, setDeletingBlock] = useState(false);
+  const [cancellingAppointment, setCancellingAppointment] = useState(false);
   const [dentistWorkInfo, setDentistWorkInfo] = useState<DentistWorkInfo>();
 
   //States for creating new appointment
@@ -264,6 +265,28 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
     }
     finally {
       setCreatingBlockSlot(false);
+    }
+  };
+
+  const handleAppointmentCancellation = async (appointment_id: number) => {
+    setCancellingAppointment(true);
+    try{
+      const response = await axios.put(
+        `${backendURL}/appointments/${appointment_id}`,
+        {
+          status: "cancelled"
+        }
+      );
+      if(response.status != 202){
+        throw new Error("Error cancelling appointment");
+      }
+      window.alert("Appointment Cancelled");
+    }
+    catch(err: any){
+      window.alert(err.message);
+    }
+    finally{
+      setCancellingAppointment(false);
     }
   }
 
@@ -517,7 +540,7 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
                 </td>
                 {showActions && (
                   <td className="p-2">
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={()=>{handleAppointmentCancellation(appointment.appointment_id)}}>
                       Cancel
                     </Button>
                   </td>
