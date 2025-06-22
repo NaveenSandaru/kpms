@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, Plus, Search, MoreHorizontal, X, Upload, FileText, Edit, Trash2, UserPlus, User, Users, Check } from 'lucide-react';
+import { useParams } from 'next/navigation';
 
 // Types based on the database structure
 interface Doctor {
@@ -51,6 +52,8 @@ interface AssignmentForm {
 }
 
 const MedicalStudyInterface: React.FC = () => {
+  // Get radiologist ID from route params
+  const { radiologistID } = useParams() as { radiologistID?: string };
   const [isAddStudyOpen, setIsAddStudyOpen] = useState(false);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [selectedStudyId, setSelectedStudyId] = useState<number | null>(null);
@@ -127,7 +130,9 @@ const MedicalStudyInterface: React.FC = () => {
         }
         const data = await response.json();
         const normalized = data.map((s: any) => normalizeStudy(s));
-        setStudies(normalized);
+        // Keep only studies assigned to the radiologist in the URL
+        const filtered = radiologistID ? normalized.filter((s: Study) => s.radiologist_id?.toString() === radiologistID) : normalized;
+        setStudies(filtered);
         console.log(normalized);
       } catch (err) {
         console.error('Failed to fetch studies:', err);
@@ -138,7 +143,7 @@ const MedicalStudyInterface: React.FC = () => {
     };
 
     fetchStudies();
-  }, []);
+  }, [radiologistID]);
 
   useEffect(() => {
     const fetchStaff = async () => {
