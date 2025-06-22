@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, Plus, Search, MoreHorizontal, X, Upload, FileText, Edit, Trash2, UserPlus, User, Users, Check } from 'lucide-react';
+import { Calendar, Clock, Plus, Search, MoreHorizontal, CheckCircle, X, Upload, FileText, Edit, Trash2, UserPlus, User, Users, Check } from 'lucide-react';
+import { useParams } from 'next/navigation';
 
 // Types based on the database structure
 interface Doctor {
@@ -51,6 +52,8 @@ interface AssignmentForm {
 }
 
 const MedicalStudyInterface: React.FC = () => {
+  // Get radiologist ID from route params
+  const { radiologistID } = useParams() as { radiologistID?: string };
   const [isAddStudyOpen, setIsAddStudyOpen] = useState(false);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [selectedStudyId, setSelectedStudyId] = useState<number | null>(null);
@@ -58,6 +61,8 @@ const MedicalStudyInterface: React.FC = () => {
   const [activeModality, setActiveModality] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [studyToEdit, setStudyToEdit] = useState<Study | null>(null);
 
   const [newStudy, setNewStudy] = useState<NewStudyForm>({
     patient_id: '',
@@ -127,7 +132,9 @@ const MedicalStudyInterface: React.FC = () => {
         }
         const data = await response.json();
         const normalized = data.map((s: any) => normalizeStudy(s));
-        setStudies(normalized);
+        // Keep only studies assigned to the radiologist in the URL
+        const filtered = radiologistID ? normalized.filter((s: Study) => s.radiologist_id?.toString() === radiologistID) : normalized;
+        setStudies(filtered);
         console.log(normalized);
       } catch (err) {
         console.error('Failed to fetch studies:', err);
@@ -138,7 +145,7 @@ const MedicalStudyInterface: React.FC = () => {
     };
 
     fetchStudies();
-  }, []);
+  }, [radiologistID]);
 
   useEffect(() => {
     const fetchStaff = async () => {
@@ -225,7 +232,8 @@ const MedicalStudyInterface: React.FC = () => {
 
     try {
       const payload: any = {
-        radiologist_id: assignmentForm.radiologist_id ? parseInt(assignmentForm.radiologist_id) : null,
+        radiologist_id: assignmentForm.radiologist_id,
+        //radiologist_id: assignmentForm.radiologist_id ? parseInt(assignmentForm.radiologist_id) : null,
         doctor_ids: assignmentForm.doctor_ids
       };
 
@@ -261,16 +269,242 @@ const MedicalStudyInterface: React.FC = () => {
     }
   };
 
-  const handleDeleteStudy = (studyId: number) => {
+  {/*const handleDeleteStudy = (studyId: number) => {
     if (confirm('Are you sure you want to delete this study?')) {
       setStudies(prev => prev.filter(study => study.study_id !== studyId));
     }
-  };
+  };*/}
 
   const handleEditStudy = (studyId: number) => {
-    // This would typically open an edit modal
-    console.log('Edit study:', studyId);
-    alert('Edit functionality would be implemented here');
+    const study = studies.find(s => s.study_id === studyId);
+    if (!study) return;
+
+    setStudyToEdit(study);
+    setIsEditMode(true);
+    setNewStudy({
+      patient_id: study.patient_id,
+      //patient_name: '', // Assuming we don't have this in the Study type yet
+      modality: study.modality,
+      server_type: study.source,
+      assertion_number: study.assertion_number.toString(),
+      description: study.description,
+      dicom_files: [], // Cannot pre-fill file inputs due to security restrictions
+      report_files: []
+    });
+    setIsAddStudyOpen(true);
+  };
+
+  // Handle the actual update of a study
+  const handleUpdateStudy = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      console.log('Updating study:', newStudy, studyToEdit);
+
+      if (!studyToEdit) {
+        setError('No study to edit');
+        setLoading(false);
+        return;
+      }
+
+      // Step 1: Handle DICOM file if a new one was uploaded
+      let dicomFileUrl = studyToEdit.dicom_file_url || '';
+      if (newStudy.dicom_files.length > 0) {
+        try {
+          // Delete the old DICOM file if it exists
+          if (studyToEdit.dicom_file_url) {
+            try {
+              // Extract the file name from the URL
+              const fileName = studyToEdit.dicom_file_url.split('/').pop();
+              if (fileName) {
+                const deleteResponse = await fetch(`http://localhost:5000/files/${fileName}`, {
+                  method: 'DELETE'
+                });
+
+                if (!deleteResponse.ok) {
+                  console.warn(`Warning: Could not delete old DICOM file: ${deleteResponse.status}`);
+                }
+              }
+            } catch (error) {
+              console.error('Error deleting old DICOM file:', error);
+            }
+          }
+
+          // Upload the new DICOM file
+          const dicomFormData = new FormData();
+          dicomFormData.append('file', newStudy.dicom_files[0]);
+
+          const dicomResponse = await fetch('http://localhost:5000/files', {
+            method: 'POST',
+            body: dicomFormData
+          });
+
+          if (!dicomResponse.ok) {
+            throw new Error(`DICOM file upload failed with status: ${dicomResponse.status}`);
+          }
+
+          const dicomData = await dicomResponse.json();
+          dicomFileUrl = dicomData.url;
+          console.log('DICOM file uploaded successfully:', dicomFileUrl);
+        } catch (error) {
+          console.error('Error uploading DICOM file:', error);
+          setError('Failed to upload DICOM file. Please try again.');
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Step 2: Handle report file if a new one was uploaded
+      let reportFileUrl = '';
+      // If there's an existing report, get its file URL
+      if (studyToEdit.report_id) {
+        try {
+          const reportResponse = await fetch(`http://localhost:5000/reports/${studyToEdit.report_id}`);
+          if (reportResponse.ok) {
+            const reportData = await reportResponse.json();
+            reportFileUrl = reportData.report_file_url || '';
+          }
+        } catch (error) {
+          console.error('Error fetching existing report:', error);
+        }
+      }
+
+      if (newStudy.report_files.length > 0) {
+        try {
+          // Delete the old report file if it exists
+          if (reportFileUrl) {
+            try {
+              const fileName = reportFileUrl.split('/').pop();
+              if (fileName) {
+                const deleteResponse = await fetch(`http://localhost:5000/files/${fileName}`, {
+                  method: 'DELETE'
+                });
+
+                if (!deleteResponse.ok) {
+                  console.warn(`Warning: Could not delete old report file: ${deleteResponse.status}`);
+                }
+              }
+            } catch (error) {
+              console.error('Error deleting old report file:', error);
+            }
+          }
+
+          // Upload the new report file
+          const reportFormData = new FormData();
+          reportFormData.append('file', newStudy.report_files[0]);
+
+          const reportResponse = await fetch('http://localhost:5000/files', {
+            method: 'POST',
+            body: reportFormData
+          });
+
+          if (!reportResponse.ok) {
+            throw new Error(`Report file upload failed with status: ${reportResponse.status}`);
+          }
+
+          const reportData = await reportResponse.json();
+          reportFileUrl = reportData.url;
+          console.log('Report file uploaded successfully:', reportFileUrl);
+        } catch (error) {
+          console.error('Error uploading report file:', error);
+          // Report is optional, so we can continue without it
+          console.warn('Continuing without report file');
+        }
+      }
+
+      // Step 3: Update study in the database
+      const studyPayload = {
+        patient_id: newStudy.patient_id,
+        date: studyToEdit.date, // Keep original date
+        time: studyToEdit.time, // Keep original time
+        modality: newStudy.modality,
+        assertion_number: parseInt(newStudy.assertion_number) || studyToEdit.assertion_number,
+        description: newStudy.description,
+        dicom_file_url: dicomFileUrl,
+        source: newStudy.server_type || studyToEdit.source,
+        isurgent: studyToEdit.isurgent
+      };
+
+      // Update study via PUT request
+      const studyResponse = await fetch(`http://localhost:5000/studies/${studyToEdit.study_id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(studyPayload)
+      });
+
+      if (!studyResponse.ok) {
+        throw new Error(`Study update failed with status: ${studyResponse.status}`);
+      }
+
+      const updatedStudyData = await studyResponse.json();
+      console.log('Study updated successfully:', updatedStudyData);
+
+      // Step 4: Update or create report if needed
+      if (reportFileUrl) {
+        // Safe access to report status with a type assertion if needed
+        let reportStatus = 'new';
+        if (studyToEdit.report_id && studyToEdit.report) {
+          reportStatus = studyToEdit.report.status || 'new';
+        }
+
+        const reportPayload = {
+          report_file_url: reportFileUrl,
+          status: reportStatus,
+          study_id: updatedStudyData.study_id,
+        };
+
+        const reportMethod = studyToEdit.report_id ? 'PUT' : 'POST';
+        const reportEndpoint = studyToEdit.report_id
+          ? `http://localhost:5000/reports/${studyToEdit.report_id}`
+          : 'http://localhost:5000/reports';
+
+        const reportResponse = await fetch(reportEndpoint, {
+          method: reportMethod,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(reportPayload)
+        });
+
+        if (!reportResponse.ok) {
+          console.error(`Report ${reportMethod} failed with status: ${reportResponse.status}`);
+        } else {
+          const reportData = await reportResponse.json();
+          console.log(`Report ${reportMethod === 'POST' ? 'created' : 'updated'} successfully:`, reportData);
+        }
+      }
+
+      // Step 5: Update studies list with the updated study
+      setStudies(prev => prev.map(study =>
+        study.study_id === updatedStudyData.study_id ? normalizeStudy(updatedStudyData) : study
+      ));
+
+      // Show success message
+      alert('Study updated successfully!');
+
+      // Step 6: Reset state and close modal
+      setIsAddStudyOpen(false);
+      setIsEditMode(false);
+      setStudyToEdit(null);
+      setNewStudy({
+        patient_id: '',
+        patient_name: '',
+        modality: '',
+        server_type: '',
+        assertion_number: '',
+        description: '',
+        dicom_files: [],
+        report_files: []
+      });
+
+    } catch (error) {
+      console.error('Error updating study:', error);
+      setError('Failed to update study. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const openAssignModal = (studyId: number) => {
@@ -360,7 +594,7 @@ const MedicalStudyInterface: React.FC = () => {
           <div className="bg-white rounded-lg p-6 shadow-sm">
             <div className="flex justify-between items-start">
               <div>
-                <div className="text-sm font-medium text-gray-600 mb-1">Total Studies</div>
+                <div className="text-sm font-medium text-gray-600 mb-1">Assigned Today</div>
                 <div className="text-3xl font-bold text-gray-900">{studies.length}</div>
               </div>
               <Calendar className="w-8 h-8 text-blue-500" />
@@ -370,7 +604,7 @@ const MedicalStudyInterface: React.FC = () => {
           <div className="bg-white rounded-lg p-6 shadow-sm">
             <div className="flex justify-between items-start">
               <div>
-                <div className="text-sm font-medium text-gray-600 mb-1">Today's Scans</div>
+                <div className="text-sm font-medium text-gray-600 mb-1">Pending Review</div>
                 <div className="text-3xl font-bold text-gray-900">{todayCount}</div>
               </div>
               <Clock className="w-8 h-8 text-yellow-500" />
@@ -383,7 +617,7 @@ const MedicalStudyInterface: React.FC = () => {
                 <div className="text-sm font-medium text-gray-600 mb-1">Reported Today</div>
                 <div className="text-3xl font-bold text-gray-900">3</div>
               </div>
-              <Check className="w-8 h-8 text-green-500" />
+              <CheckCircle className="w-8 h-8 text-green-500" />
             </div>
           </div>
         </div>
@@ -524,13 +758,13 @@ const MedicalStudyInterface: React.FC = () => {
                         >
                           <Edit className="w-4 h-4" />
                         </button>
-                        <button
+                        {/*<button
                           onClick={() => handleDeleteStudy(study.study_id)}
                           className="p-1 text-red-600 hover:bg-red-50 rounded"
                           title="Delete Study"
                         >
                           <Trash2 className="w-4 h-4" />
-                        </button>
+                        </button>*/}
                         <button
                           onClick={() => openAssignModal(study.study_id)}
                           className="p-1 text-green-600 hover:bg-green-50 rounded"
@@ -763,10 +997,10 @@ const MedicalStudyInterface: React.FC = () => {
                     Cancel
                   </button>
                   <button
-                    onClick={handleSubmitStudy}
+                    onClick={isEditMode ? handleUpdateStudy : handleSubmitStudy}
                     className="px-6 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600"
                   >
-                    Upload Study
+                    {isEditMode ? 'Update Study' : 'Upload Study'}
                   </button>
                 </div>
               </div>
