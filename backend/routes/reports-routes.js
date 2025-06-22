@@ -145,14 +145,6 @@ router.put('/:report_id', /* authenticateToken, */ async (req, res) => {
       data: {
         status: status ?? existingReport.status,
         report_file_url: report_file_url ?? existingReport.report_file_url
-      },
-      include: {
-        studies: {
-          include: {
-            patient: true,
-            radiologist: true
-          }
-        }
       }
     });
 

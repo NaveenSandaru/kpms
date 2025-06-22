@@ -51,7 +51,8 @@ router.get('/patient/:patient_id', /* authenticateToken, */ async (req, res) => 
       where: { patient_id: req.params.patient_id },
       include: {
         radiologist: true,
-        report: true
+        report: true,
+        status: true
       },
       orderBy: [
         { date: 'desc' },
@@ -93,33 +94,10 @@ router.put('/:study_id', /* authenticateToken, */ async (req, res) => {
     const studyId = parseInt(req.params.study_id);
     const data = { ...req.body };
     
-    // Process the date field if it exists
-    if (data.date) {
-      data.date = new Date(data.date);
-    }
-    
-    // Handle numeric fields
-    if (data.radiologist_id) {
-      data.radiologist_id = parseInt(data.radiologist_id);
-    }
-    
-    if (data.report_id) {
-      data.report_id = parseInt(data.report_id);
-    }
-    
-    if (data.assertion_number) {
-      data.assertion_number = parseInt(data.assertion_number);
-    }
-    
     // Update study
     const updatedStudy = await prisma.study.update({
       where: { study_id: studyId },
-      data,
-      include: {
-        patient: true,
-        radiologist: true,
-        report: true
-      }
+      data
     });
     
     res.json(updatedStudy);
