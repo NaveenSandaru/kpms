@@ -54,6 +54,11 @@ const timeSlots = [
   "15:00", "15:30", "16:00", "16:30", "17:00", "17:30"
 ];
 
+// Date formatting utility function
+const formatDate = (dateString: string) => {
+  return dateString.split('T')[0]; // Extract YYYY-MM-DD from ISO string
+};
+
 export default function DentistSchedulePage({ params }: DentistScheduleProps) {
   const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
   const { user, isLoadingAuth, isLoggedIn } = useContext(AuthContext);
@@ -67,18 +72,22 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
   const [loadingAppointments, setLoadingAppointments] = useState(false);
   const [loadingBlockedSlots, setLoadingBlockedSlots] = useState(false);
 
+  const today = new Date().toISOString().split('T')[0];
+
   const fetchAppointments = async () => {
     setLoadingAppointments(true);
     try {
       const response = await axios.get(
         `${backendURL}/appointments/fordentist/${user.id}`
       );
-      if (response.status == 500) {
+      if (response.status === 500) {
         throw new Error("Internal server error");
       }
+      console.log("Fetched appointments:", response.data); // Debug log
       setAppointments(response.data);
     }
     catch (err: any) {
+      console.error("Error fetching appointments:", err);
       window.alert(err.message);
     }
     finally {
@@ -92,12 +101,14 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
       const response = await axios.get(
         `${backendURL}/blocked-dates/fordentist/${user.id}`
       );
-      if (response.status == 500) {
+      if (response.status === 500) {
         throw new Error("Internal Server Error");
       }
+      console.log("Fetched blocked slots:", response.data); // Debug log
       setBlockedDates(response.data);
     }
     catch (err: any) {
+      console.error("Error fetching blocked slots:", err);
       window.alert(err.message);
     }
     finally {
@@ -107,13 +118,30 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
 
   // Filter appointments based on selected date and search term
   const filteredAppointments = appointments.filter(apt => {
-    const matchesDate = apt.date === selectedDate;
-    const matchesSearch = apt.patient.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const aptDate = formatDate(apt.date); // Format the appointment date
+    const matchesDate = aptDate === selectedDate;
+    const matchesSearch = searchTerm === "" || 
+      apt.patient?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       apt.note?.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesDate && matchesSearch;
   });
 
-  const todayBlockedSlots = blockedDates.filter(block => block.date === selectedDate);
+  // Get appointments for different time periods
+  const todayAppointments = appointments.filter(apt => formatDate(apt.date) === today);
+  const upcomingAppointments = appointments.filter(apt => formatDate(apt.date) > today);
+  const pastAppointments = appointments.filter(apt => formatDate(apt.date) < today);
+
+  // Filter by search term for each category
+  const getFilteredAppointmentsByTab = (tabAppointments: Appointment[]) => {
+    return tabAppointments.filter(apt => 
+      searchTerm === "" || 
+      apt.patient?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      apt.note?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  };
+
+  // Fixed: Filter blocked dates for selected date instead of today only
+  const selectedDateBlockedSlots = blockedDates.filter(block => formatDate(block.date) === selectedDate);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -134,7 +162,7 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
   };
 
   const isTimeSlotBlocked = (time: string) => {
-    return todayBlockedSlots.some(block => {
+    return selectedDateBlockedSlots.some(block => {
       const blockStart = block.time_from;
       const blockEnd = block.time_to;
       return time >= blockStart && time < blockEnd;
@@ -154,11 +182,11 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
       window.location.href = "/";
       return;
     }
-    if (user) {
+    if (user?.id) {
       fetchAppointments();
       fetchBlockedSlots();
     }
-  }, [user, isLoadingAuth]);
+  }, [user, isLoadingAuth, isLoggedIn]);
 
   const NewAppointmentForm = () => (
     <DialogContent className="max-w-md max-h-screen overflow-y-auto">
@@ -258,13 +286,81 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
     </DialogContent>
   );
 
+  const renderAppointmentTable = (appointmentList: Appointment[], showActions: boolean = true) => (
+    <div className="overflow-x-auto">
+      <table className="w-full">
+        <thead>
+          <tr className="border-b">
+            <th className="text-left p-2">Patient</th>
+            <th className="text-left p-2 hidden sm:table-cell">Service</th>
+            <th className="text-left p-2">Date & Time</th>
+            <th className="text-left p-2 hidden md:table-cell">Fee</th>
+            <th className="text-left p-2">Status</th>
+            {showActions && <th className="text-left p-2">Actions</th>}
+          </tr>
+        </thead>
+        <tbody>
+          {appointmentList.length === 0 ? (
+            <tr>
+              <td colSpan={showActions ? 6 : 5} className="p-4 text-center text-gray-500">
+                {loadingAppointments ? "Loading appointments..." : "No appointments found"}
+              </td>
+            </tr>
+          ) : (
+            appointmentList.map((appointment) => (
+              <tr key={appointment.appointment_id} className="border-b">
+                <td className="p-2">
+                  <div>
+                    <div className="font-medium">{appointment.patient?.name || 'Unknown Patient'}</div>
+                    <div className="text-sm text-gray-600 sm:hidden">
+                      {appointment.note}
+                    </div>
+                  </div>
+                </td>
+                <td className="p-2 hidden sm:table-cell">{appointment.note}</td>
+                <td className="p-2">
+                  <div className="text-sm">
+                    {formatDate(appointment.date)}
+                    <br />
+                    {appointment.time_from} - {appointment.time_to}
+                  </div>
+                </td>
+                <td className="p-2 hidden md:table-cell">${appointment.fee}</td>
+                <td className="p-2">
+                  <div className="space-y-1">
+                    <Badge className={getStatusColor(appointment.status)}>
+                      {appointment.status}
+                    </Badge>
+                    <div className="md:hidden">
+                      <Badge className={getPaymentStatusColor(appointment.payment_status)}>
+                        {appointment.payment_status}
+                      </Badge>
+                    </div>
+                  </div>
+                </td>
+                {showActions && (
+                  <td className="p-2">
+                    <Button variant="outline" size="sm">
+                      Cancel
+                    </Button>
+                  </td>
+                )}
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-
+            <h1 className="text-2xl font-bold text-gray-900">Schedule Management</h1>
+            <p className="text-gray-600">Manage your appointments and blocked time slots</p>
           </div>
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
             <Dialog open={isNewAppointmentOpen} onOpenChange={setIsNewAppointmentOpen}>
@@ -276,13 +372,12 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
               </DialogTrigger>
               <NewAppointmentForm />
             </Dialog>
-
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Daily Schedule */}
-          <div className="lg:col-span-2 space-y-4 h-">
+          <div className="lg:col-span-2 space-y-4">
             <Card className="h-full">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-lg font-medium">Daily Schedule</CardTitle>
@@ -296,74 +391,75 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2 max-h-[calc(100vh-20rem)] overflow-y-auto">
-                  {timeSlots.map((time) => {
-                    const appointment = filteredAppointments.find(apt =>
-                      apt.time_from <= time && apt.time_to > time
-                    );
-                    const isBlocked = isTimeSlotBlocked(time);
-                    const isBooked = isTimeSlotBooked(time);
+                {loadingAppointments || loadingBlockedSlots ? (
+                  <div className="text-center py-8 text-gray-500">Loading schedule...</div>
+                ) : (
+                  <div className="space-y-2 max-h-[calc(100vh-20rem)] overflow-y-auto">
+                    {timeSlots.map((time) => {
+                      const appointment = filteredAppointments.find(apt =>
+                        apt.time_from <= time && apt.time_to > time
+                      );
+                      const isBlocked = isTimeSlotBlocked(time);
 
-                    return (
-                      <div key={time} className="flex items-center space-x-3 p-2 rounded-lg border">
-                        <div className="text-sm font-medium w-16 text-gray-600">
-                          {time}
-                        </div>
-                        <div className="flex-1">
-                          {appointment ? (
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-2 sm:space-y-0 ">
-                              <div className="flex items-center space-x-2">
-                                <User className="w-4 h-4 text-gray-400" />
-                                <span className="font-medium">{appointment.patient.name}</span>
-                                <Badge className={getStatusColor(appointment.status)}>
-                                  {appointment.status}
-                                </Badge>
+                      return (
+                        <div key={time} className="flex items-center space-x-3 p-2 rounded-lg border">
+                          <div className="text-sm font-medium w-16 text-gray-600">
+                            {time}
+                          </div>
+                          <div className="flex-1">
+                            {appointment ? (
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-2 sm:space-y-0">
+                                <div className="flex items-center space-x-2">
+                                  <User className="w-4 h-4 text-gray-400" />
+                                  <span className="font-medium">{appointment.patient?.name || 'Unknown Patient'}</span>
+                                  <Badge className={getStatusColor(appointment.status)}>
+                                    {appointment.status}
+                                  </Badge>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-sm text-gray-600">${appointment.fee}</span>
+                                  <Badge className={getPaymentStatusColor(appointment.payment_status)}>
+                                    {appointment.payment_status}
+                                  </Badge>
+                                </div>
                               </div>
+                            ) : isBlocked ? (
                               <div className="flex items-center space-x-2">
-                                <span className="text-sm text-gray-600">${appointment.fee}</span>
-                                <Badge className={getPaymentStatusColor(appointment.payment_status)}>
-                                  {appointment.payment_status}
-                                </Badge>
+                                <X className="w-4 h-4 text-red-500" />
+                                <span className="text-red-600 font-medium">Blocked</span>
+                                <Button variant="ghost" size="sm" className="ml-auto">
+                                  <Edit className="w-3 h-3" />
+                                </Button>
                               </div>
-                            </div>
-                          ) : isBlocked ? (
-                            <div className="flex items-center space-x-2">
-                              <X className="w-4 h-4 text-red-500" />
-                              <span className="text-red-600 font-medium">Blocked</span>
-                              <Button variant="ghost" size="sm" className="ml-auto">
-                                <Edit className="w-3 h-3" />
-                              </Button>
-                            </div>
-                          ) : (
-                            <span className="text-gray-400">Available</span>
-                          )}
+                            ) : (
+                              <span className="text-gray-400">Available</span>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-4 ">
+          <div className="space-y-4">
             {/* Schedule Summary Card */}
             <Card>
-              <CardHeader className="pb-3 ">
+              <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base font-medium">
-                    Schedule for {new Date().toLocaleDateString('en-US', {
+                    Schedule for {new Date(selectedDate).toLocaleDateString('en-US', {
                       year: 'numeric',
                       month: 'long',
                       day: 'numeric',
                     })}
                   </CardTitle>
-
                   <Dialog open={isBlockTimeOpen} onOpenChange={setIsBlockTimeOpen}>
                     <DialogTrigger asChild>
                       <Button variant="outline" className="w-auto">
-
                         Block Time
                       </Button>
                     </DialogTrigger>
@@ -371,36 +467,51 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
                   </Dialog>
                 </div>
                 <div className="text-sm text-gray-500">
-                  Appointments today: {appointments.length}
+                  Appointments for selected date: {filteredAppointments.length}
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
-                {/* Appointment Item */}
-                <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border-l-4 border-blue-400">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
-                      <User className="w-4 h-4 text-gray-600" />
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">John Doe</div>
-                      <div className="text-xs text-blue-600">10:00 - 10:30</div>
-                      <div className="text-xs text-gray-500">Filling</div>
-                    </div>
+                {filteredAppointments.length === 0 ? (
+                  <div className="text-center py-4 text-gray-500">
+                    No appointments for this date
                   </div>
-                </div>
+                ) : (
+                  filteredAppointments.map((appointment) => (
+                    <div key={appointment.appointment_id} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border-l-4 border-blue-400">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+                          <User className="w-4 h-4 text-gray-600" />
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">
+                            {appointment.patient?.name || 'Unknown Patient'}
+                          </div>
+                          <div className="text-xs text-blue-600">
+                            {appointment.time_from} - {appointment.time_to}
+                          </div>
+                          <div className="text-xs text-gray-500">{appointment.note}</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
 
-                {/* Blocked Time Item */}
-                <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg border-l-4 border-red-400">
-                  <div className="flex items-center justify-between w-full">
-                    <div>
-                      <div className="text-sm font-medium text-red-700">11:00 - 13:00</div>
-                      <div className="text-xs text-red-600">Blocked</div>
+                {/* Blocked Time Items - Fixed to use selectedDateBlockedSlots */}
+                {selectedDateBlockedSlots.map((block) => (
+                  <div key={block.blocked_date_id} className="flex items-center justify-between p-3 bg-red-50 rounded-lg border-l-4 border-red-400">
+                    <div className="flex items-center justify-between w-full">
+                      <div>
+                        <div className="text-sm font-medium text-red-700">
+                          {block.time_from} - {block.time_to}
+                        </div>
+                        <div className="text-xs text-red-600">Blocked</div>
+                      </div>
+                      <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 text-xs">
+                        Cancel Block
+                      </Button>
                     </div>
-                    <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 text-xs">
-                      Cancel Block
-                    </Button>
                   </div>
-                </div>
+                ))}
               </CardContent>
             </Card>
           </div>
@@ -422,69 +533,18 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
           <CardContent>
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="today">Today</TabsTrigger>
-                <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
-                <TabsTrigger value="past">Past</TabsTrigger>
+                <TabsTrigger value="today">Today ({todayAppointments.length})</TabsTrigger>
+                <TabsTrigger value="upcoming">Upcoming ({upcomingAppointments.length})</TabsTrigger>
+                <TabsTrigger value="past">Past ({pastAppointments.length})</TabsTrigger>
               </TabsList>
               <TabsContent value="today" className="space-y-4">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left p-2">Patient</th>
-                        <th className="text-left p-2 hidden sm:table-cell">Service</th>
-                        <th className="text-left p-2">Time</th>
-                        <th className="text-left p-2 hidden md:table-cell">Fee</th>
-                        <th className="text-left p-2">Status</th>
-                        <th className="text-left p-2">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredAppointments.map((appointment) => (
-                        <tr key={appointment.appointment_id} className="border-b">
-                          <td className="p-2">
-                            <div>
-                              <div className="font-medium">{appointment.patient.name}</div>
-                              <div className="text-sm text-gray-600 sm:hidden">
-                                {appointment.note}
-                              </div>
-                            </div>
-                          </td>
-                          <td className="p-2 hidden sm:table-cell">{appointment.note}</td>
-                          <td className="p-2">
-                            <div className="text-sm">
-                              {appointment.time_from} - {appointment.time_to}
-                            </div>
-                          </td>
-                          <td className="p-2 hidden md:table-cell">${appointment.fee}</td>
-                          <td className="p-2">
-                            <div className="space-y-1">
-                              <Badge className={getStatusColor(appointment.status)}>
-                                {appointment.status}
-                              </Badge>
-                              <div className="md:hidden">
-                                <Badge className={getPaymentStatusColor(appointment.payment_status)}>
-                                  {appointment.payment_status}
-                                </Badge>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="p-2">
-                            <Button variant="ghost" size="sm">
-                              <Edit className="w-3 h-3" />
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                {renderAppointmentTable(getFilteredAppointmentsByTab(todayAppointments), true)}
               </TabsContent>
-              <TabsContent value="upcoming">
-                <p className="text-gray-500">No upcoming appointments</p>
+              <TabsContent value="upcoming" className="space-y-4">
+                {renderAppointmentTable(getFilteredAppointmentsByTab(upcomingAppointments), true)}
               </TabsContent>
-              <TabsContent value="past">
-                <p className="text-gray-500">No past appointments</p>
+              <TabsContent value="past" className="space-y-4">
+                {renderAppointmentTable(getFilteredAppointmentsByTab(pastAppointments), false)}
               </TabsContent>
             </Tabs>
           </CardContent>
