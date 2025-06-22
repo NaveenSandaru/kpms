@@ -57,10 +57,178 @@ interface DentistWorkInfo {
   appointment_fee: number
 }
 
-// Date formatting utility function
 const formatDate = (dateString: string) => {
-  return dateString.split('T')[0]; // Extract YYYY-MM-DD from ISO string
+  return dateString.split('T')[0];
 };
+
+const NewAppointmentForm = ({
+  patient_id,
+  setPatient_id,
+  date,
+  setDate,
+  time_from,
+  setTimeFrom,
+  note,
+  setNote,
+  timeSlots,
+  handleAppointmentCreation,
+  creatingAppointment
+}: {
+  patient_id: string;
+  setPatient_id: (value: string) => void;
+  date: string;
+  setDate: (value: string) => void;
+  time_from: string;
+  setTimeFrom: (value: string) => void;
+  note: string;
+  setNote: (value: string) => void;
+  timeSlots: string[];
+  handleAppointmentCreation: () => void;
+  creatingAppointment: boolean;
+}) => (
+  <DialogContent className="max-w-md max-h-screen overflow-y-auto">
+    <DialogHeader>
+      <DialogTitle>New Appointment</DialogTitle>
+    </DialogHeader>
+    <div className="space-y-4">
+      <div>
+        <Label className='mb-2' htmlFor="patient" >Patient</Label>
+        <Input
+          id="patient"
+          placeholder="Enter Patient ID"
+          value={patient_id}
+          onChange={(e) => setPatient_id(e.target.value)}
+        />
+      </div>
+      <div>
+        <Label className='mb-2' htmlFor="date">Date</Label>
+        <Input
+          id="date"
+          type="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <Label className='mb-2' htmlFor="time_from">Time</Label>
+          <Select value={time_from} onValueChange={(value) => setTimeFrom(value)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Start time" />
+            </SelectTrigger>
+            <SelectContent>
+              {timeSlots.map((time) => (
+                <SelectItem key={time} value={time}>
+                  {time}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div>
+        <Label className='mb-2' htmlFor="note">Note</Label>
+        <Textarea
+          id="note"
+          placeholder="Appointment notes..."
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+        />
+      </div>
+      <Button 
+        className="w-full bg-emerald-500 hover:bg-emerald-600" 
+        onClick={handleAppointmentCreation}
+        disabled={creatingAppointment}
+      >
+        {creatingAppointment ? "Creating..." : "Create Appointment"}
+      </Button>
+    </div>
+  </DialogContent>
+);
+
+const BlockTimeForm = ({
+  blockDate,
+  setBlockDate,
+  blockTimeFrom,
+  setBlockTimeFrom,
+  blockTimeTo,
+  setBlockTimeTo,
+  timeSlots,
+  handleBlockSlotCreation,
+  creatingBlockSlot
+}: {
+  blockDate: string;
+  setBlockDate: (value: string) => void;
+  blockTimeFrom: string;
+  setBlockTimeFrom: (value: string) => void;
+  blockTimeTo: string;
+  setBlockTimeTo: (value: string) => void;
+  timeSlots: string[];
+  handleBlockSlotCreation: () => void;
+  creatingBlockSlot: boolean;
+}) => (
+  <DialogContent className="max-w-md">
+    <DialogHeader>
+      <DialogTitle>Block Time</DialogTitle>
+    </DialogHeader>
+    <div className="space-y-4">
+      <div>
+        <Label className='mb-2' htmlFor="block_date">Date</Label>
+        <Input
+          id="block_date"
+          type="date"
+          value={blockDate}
+          onChange={(e) => setBlockDate(e.target.value)}
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <Label className='mb-2' htmlFor="block_from">From</Label>
+          <Select
+            value={blockTimeFrom}
+            onValueChange={(value) => setBlockTimeFrom(value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Start time" />
+            </SelectTrigger>
+            <SelectContent>
+              {timeSlots.map(time => (
+                <SelectItem key={time} value={time}>
+                  {time}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label className='mb-2' htmlFor="block_to">To</Label>
+          <Select
+            value={blockTimeTo}
+            onValueChange={(value) => setBlockTimeTo(value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="End time" />
+            </SelectTrigger>
+            <SelectContent>
+              {timeSlots.map(time => (
+                <SelectItem key={time} value={time}>
+                  {time}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <Button 
+        className="w-full bg-emerald-500 hover:bg-emerald-600" 
+        onClick={handleBlockSlotCreation}
+        disabled={creatingBlockSlot}
+      >
+        {creatingBlockSlot ? "Blocking..." : "Block Time"}
+      </Button>
+    </div>
+  </DialogContent>
+);
 
 export default function DentistSchedulePage({ params }: DentistScheduleProps) {
   const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
@@ -80,14 +248,14 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
   const [cancellingAppointment, setCancellingAppointment] = useState(false);
   const [dentistWorkInfo, setDentistWorkInfo] = useState<DentistWorkInfo>();
 
-  //States for creating new appointment
+  // States for creating new appointment
   const [patient_id, setPatient_id] = useState("");
   const [date, setDate] = useState("");
   const [time_from, setTimeFrom] = useState("");
   const [time_to, setTimeTo] = useState("");
   const [note, setNote] = useState("");
 
-  //States for creating new block slot
+  // States for creating new block slot
   const [blockDate, setBlockDate] = useState("");
   const [blockTimeFrom, setBlockTimeFrom] = useState("");
   const [blockTimeTo, setBlockTimeTo] = useState("");
@@ -120,7 +288,6 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
       if (response.status === 500) {
         throw new Error("Internal server error");
       }
-      console.log("Fetched appointments:", response.data); // Debug log
       setAppointments(response.data);
     }
     catch (err: any) {
@@ -141,7 +308,6 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
       if (response.status === 500) {
         throw new Error("Internal Server Error");
       }
-      console.log("Fetched blocked slots:", response.data); // Debug log
       setBlockedDates(response.data);
     }
     catch (err: any) {
@@ -154,20 +320,22 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
   };
 
   const handleBlockDeletion = async (blocked_date_id: number) => {
+    if (!confirm("Are you sure you want to delete this block slot?")) return;
+    
     setDeletingBlock(true);
-    try{
+    try {
       const response = await axios.delete(
         `${backendURL}/blocked-dates/${blocked_date_id}`
       );
-      if(response.status == 500){
+      if (response.status == 500) {
         throw new Error("Error Deleting Block Slot");
       }
-      window.alert("Block Slot Successfully Deleted");
+      fetchBlockedSlots();
     }
-    catch(err: any){
+    catch (err: any) {
       window.alert(err.message);
     }
-    finally{
+    finally {
       setDeletingBlock(false);
     }
   }
@@ -185,9 +353,6 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
     catch (err: any) {
       window.alert(err.message);
     }
-    finally {
-
-    }
   };
 
   const generateTimeSlots = (workInfo: DentistWorkInfo) => {
@@ -195,7 +360,7 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
 
     const [startHour, startMin] = workInfo.work_time_from.split(":").map(Number);
     const [endHour, endMin] = workInfo.work_time_to.split(":").map(Number);
-    const duration = parseInt(workInfo.appointment_duration, 10); // in minutes
+    const duration = parseInt(workInfo.appointment_duration, 10);
 
     let start = startHour * 60 + startMin;
     const end = endHour * 60 + endMin;
@@ -235,6 +400,13 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
         throw new Error("Error Creating Appointment");
       } else {
         window.alert("Appointment Created Successfully");
+        setIsNewAppointmentOpen(false);
+        fetchAppointments();
+        // Reset form
+        setPatient_id("");
+        setDate("");
+        setTimeFrom("");
+        setNote("");
       }
     } catch (err: any) {
       window.alert(err.message);
@@ -259,6 +431,12 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
         throw new Error("Internal Server Error");
       }
       window.alert("Block Slot Created Successfully");
+      setIsBlockTimeOpen(false);
+      fetchBlockedSlots();
+      // Reset form
+      setBlockDate("");
+      setBlockTimeFrom("");
+      setBlockTimeTo("");
     }
     catch (err: any) {
       window.alert(err.message);
@@ -266,7 +444,7 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
     finally {
       setCreatingBlockSlot(false);
     }
-  };
+  }
 
   const handleAppointmentCancellation = async (appointment_id: number) => {
     setCancellingAppointment(true);
@@ -290,10 +468,9 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
     }
   }
 
-
   // Filter appointments based on selected date and search term
   const filteredAppointments = appointments.filter(apt => {
-    const aptDate = formatDate(apt.date); // Format the appointment date
+    const aptDate = formatDate(apt.date);
     const matchesDate = aptDate === selectedDate;
     const matchesSearch = searchTerm === "" ||
       apt.patient?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -315,7 +492,7 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
     );
   };
 
-  // Fixed: Filter blocked dates for selected date instead of today only
+  // Filter blocked dates for selected date
   const selectedDateBlockedSlots = blockedDates.filter(block => formatDate(block.date) === selectedDate);
 
   const getStatusColor = (status: string) => {
@@ -369,122 +546,6 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
       generateTimeSlots(dentistWorkInfo);
     }
   }, [dentistWorkInfo]);
-
-  const NewAppointmentForm = () => (
-    <DialogContent className="max-w-md max-h-screen overflow-y-auto">
-      <DialogHeader>
-        <DialogTitle>New Appointment</DialogTitle>
-      </DialogHeader>
-      <div className="space-y-4">
-        <div>
-          <Label htmlFor="patient">Patient</Label>
-          <Input
-            id="patient"
-            placeholder="Enter Patient ID"
-            value={patient_id}
-            onChange={(e) => setPatient_id(e.target.value)}
-          />
-        </div>
-        <div>
-          <Label htmlFor="date">Date</Label>
-          <Input
-            id="date"
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-          />
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <Label htmlFor="time_from">Time</Label>
-            <Select value={time_from} onValueChange={(value) => setTimeFrom(value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Start time" />
-              </SelectTrigger>
-              <SelectContent>
-                {timeSlots.map((time) => (
-                  <SelectItem key={time} value={time}>
-                    {time}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        <div>
-          <Label htmlFor="note">Note</Label>
-          <Textarea
-            id="note"
-            placeholder="Appointment notes..."
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-          />
-        </div>
-        <Button className="w-full" onClick={handleAppointmentCreation}>
-          Create Appointment
-        </Button>
-      </div>
-    </DialogContent>
-
-  );
-
-  const BlockTimeForm = () => (
-    <DialogContent className="max-w-md">
-      <DialogHeader>
-        <DialogTitle>Block Time</DialogTitle>
-      </DialogHeader>
-      <div className="space-y-4">
-        <div>
-          <Label htmlFor="block_date">Date</Label>
-          <Input
-            id="block_date"
-            type="date"
-            value={blockDate}
-            onChange={(e) => setBlockDate(e.target.value)}
-          />
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <Label htmlFor="block_from">From</Label>
-            <Select
-              value={blockTimeFrom}
-              onValueChange={(value) => setBlockTimeFrom(value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Start time" />
-              </SelectTrigger>
-              <SelectContent>
-                {timeSlots.map(time => (
-                  <SelectItem key={time} value={time}>
-                    {time}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor="block_to">To</Label>
-            <Select
-              value={blockTimeTo}
-              onValueChange={(value) => setBlockTimeTo(value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="End time" />
-              </SelectTrigger>
-              <SelectContent>
-                {timeSlots.map(time => (
-                  <SelectItem key={time} value={time}>
-                    {time}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        <Button className="w-full" onClick={handleBlockSlotCreation}>Block Time</Button>
-      </div>
-    </DialogContent>
-  );
 
   const renderAppointmentTable = (appointmentList: Appointment[], showActions: boolean = true) => (
     <div className="overflow-x-auto">
@@ -540,8 +601,13 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
                 </td>
                 {showActions && (
                   <td className="p-2">
-                    <Button variant="outline" size="sm" onClick={()=>{handleAppointmentCancellation(appointment.appointment_id)}}>
-                      Cancel
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handleAppointmentCancellation(appointment.appointment_id)}
+                      disabled={cancellingAppointment || appointment.status === "cancelled"}
+                    >
+                      {appointment.status === "cancelled" ? "Cancelled" : "Cancel"}
                     </Button>
                   </td>
                 )}
@@ -570,7 +636,19 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
                   New Appointment
                 </Button>
               </DialogTrigger>
-              <NewAppointmentForm />
+              <NewAppointmentForm
+                patient_id={patient_id}
+                setPatient_id={setPatient_id}
+                date={date}
+                setDate={setDate}
+                time_from={time_from}
+                setTimeFrom={setTimeFrom}
+                note={note}
+                setNote={setNote}
+                timeSlots={timeSlots}
+                handleAppointmentCreation={handleAppointmentCreation}
+                creatingAppointment={creatingAppointment}
+              />
             </Dialog>
           </div>
         </div>
@@ -663,7 +741,17 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
                         Block Time
                       </Button>
                     </DialogTrigger>
-                    <BlockTimeForm />
+                    <BlockTimeForm
+                      blockDate={blockDate}
+                      setBlockDate={setBlockDate}
+                      blockTimeFrom={blockTimeFrom}
+                      setBlockTimeFrom={setBlockTimeFrom}
+                      blockTimeTo={blockTimeTo}
+                      setBlockTimeTo={setBlockTimeTo}
+                      timeSlots={timeSlots}
+                      handleBlockSlotCreation={handleBlockSlotCreation}
+                      creatingBlockSlot={creatingBlockSlot}
+                    />
                   </Dialog>
                 </div>
                 <div className="text-sm text-gray-500">
@@ -696,7 +784,7 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
                   ))
                 )}
 
-                {/* Blocked Time Items - Fixed to use selectedDateBlockedSlots */}
+                {/* Blocked Time Items */}
                 {selectedDateBlockedSlots.map((block) => (
                   <div key={block.blocked_date_id} className="flex items-center justify-between p-3 bg-red-50 rounded-lg border-l-4 border-red-400">
                     <div className="flex items-center justify-between w-full">
@@ -706,8 +794,14 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
                         </div>
                         <div className="text-xs text-red-600">Blocked</div>
                       </div>
-                      <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 text-xs" onClick={()=>{handleBlockDeletion(block.blocked_date_id)}}>
-                        Cancel Block
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-red-600 hover:text-red-700 text-xs" 
+                        onClick={() => handleBlockDeletion(block.blocked_date_id)}
+                        disabled={deletingBlock}
+                      >
+                        {deletingBlock ? "Deleting..." : "Cancel Block"}
                       </Button>
                     </div>
                   </div>
