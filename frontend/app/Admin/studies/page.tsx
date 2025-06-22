@@ -264,7 +264,7 @@ const MedicalStudyInterface: React.FC = () => {
             <div className="flex justify-between items-start">
               <div>
                 <div className="text-sm font-medium text-gray-600 mb-1">Today's Scans</div>
-                <div className="text-3xl font-bold text-gray-900">8</div>
+                <div className="text-3xl font-bold text-gray-900">0</div>
               </div>
               <Clock className="w-8 h-8 text-green-500" />
             </div>
