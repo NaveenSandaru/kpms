@@ -363,8 +363,14 @@ const MedicalStudyInterface: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-2">
-                <button className="px-4 py-2 text-emerald-600 border border-emerald-300 rounded-lg hover:bg-emerald-50">
-                  Reset
+                <button
+                  onClick={() => {
+                    setActiveTab('ALL');
+                    setActiveModality('All');
+                    setSearchTerm('');
+                  }}
+                  className="px-4 py-2 text-emerald-600 border border-emerald-300 rounded-lg hover:bg-emerald-50"
+                >Reset
                 </button>
                 <button className="px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600">
                   Search
