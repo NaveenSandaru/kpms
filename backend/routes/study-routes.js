@@ -92,14 +92,55 @@ router.post('/', /* authenticateToken, */ async (req, res) => {
 router.put('/:study_id', /* authenticateToken, */ async (req, res) => {
   try {
     const studyId = parseInt(req.params.study_id);
-    const data = { ...req.body };
+    console.debug("put method called");
+    // Extract custom assignment fields
+    const { radiologist_id, doctor_ids, ...rest } = req.body;
+
+    // Build Prisma-compatible update payload
+    /** @type {import('@prisma/client').Prisma.studyUpdateInput} */
+    const updateData = { ...rest };
+
+    // Handle radiologist assignment (nullable)
+    if (radiologist_id !== undefined) {
+      if (radiologist_id === null || radiologist_id === '') {
+        updateData.radiologist = { disconnect: true };
+      } else {
+        updateData.radiologist = {
+          connect: { radiologist_id: Number(radiologist_id) }
+        };
+      }
+    }
+
+    // Handle dentists assignment through junction table DentistAssign
+    if (Array.isArray(doctor_ids)) {
+      if (doctor_ids.length === 0) {
+        // User cleared all dentists
+        updateData.dentistAssigns = { deleteMany: {} };
+      } else {
+        // Replace existing dentists with provided list
+        updateData.dentistAssigns = {
+          deleteMany: {},
+          create: doctor_ids.map((dentistId) => ({
+            dentist: { connect: { dentist_id: dentistId.toString() } }
+          }))
+        };
+      }
+    }
 
     // Update study
     const updatedStudy = await prisma.study.update({
       where: { study_id: studyId },
-      data
+      data: updateData,
+      include: {
+        radiologist: true,
+        dentistAssigns: {
+          include: {
+            dentist: true
+          }
+        }
+      }
     });
-
+    console.debug("Updated successfully");
     res.json(updatedStudy);
   } catch (error) {
     console.error('Error updating study:', error);

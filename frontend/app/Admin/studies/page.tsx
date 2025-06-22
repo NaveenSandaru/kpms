@@ -79,6 +79,21 @@ const MedicalStudyInterface: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [todayCount, setTodayCount] = useState<number>(0);
+  const [radiologists, setRadiologists] = useState<Radiologist[]>([]);
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
+
+  // Helper to convert API study payload into UI-friendly shape
+  const normalizeStudy = (raw: any): Study => {
+    const doctorsList: Doctor[] = (raw.dentistAssigns ?? []).map((da: any) => ({
+      id: da.dentist?.dentist_id ? parseInt(da.dentist.dentist_id) : parseInt(da.dentist_id ?? '0'),
+      name: da.dentist?.name ?? da.dentist?.email ?? 'Dentist',
+      specialization: da.dentist?.specialization ?? ''
+    }));
+    return {
+      ...raw,
+      doctors: doctorsList.length ? doctorsList : undefined
+    } as Study;
+  };
 
   // Fetch today's study count
   useEffect(() => {
@@ -109,8 +124,9 @@ const MedicalStudyInterface: React.FC = () => {
           throw new Error(`Error: ${response.status}`);
         }
         const data = await response.json();
-        setStudies(data);
-        console.log(data);
+        const normalized = data.map((s: any) => normalizeStudy(s));
+        setStudies(normalized);
+        console.log(normalized);
       } catch (err) {
         console.error('Failed to fetch studies:', err);
         setError('Failed to load studies. Please try again later.');
@@ -120,6 +136,40 @@ const MedicalStudyInterface: React.FC = () => {
     };
 
     fetchStudies();
+  }, []);
+
+  useEffect(() => {
+    const fetchStaff = async () => {
+      try {
+        // Radiologists
+        const radRes = await fetch('http://localhost:5000/radiologists');
+        if (radRes.ok) {
+          const data = await radRes.json();
+          const mapped = data.map((r: any) => ({
+            id: r.radiologist_id ?? r.id,
+            name: r.name ?? `${r.first_name ?? ''} ${r.last_name ?? ''}`.trim(),
+            specialization: r.specialization ?? r.email ?? ''
+          }));
+          setRadiologists(mapped);
+        }
+
+        // Doctors (dentists)
+        const docRes = await fetch('http://localhost:5000/dentists');
+        if (docRes.ok) {
+          const data = await docRes.json();
+          const mapped = data.map((d: any) => ({
+            id: d.dentist_id ?? d.id,
+            name: d.name ?? `${d.first_name ?? ''} ${d.last_name ?? ''}`.trim(),
+            specialization: d.specialization ?? d.email ?? ''
+          }));
+          setDoctors(mapped);
+        }
+      } catch (err) {
+        console.error('Error fetching staff:', err);
+      }
+    };
+
+    fetchStaff();
   }, []);
 
   const tabs = ['1D', '3D', '1W', '1M', '1Y', 'ALL'];
@@ -168,31 +218,45 @@ const MedicalStudyInterface: React.FC = () => {
     });
   };
 
-  const handleAssignStaff = () => {
+  const handleAssignStaff = async () => {
     if (!selectedStudyId) return;
 
-    const selectedRadiologist = mockRadiologists.find(r => r.id === parseInt(assignmentForm.radiologist_id));
-    const selectedDoctors = mockDoctors.filter(d => assignmentForm.doctor_ids.includes(d.id.toString()));
+    try {
+      const payload: any = {
+        radiologist_id: assignmentForm.radiologist_id ? parseInt(assignmentForm.radiologist_id) : null,
+        doctor_ids: assignmentForm.doctor_ids
+      };
 
-    setStudies(prev => prev.map(study => {
-      if (study.study_id === selectedStudyId) {
-        return {
-          ...study,
-          radiologist_id: selectedRadiologist?.id,
-          radiologist: selectedRadiologist,
-          doctors: selectedDoctors.length > 0 ? selectedDoctors : undefined
-        };
+      const res = await fetch(`http://localhost:5000/studies/${selectedStudyId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to assign staff');
       }
-      return study;
-    }));
 
-    // Close modal and reset form
-    setIsAssignModalOpen(false);
-    setSelectedStudyId(null);
-    setAssignmentForm({
-      radiologist_id: '',
-      doctor_ids: []
-    });
+      const updatedRaw = await res.json();
+      const updatedStudy: Study = normalizeStudy(updatedRaw);
+
+      setStudies(prev => prev.map(study =>
+        study.study_id === updatedStudy.study_id ? updatedStudy : study
+      ));
+
+      // Close modal and reset form
+      setIsAssignModalOpen(false);
+      setSelectedStudyId(null);
+      setAssignmentForm({
+        radiologist_id: '',
+        doctor_ids: []
+      });
+    } catch (error) {
+      console.error('Error assigning staff:', error);
+      alert('Failed to assign staff. Please try again.');
+    }
   };
 
   const handleDeleteStudy = (studyId: number) => {
@@ -732,7 +796,7 @@ const MedicalStudyInterface: React.FC = () => {
                     Assign Radiologist (Required - One Only)
                   </label>
                   <div className="space-y-2">
-                    {mockRadiologists.map((radiologist) => (
+                    {radiologists.map((radiologist) => (
                       <label key={radiologist.id} className="flex items-center p-3 border rounded-lg hover:bg-gray-50">
                         <input
                           type="radio"
@@ -761,7 +825,7 @@ const MedicalStudyInterface: React.FC = () => {
                     Assign Doctors (Optional - Multiple Allowed)
                   </label>
                   <div className="space-y-2">
-                    {mockDoctors.map((doctor) => (
+                    {doctors.map((doctor) => (
                       <label key={doctor.id} className="flex items-center p-3 border rounded-lg hover:bg-gray-50">
                         <input
                           type="checkbox"
@@ -786,7 +850,7 @@ const MedicalStudyInterface: React.FC = () => {
                     {assignmentForm.radiologist_id && (
                       <div className="text-sm text-blue-800 mb-1">
                         <User className="w-3 h-3 inline mr-1" />
-                        Radiologist: {mockRadiologists.find(r => r.id.toString() === assignmentForm.radiologist_id)?.name}
+                        Radiologist: {radiologists.find(r => r.id.toString() === assignmentForm.radiologist_id)?.name}
                       </div>
                     )}
                     {assignmentForm.doctor_ids.length > 0 && (
@@ -794,7 +858,7 @@ const MedicalStudyInterface: React.FC = () => {
                         <Users className="w-3 h-3 inline mr-1" />
                         Doctors ({assignmentForm.doctor_ids.length}): {
                           assignmentForm.doctor_ids
-                            .map(id => mockDoctors.find(d => d.id.toString() === id)?.name)
+                            .map(id => doctors.find(d => d.id.toString() === id)?.name)
                             .join(', ')
                         }
                       </div>
