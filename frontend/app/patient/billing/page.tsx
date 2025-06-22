@@ -36,6 +36,8 @@ interface Appointment {
   fee: number;
   status: string;
   payment_status: string;
+  patient: Patient;
+  dentist: Dentist;
 }
 
 interface PaymentHistory {
@@ -46,10 +48,11 @@ interface PaymentHistory {
 }
 
 interface PaymentRecord {
+  appointment_id: number;
+  payment_date: string;
+  payment_time: string;
+  reference_number: string;
   appointment: Appointment;
-  patient: Patient;
-  dentist: Dentist;
-  payment: PaymentHistory;
 }
 
 const PaymentsInterface: React.FC = () => {
@@ -68,20 +71,18 @@ const PaymentsInterface: React.FC = () => {
   const fetchPayments = async () => {
     setLoadingPayments(true);
     try {
-      const response = await axios.get(`${backendURL}/payment-history`);
+      const response = await axios.get(`${backendURL}/payment-history/patient/${user.id}`);
 
       if (response.status === 500) {
         throw new Error("Internal Server Error");
       }
 
-      // Transform raw response to match PaymentRecord[]
+      // The response data should already match the PaymentRecord[] format
       const formatted: PaymentRecord[] = response.data.map((item: any) => ({
-        payment: {
-          appointment_id: item.appointment_id,
-          payment_date: item.payment_date,
-          payment_time: item.payment_time,
-          reference_number: item.reference_number
-        },
+        appointment_id: item.appointment_id,
+        payment_date: item.payment_date,
+        payment_time: item.payment_time,
+        reference_number: item.reference_number,
         appointment: {
           appointment_id: item.appointment.appointment_id,
           patient_id: item.appointment.patient_id,
@@ -91,10 +92,10 @@ const PaymentsInterface: React.FC = () => {
           time_to: item.appointment.time_to,
           fee: parseFloat(item.appointment.fee ?? 0),
           status: item.appointment.status,
-          payment_status: item.appointment.payment_status
-        },
-        patient: item.appointment.patient,
-        dentist: item.appointment.dentist
+          payment_status: item.appointment.payment_status,
+          patient: item.appointment.patient,
+          dentist: item.appointment.dentist
+        }
       }));
 
       setPayments(formatted);
@@ -109,9 +110,9 @@ const PaymentsInterface: React.FC = () => {
 
   useEffect(() => {
     const filtered = payments.filter(payment =>
-      payment.patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      payment.dentist.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      payment.payment.reference_number.includes(searchTerm)
+      payment.appointment.patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      payment.appointment.dentist.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      payment.reference_number.includes(searchTerm)
     );
     setFilteredPayments(filtered);
   }, [searchTerm, payments]);
@@ -197,34 +198,34 @@ const PaymentsInterface: React.FC = () => {
                 </thead>
                 <tbody>
                   {filteredPayments.map((payment) => (
-                    <tr key={payment.appointment.appointment_id} className="border-b hover:bg-gray-50">
+                    <tr key={payment.appointment_id} className="border-b hover:bg-gray-50">
                       <td className="px-6 py-4">
                         <div className="flex items-center space-x-3">
                           <Avatar className="h-10 w-10">
-                            <AvatarImage src={payment.patient.profile_picture} />
+                            <AvatarImage src={payment.appointment.patient.profile_picture} />
                             <AvatarFallback className="bg-blue-100 text-blue-600">
-                              {getInitials(payment.patient.name)}
+                              {getInitials(payment.appointment.patient.name)}
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <div className="font-medium text-gray-900">{payment.patient.name}</div>
-                            <div className="text-sm text-gray-500">{payment.patient.email}</div>
-                            <div className="text-sm text-gray-500">{payment.patient.phone_number}</div>
+                            <div className="font-medium text-gray-900">{payment.appointment.patient.name}</div>
+                            <div className="text-sm text-gray-500">{payment.appointment.patient.email}</div>
+                            <div className="text-sm text-gray-500">{payment.appointment.patient.phone_number}</div>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center space-x-3">
                           <Avatar className="h-10 w-10">
-                            <AvatarImage src={payment.dentist.profile_picture} />
+                            <AvatarImage src={payment.appointment.dentist.profile_picture} />
                             <AvatarFallback className="bg-green-100 text-green-600">
-                              {getInitials(payment.dentist.name)}
+                              {getInitials(payment.appointment.dentist.name)}
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <div className="font-medium text-gray-900">{payment.dentist.name}</div>
-                            <div className="text-sm text-gray-500">{payment.dentist.email}</div>
-                            <div className="text-sm text-gray-500">{payment.dentist.phone_number}</div>
+                            <div className="font-medium text-gray-900">{payment.appointment.dentist.name}</div>
+                            <div className="text-sm text-gray-500">{payment.appointment.dentist.email}</div>
+                            <div className="text-sm text-gray-500">{payment.appointment.dentist.phone_number}</div>
                           </div>
                         </div>
                       </td>
@@ -236,16 +237,16 @@ const PaymentsInterface: React.FC = () => {
                       <td className="px-6 py-4">
                         <div className="space-y-1">
                           <div className="text-sm font-medium text-gray-900">
-                            {formatDate(payment.payment.payment_date)}
+                            {formatDate(payment.payment_date)}
                           </div>
                           <div className="text-sm text-gray-500">
-                            {formatTime(payment.payment.payment_time)}
+                            {formatTime(payment.payment_time)}
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4">
                         <Badge variant="outline" className="font-mono text-xs">
-                          {payment.payment.reference_number}
+                          {payment.reference_number}
                         </Badge>
                       </td>
                     </tr>
@@ -260,19 +261,19 @@ const PaymentsInterface: React.FC = () => {
         {/* Mobile Card View */}
         <div className="lg:hidden space-y-4">
           {filteredPayments.map((payment) => (
-            <Card key={payment.appointment.appointment_id} className="overflow-hidden">
+            <Card key={payment.appointment_id} className="overflow-hidden">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <Avatar className="h-12 w-12">
-                      <AvatarImage src={payment.patient.profile_picture} />
+                      <AvatarImage src={payment.appointment.patient.profile_picture} />
                       <AvatarFallback className="bg-blue-100 text-blue-600">
-                        {getInitials(payment.patient.name)}
+                        {getInitials(payment.appointment.patient.name)}
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <CardTitle className="text-lg">{payment.patient.name}</CardTitle>
-                      <CardDescription className="text-sm">{payment.patient.email}</CardDescription>
+                      <CardTitle className="text-lg">{payment.appointment.patient.name}</CardTitle>
+                      <CardDescription className="text-sm">{payment.appointment.patient.email}</CardDescription>
                     </div>
                   </div>
                   <div className="flex items-center space-x-1">
@@ -284,14 +285,14 @@ const PaymentsInterface: React.FC = () => {
               <CardContent className="space-y-4">
                 <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
                   <Avatar className="h-10 w-10">
-                    <AvatarImage src={payment.dentist.profile_picture} />
+                    <AvatarImage src={payment.appointment.dentist.profile_picture} />
                     <AvatarFallback className="bg-green-100 text-green-600">
-                      {getInitials(payment.dentist.name)}
+                      {getInitials(payment.appointment.dentist.name)}
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <div className="font-medium text-gray-900">{payment.dentist.name}</div>
-                    <div className="text-sm text-gray-500">{payment.dentist.email}</div>
+                    <div className="font-medium text-gray-900">{payment.appointment.dentist.name}</div>
+                    <div className="text-sm text-gray-500">{payment.appointment.dentist.email}</div>
                   </div>
                 </div>
 
@@ -299,7 +300,7 @@ const PaymentsInterface: React.FC = () => {
                   <div className="flex items-center space-x-2">
                     <Calendar className="h-4 w-4 text-gray-400" />
                     <div>
-                      <div className="text-sm font-medium">{formatDate(payment.payment.payment_date)}</div>
+                      <div className="text-sm font-medium">{formatDate(payment.payment_date)}</div>
                       <div className="text-xs text-gray-500">Date</div>
                     </div>
                   </div>
@@ -307,7 +308,7 @@ const PaymentsInterface: React.FC = () => {
                     <Clock className="h-4 w-4 text-gray-400" />
                     <div>
                       <div className="text-sm font-medium">
-                        {formatTime(payment.payment.payment_time)}
+                        {formatTime(payment.payment_time)}
                       </div>
                       <div className="text-xs text-gray-500">Time</div>
                     </div>
@@ -317,7 +318,7 @@ const PaymentsInterface: React.FC = () => {
                 <div className="pt-2 border-t">
                   <div className="text-xs text-gray-500 mb-1">Reference Number</div>
                   <Badge variant="outline" className="font-mono text-xs">
-                    {payment.payment.reference_number}
+                    {payment.reference_number}
                   </Badge>
                 </div>
               </CardContent>

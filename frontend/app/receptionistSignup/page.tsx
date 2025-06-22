@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ArrowLeft, User, Mail, Phone, Upload, X, Camera } from 'lucide-react';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,7 +11,7 @@ import { Alert, AlertDescription } from '@/Components/ui/alert';
 
 // Types
 interface SecurityQuestion {
-  id: number;
+  security_question_id: number;
   question: string;
 }
 
@@ -50,17 +50,26 @@ const ReceptionistSignUp: React.FC = () => {
     ]
   });
 
-  // Security questions for account recovery
-  const securityQuestions: SecurityQuestion[] = [
-    { id: 1, question: "What was the name of your first pet?" },
-    { id: 2, question: "In what city were you born?" },
-    { id: 3, question: "What was your mother's maiden name?" },
-    { id: 4, question: "What was the name of your elementary school?" },
-    { id: 5, question: "What was your childhood nickname?" },
-    { id: 6, question: "What is your favorite book?" },
-    { id: 7, question: "What was the make of your first car?" },
-    { id: 8, question: "In what city did you meet your spouse/significant other?" }
-  ];
+  const [securityQuestions, setSecurityQuestions] = useState<SecurityQuestion[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  // Fetch security questions on component mount
+  useEffect(() => {
+    const fetchSecurityQuestions = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/security-questions');
+        if (!response.ok) throw new Error('Failed to fetch security questions');
+        const data = await response.json();
+        setSecurityQuestions(data);
+      } catch (err) {
+        console.error('Error fetching security questions:', err);
+        setError('Failed to load security questions. Please refresh the page to try again.');
+      }
+    };
+
+    fetchSecurityQuestions();
+  }, []);
 
   const handleInputChange = (field: keyof ReceptionistFormData, value: string) => {
     setFormData(prev => ({
@@ -149,37 +158,85 @@ const ReceptionistSignUp: React.FC = () => {
     setCurrentStep(1);
   };
 
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
+  const [generatedId, setGeneratedId] = useState('');
+
   const handleSubmit = async () => {
-    if (validateStep2()) {
-      try {
-        // Create FormData object to handle file upload
-        const formDataToSend = new FormData();
-        
-        // Append all form fields
-        Object.entries(formData).forEach(([key, value]) => {
-          if (key === 'securityQuestions') {
-            formDataToSend.append(key, JSON.stringify(value));
-          } else if (key === 'profilePicture' && value) {
-            formDataToSend.append(key, value as File);
-          } else if (key !== 'profilePicture' && key !== 'confirmPassword') {
-            // Don't send confirmPassword to backend, only use for validation
-            formDataToSend.append(key, value as string);
-          }
-        });
-        
-        console.log('Receptionist registration data:', formData);
-        
-        // Example API call structure:
-        // const response = await fetch('/api/receptionists/register', {
-        //   method: 'POST',
-        //   body: formDataToSend
-        // });
-        
-        alert('Receptionist registration completed successfully!');
-      } catch (error) {
-        console.error('Registration failed:', error);
-        alert('Registration failed. Please try again.');
+    if (!validateStep2()) {
+      setError('Please fill in all required fields');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      // 1. Create the receptionist
+      const receptionistData = {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        phone_number: formData.phoneNumber,
+      };
+
+      // Create receptionist
+      const receptionistResponse = await fetch('http://localhost:5000/receptionists', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(receptionistData),
+      });
+
+      if (!receptionistResponse.ok) {
+        const errorData = await receptionistResponse.json();
+        throw new Error(errorData.error || 'Failed to create receptionist account');
       }
+
+      const receptionist = await receptionistResponse.json();
+      
+      // Store the generated ID for display
+      setGeneratedId(receptionist.receptionist_id);
+
+      // 2. Save security questions answers
+      const securityPromises = formData.securityQuestions.map(async (sq) => {
+        if (!sq.questionId || !sq.answer) return null;
+        
+        return fetch('http://localhost:5000/receptionist-security-questions-answers', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            receptionist_id: receptionist.receptionist_id,
+            security_question_id: parseInt(sq.questionId),
+            answer: sq.answer,
+          }),
+        });
+      });
+
+      await Promise.all(securityPromises);
+      
+      // Mark registration as successful
+      setRegistrationSuccess(true);
+      
+      // Clear form
+      setFormData({
+        name: '',
+        email: '',
+        password: '',
+        confirmPassword: '',
+        phoneNumber: '',
+        profilePicture: null,
+        securityQuestions: Array(3).fill({ questionId: '', answer: '' })
+      });
+      setProfileImagePreview(null);
+      
+    } catch (error) {
+      console.error('Registration failed:', error);
+      setError(error instanceof Error ? error.message : 'Registration failed. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -188,10 +245,54 @@ const ReceptionistSignUp: React.FC = () => {
       .map((sq, index) => index !== currentIndex ? sq.questionId : null)
       .filter((id): id is string => id !== null && id !== '');
     
-    return securityQuestions.filter(q => !selectedIds.includes(q.id.toString()));
+    return securityQuestions.filter(q => !selectedIds.includes(q.security_question_id.toString()));
   };
 
   const progressValue = (currentStep / 2) * 100;
+
+  if (registrationSuccess) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="p-6 max-w-md w-full bg-white rounded-lg shadow-md text-center">
+          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100">
+            <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h2 className="mt-3 text-xl font-semibold text-gray-900">Registration Successful!</h2>
+          <p className="mt-2 text-gray-600">
+            Your receptionist ID is: <span className="font-bold">{generatedId}</span>
+          </p>
+          <p className="mt-2 text-gray-600">
+            An email has been sent to {formData.email} with your login details.
+            Please check your inbox and keep your ID safe.
+          </p>
+          <div className="mt-6">
+            <Button 
+              onClick={() => window.location.href = '/'}
+              className="w-full bg-emerald-600 hover:bg-emerald-700"
+            >
+              Go to Login
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="p-6 max-w-md w-full bg-white rounded-lg shadow-md">
+          <h2 className="text-xl font-semibold text-red-600 mb-4">Error</h2>
+          <p className="text-gray-700 mb-4">{error}</p>
+          <Button onClick={() => setError('')} className="w-full">
+            Go Back
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-100 py-8 px-4">
@@ -222,70 +323,7 @@ const ReceptionistSignUp: React.FC = () => {
                 </CardHeader>
 
                 <div className="space-y-6">
-                  {/* Profile Picture Upload */}
-                  <div className="space-y-4">
-                    <Label className="flex items-center">
-                      <Camera className="w-4 h-4 mr-2" />
-                      Profile Picture (Optional)
-                    </Label>
-                    <div className="flex flex-col items-center space-y-4">
-                      {/* Image Preview */}
-                      <div className="relative">
-                        {profileImagePreview ? (
-                          <div className="relative">
-                            <img
-                              src={profileImagePreview}
-                              alt="Profile preview"
-                              className="w-32 h-32 rounded-full object-cover border-4 border-emerald-200 shadow-lg"
-                            />
-                            <button
-                              type="button"
-                              onClick={removeProfilePicture}
-                              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="w-32 h-32 rounded-full border-4 border-dashed border-emerald-300 flex items-center justify-center bg-emerald-50">
-                            <Camera className="w-8 h-8 text-emerald-400" />
-                          </div>
-                        )}
-                      </div>
-                      
-                      {/* Upload Button */}
-                      <div className="text-center">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={triggerFileUpload}
-                          className="border-emerald-300 text-emerald-700 hover:bg-emerald-50"
-                        >
-                          <Upload className="w-4 h-4 mr-2" />
-                          {profileImagePreview ? 'Change Picture' : 'Upload Picture'}
-                        </Button>
-                        <p className="text-sm text-gray-500 mt-2">
-                          JPG, PNG or GIF. Max size 5MB.
-                        </p>
-                      </div>
-                      
-                      {/* Hidden File Input */}
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*"
-                        onChange={handleFileUpload}
-                        className="hidden"
-                      />
-                      
-                      {/* Upload Error */}
-                      {uploadError && (
-                        <Alert variant="destructive" className="max-w-md">
-                          <AlertDescription>{uploadError}</AlertDescription>
-                        </Alert>
-                      )}
-                    </div>
-                  </div>
+                  
 
                   {/* Name */}
                   <div className="space-y-2">
@@ -416,7 +454,7 @@ const ReceptionistSignUp: React.FC = () => {
                           >
                             <option value="">Select a security question</option>
                             {getAvailableQuestions(index).map(q => (
-                              <option key={q.id} value={q.id.toString()}>{q.question}</option>
+                              <option key={q.security_question_id} value={q.security_question_id.toString()}>{q.question}</option>
                             ))}
                           </select>
                         </div>

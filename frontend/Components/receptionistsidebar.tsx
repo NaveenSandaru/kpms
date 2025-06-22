@@ -4,8 +4,8 @@ import { usePathname } from "next/navigation";
 import { useState, useContext, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { BarChart3, LogOut, Settings, User2, Menu, X } from "lucide-react";
-//import { AuthContext } from "@/context/auth-context";
-//import { toast } from "sonner";
+import { AuthContext } from "@/context/auth-context";
+import { toast } from "sonner";
 
 import {
   Sidebar,
@@ -30,11 +30,11 @@ import {
   UserCheck,
   Calendar,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-//import axios from "axios";
+import { Button } from "@/Components/ui/button";
+import axios from "axios";
 
 const ReceptionistSidebar = () => {
-  //const {setUser, setAccessToken} = useContext(AuthContext);
+  const {setUser, setAccessToken, user} = useContext(AuthContext);
   const router = useRouter();
   const pathname = usePathname();
   const [isLoading, setIsLoading] = useState(false);
@@ -52,41 +52,41 @@ const ReceptionistSidebar = () => {
 
   // Generate dynamic menu items based on receptionistId
   const items = useMemo(() => {
-    if (!receptionistId) return [];
+    if (!user) return [];
     
     return [
       {
     title: "Dashboard",
-    url: `/receptionist/${receptionistId}`,
+    url: `/receptionist`,
     icon: LayoutGrid,
   },
   {
     title: "Appointments",
-    url: `/receptionist/${receptionistId}/appointments`,
+    url: `/receptionist/appointments`,
     icon: Calendar,
   },
   {
     title: "Pending Appointments",
-    url: `/receptionist/${receptionistId}/pendingappointments`,
+    url: `/receptionist/pendingappointments`,
     icon: UserCheck,
   },
   {
     title: "Dentists",
-    url: `/receptionist/${receptionistId}/dentists`, 
+    url: `/receptionist/dentists`, 
     icon: Users,
   },
   {
     title: "Patients",
-    url: `/receptionist/${receptionistId}/patients`,
+    url: `/receptionist/patients`,
     icon: User2,
   },
   {
     title: "Payments",
-    url: `/receptionist/${receptionistId}/payments`,
+    url: `/receptionist/payments`,
     icon: KanbanSquare,
   },
     ];
-  }, [receptionistId]);
+  }, [user]);
 
   // Close mobile menu when route changes
   useEffect(() => {
@@ -121,11 +121,6 @@ const ReceptionistSidebar = () => {
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
-
-  // Don't render if no receptionistId is found
-  if (!receptionistId) {
-    return null;
-  }
 
   return (
     <>

@@ -233,7 +233,7 @@ model insurance_details {
 model study {
   study_id          Int         @id @default(autoincrement())
   patient_id        String
-  radiologist_id    Int?
+  radiologist_id    String?
   date              DateTime
   time              String
   modality          String?
@@ -269,7 +269,7 @@ model reports {
 }
 
 model radiologists {
-  radiologist_id  Int      @id @default(autoincrement())
+  radiologist_id  String      @id
   password        String
   name            String
   profile_picture String?
