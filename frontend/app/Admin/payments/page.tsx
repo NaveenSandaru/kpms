@@ -182,6 +182,7 @@ const PaymentsInterface: React.FC = () => {
 
         {/* Desktop Table View */}
         <div className="hidden lg:block bg-white rounded-lg shadow-sm border overflow-hidden">
+          {filteredPayments.length > 0 && (
           <div className="overflow-x-auto">
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -253,7 +254,7 @@ const PaymentsInterface: React.FC = () => {
               </table>
             </div>
           </div>
-
+          )}
         </div>
 
         {/* Mobile Card View */}

@@ -1,12 +1,26 @@
 "use client";
 import React, { useState } from 'react';
-import { Calendar, Clock, Plus, Search, MoreHorizontal, X, Upload, FileText } from 'lucide-react';
+import { Calendar, Clock, Plus, Search, MoreHorizontal, X, Upload, FileText, Edit, Trash2, UserPlus, User, Users } from 'lucide-react';
 
 // Types based on the database structure
+interface Doctor {
+  id: number;
+  name: string;
+  specialization: string;
+}
+
+interface Radiologist {
+  id: number;
+  name: string;
+  specialization: string;
+}
+
 interface Study {
   study_id: number;
   patient_id: string;
   radiologist_id?: number;
+  radiologist?: Radiologist;
+  doctors?: Doctor[];
   date: string;
   time: string;
   modality?: string;
@@ -31,8 +45,15 @@ interface NewStudyForm {
   report_files: File[];
 }
 
+interface AssignmentForm {
+  radiologist_id: string;
+  doctor_ids: string[];
+}
+
 const MedicalStudyInterface: React.FC = () => {
   const [isAddStudyOpen, setIsAddStudyOpen] = useState(false);
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [selectedStudyId, setSelectedStudyId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState('1D');
   const [activeModality, setActiveModality] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
@@ -49,18 +70,44 @@ const MedicalStudyInterface: React.FC = () => {
     report_files: []
   });
 
-  // Mock data
-  const mockStudies: Study[] = Array.from({ length: 77 }, (_, i) => ({
-    study_id: i + 1,
-    patient_id: 'PID001',
-    date: '2024-12-01',
-    time: '10:15AM',
-    modality: 'CT',
-    assertion_number: 203948,
-    description: 'Head CT Scan',
-    source: 'CT-SOURCE-AE',
-    isurgent: false
-  }));
+  const [assignmentForm, setAssignmentForm] = useState<AssignmentForm>({
+    radiologist_id: '',
+    doctor_ids: []
+  });
+
+  // Mock data for radiologists and doctors
+  const mockRadiologists: Radiologist[] = [
+    { id: 1, name: 'Dr. Sarah Johnson', specialization: 'Neuroradiology' },
+    { id: 2, name: 'Dr. Michael Chen', specialization: 'Cardiothoracic Radiology' },
+    { id: 3, name: 'Dr. Emily Rodriguez', specialization: 'Musculoskeletal Radiology' }
+  ];
+
+  const mockDoctors: Doctor[] = [
+    { id: 1, name: 'Dr. John Smith', specialization: 'Cardiology' },
+    { id: 2, name: 'Dr. Lisa Wang', specialization: 'Neurology' },
+    { id: 3, name: 'Dr. David Brown', specialization: 'Orthopedics' },
+    { id: 4, name: 'Dr. Maria Garcia', specialization: 'Internal Medicine' },
+    { id: 5, name: 'Dr. Robert Taylor', specialization: 'Emergency Medicine' }
+  ];
+
+  // Mock data with some studies having assigned radiologists and doctors
+  const [studies, setStudies] = useState<Study[]>(
+    Array.from({ length: 77 }, (_, i) => ({
+      study_id: i + 1,
+      patient_id: 'PID001',
+      date: '2024-12-01',
+      time: '10:15AM',
+      modality: 'CT',
+      assertion_number: 203948 + i,
+      description: 'Head CT Scan',
+      source: 'CT-SOURCE-AE',
+      isurgent: false,
+      // Add some mock assignments for demonstration
+      radiologist_id: i % 3 === 0 ? mockRadiologists[0].id : undefined,
+      radiologist: i % 3 === 0 ? mockRadiologists[0] : undefined,
+      doctors: i % 4 === 0 ? [mockDoctors[0], mockDoctors[1]] : undefined
+    }))
+  );
 
   const tabs = ['1D', '3D', '1W', '1M', '1Y', 'ALL'];
   const modalities = ['All', 'CT', 'MRI', 'DX', 'IO', 'CR'];
@@ -77,7 +124,23 @@ const MedicalStudyInterface: React.FC = () => {
 
   const handleSubmitStudy = () => {
     console.log('Submitting study:', newStudy);
-    // Here you would typically send the data to your API
+    
+    // Create new study object
+    const newStudyRecord: Study = {
+      study_id: studies.length + 1,
+      patient_id: newStudy.patient_id,
+      date: new Date().toISOString().split('T')[0],
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      modality: newStudy.modality,
+      assertion_number: parseInt(newStudy.assertion_number) || Math.floor(Math.random() * 1000000),
+      description: newStudy.description,
+      source: 'MANUAL-UPLOAD',
+      isurgent: false
+    };
+
+    // Add to studies list
+    setStudies(prev => [newStudyRecord, ...prev]);
+    
     setIsAddStudyOpen(false);
     // Reset form
     setNewStudy({
@@ -92,8 +155,70 @@ const MedicalStudyInterface: React.FC = () => {
     });
   };
 
-  const displayedStudies = mockStudies.slice((currentPage - 1) * 10, currentPage * 10);
-  const totalPages = Math.ceil(mockStudies.length / 10);
+  const handleAssignStaff = () => {
+    if (!selectedStudyId) return;
+
+    const selectedRadiologist = mockRadiologists.find(r => r.id === parseInt(assignmentForm.radiologist_id));
+    const selectedDoctors = mockDoctors.filter(d => assignmentForm.doctor_ids.includes(d.id.toString()));
+
+    setStudies(prev => prev.map(study => {
+      if (study.study_id === selectedStudyId) {
+        return {
+          ...study,
+          radiologist_id: selectedRadiologist?.id,
+          radiologist: selectedRadiologist,
+          doctors: selectedDoctors.length > 0 ? selectedDoctors : undefined
+        };
+      }
+      return study;
+    }));
+
+    // Close modal and reset form
+    setIsAssignModalOpen(false);
+    setSelectedStudyId(null);
+    setAssignmentForm({
+      radiologist_id: '',
+      doctor_ids: []
+    });
+  };
+
+  const handleDeleteStudy = (studyId: number) => {
+    if (confirm('Are you sure you want to delete this study?')) {
+      setStudies(prev => prev.filter(study => study.study_id !== studyId));
+    }
+  };
+
+  const handleEditStudy = (studyId: number) => {
+    // This would typically open an edit modal
+    console.log('Edit study:', studyId);
+    alert('Edit functionality would be implemented here');
+  };
+
+  const openAssignModal = (studyId: number) => {
+    setSelectedStudyId(studyId);
+    setIsAssignModalOpen(true);
+    
+    // Pre-populate form with existing assignments
+    const study = studies.find(s => s.study_id === studyId);
+    if (study) {
+      setAssignmentForm({
+        radiologist_id: study.radiologist_id?.toString() || '',
+        doctor_ids: study.doctors?.map(d => d.id.toString()) || []
+      });
+    }
+  };
+
+  const handleDoctorSelection = (doctorId: string) => {
+    setAssignmentForm(prev => ({
+      ...prev,
+      doctor_ids: prev.doctor_ids.includes(doctorId)
+        ? prev.doctor_ids.filter(id => id !== doctorId)
+        : [...prev.doctor_ids, doctorId]
+    }));
+  };
+
+  const displayedStudies = studies.slice((currentPage - 1) * 10, currentPage * 10);
+  const totalPages = Math.ceil(studies.length / 10);
 
   return (
     <div className="min-h-screen bg-gray-50 p-6 overflow-auto">
@@ -110,15 +235,13 @@ const MedicalStudyInterface: React.FC = () => {
           </div>
         </div>
 
-    
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <div className="bg-white rounded-lg p-6 shadow-sm">
             <div className="flex justify-between items-start">
               <div>
                 <div className="text-sm font-medium text-gray-600 mb-1">Total Studies</div>
-                <div className="text-3xl font-bold text-gray-900">77</div>
-                
+                <div className="text-3xl font-bold text-gray-900">{studies.length}</div>
               </div>
               <Calendar className="w-8 h-8 text-blue-500" />
             </div>
@@ -129,7 +252,6 @@ const MedicalStudyInterface: React.FC = () => {
               <div>
                 <div className="text-sm font-medium text-gray-600 mb-1">Today's Scans</div>
                 <div className="text-3xl font-bold text-gray-900">8</div>
-                
               </div>
               <Clock className="w-8 h-8 text-green-500" />
             </div>
@@ -189,7 +311,7 @@ const MedicalStudyInterface: React.FC = () => {
               </div>
               
               <div className="flex items-center gap-2">
-                <button className="px-4 py-2 text-emerald-600 border border-emrald-300 rounded-lg hover:bg-emerald-50">
+                <button className="px-4 py-2 text-emerald-600 border border-emerald-300 rounded-lg hover:bg-emerald-50">
                   Reset
                 </button>
                 <button className="px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600">
@@ -230,11 +352,13 @@ const MedicalStudyInterface: React.FC = () => {
                   <th className="px-4 py-3 text-left text-sm font-medium">Date</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">Time</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">Source AE</th>
-                  
+                  <th className="px-4 py-3 text-left text-sm font-medium">Radiologist</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Doctors</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {displayedStudies.map((study, index) => (
+                {displayedStudies.map((study) => (
                   <tr key={study.study_id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm text-gray-900">{study.patient_id}</td>
                     <td className="px-4 py-3 text-sm text-gray-900">John Doe</td>
@@ -245,7 +369,51 @@ const MedicalStudyInterface: React.FC = () => {
                     <td className="px-4 py-3 text-sm text-gray-900">{study.date}</td>
                     <td className="px-4 py-3 text-sm text-gray-900">{study.time}</td>
                     <td className="px-4 py-3 text-sm text-gray-900">{study.source}</td>
-                    
+                    <td className="px-4 py-3 text-sm">
+                      {study.radiologist ? (
+                        <div className="flex items-center gap-1 text-green-600">
+                          <User className="w-3 h-3" />
+                          <span className="text-xs">{study.radiologist.name}</span>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 text-xs">Not assigned</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      {study.doctors && study.doctors.length > 0 ? (
+                        <div className="flex items-center gap-1 text-blue-600">
+                          <Users className="w-3 h-3" />
+                          <span className="text-xs">{study.doctors.length} doctor(s)</span>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 text-xs">Not assigned</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleEditStudy(study.study_id)}
+                          className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                          title="Edit Study"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteStudy(study.study_id)}
+                          className="p-1 text-red-600 hover:bg-red-50 rounded"
+                          title="Delete Study"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => openAssignModal(study.study_id)}
+                          className="p-1 text-green-600 hover:bg-green-50 rounded"
+                          title="Assign Staff"
+                        >
+                          <UserPlus className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -258,9 +426,26 @@ const MedicalStudyInterface: React.FC = () => {
               <div key={study.study_id} className="p-4">
                 <div className="flex justify-between items-start mb-2">
                   <div className="font-medium text-gray-900">{study.patient_id} - John Doe</div>
-                  <button className="text-emerald-400 hover:text-emerald-600">
-                    <MoreHorizontal className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleEditStudy(study.study_id)}
+                      className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteStudy(study.study_id)}
+                      className="p-1 text-red-600 hover:bg-red-50 rounded"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => openAssignModal(study.study_id)}
+                      className="p-1 text-green-600 hover:bg-green-50 rounded"
+                    >
+                      <UserPlus className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
                 <div className="text-sm text-gray-600 space-y-1">
                   <div>Modality: {study.modality}</div>
@@ -268,13 +453,16 @@ const MedicalStudyInterface: React.FC = () => {
                   <div>Date: {study.date} at {study.time}</div>
                   <div>Accession: ACC-{study.assertion_number}</div>
                   <div className="text-blue-600 underline cursor-pointer">Report_001.pdf</div>
+                  {study.radiologist && (
+                    <div className="text-green-600">Radiologist: {study.radiologist.name}</div>
+                  )}
+                  {study.doctors && study.doctors.length > 0 && (
+                    <div className="text-blue-600">Doctors: {study.doctors.map(d => d.name).join(', ')}</div>
+                  )}
                 </div>
               </div>
             ))}
           </div>
-
-          =
-          
         </div>
       </div>
 
@@ -419,7 +607,7 @@ const MedicalStudyInterface: React.FC = () => {
                     <p className="text-sm text-gray-600 mb-2">
                       <span className="text-blue-600 underline cursor-pointer">Upload a file</span> or drag and drop
                     </p>
-                    <p className="text-xs text-gray-500">DICOM files cannot be 20 megabytes up to 10MB</p>
+                    <p className="text-xs text-gray-500">PDF, DOC, DOCX files up to 10MB</p>
                     <input
                       type="file"
                       multiple
@@ -444,15 +632,130 @@ const MedicalStudyInterface: React.FC = () => {
                 <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-gray-200">
                   <button
                     onClick={() => setIsAddStudyOpen(false)}
-                    className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                    className="px-6 py-2 border border-emerald-300 text-gray-700 rounded-lg hover:bg-emerald-50"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleSubmitStudy}
-                    className="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700"
+                    className="px-6 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600"
                   >
                     Upload Study
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Assign Staff Modal */}
+      {isAssignModalOpen && (
+        <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold text-gray-900">Assign Staff to Study</h2>
+                <button
+                  onClick={() => setIsAssignModalOpen(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                {/* Radiologist Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    <User className="w-4 h-4 inline mr-2" />
+                    Assign Radiologist (Required - One Only)
+                  </label>
+                  <div className="space-y-2">
+                    {mockRadiologists.map((radiologist) => (
+                      <label key={radiologist.id} className="flex items-center p-3 border rounded-lg hover:bg-gray-50">
+                        <input
+                          type="radio"
+                          name="radiologist"
+                          value={radiologist.id.toString()}
+                          checked={assignmentForm.radiologist_id === radiologist.id.toString()}
+                          onChange={(e) => setAssignmentForm(prev => ({ 
+                            ...prev, 
+                            radiologist_id: e.target.value 
+                          }))}
+                          className="mr-3"
+                        />
+                        <div>
+                          <div className="font-medium text-gray-900">{radiologist.name}</div>
+                          <div className="text-sm text-gray-600">{radiologist.specialization}</div>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Doctor Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    <Users className="w-4 h-4 inline mr-2" />
+                    Assign Doctors (Optional - Multiple Allowed)
+                  </label>
+                  <div className="space-y-2">
+                    {mockDoctors.map((doctor) => (
+                      <label key={doctor.id} className="flex items-center p-3 border rounded-lg hover:bg-gray-50">
+                        <input
+                          type="checkbox"
+                          value={doctor.id.toString()}
+                          checked={assignmentForm.doctor_ids.includes(doctor.id.toString())}
+                          onChange={(e) => handleDoctorSelection(e.target.value)}
+                          className="mr-3"
+                        />
+                        <div>
+                          <div className="font-medium text-gray-900">{doctor.name}</div>
+                          <div className="text-sm text-gray-600">{doctor.specialization}</div>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Current Assignments Summary */}
+                {(assignmentForm.radiologist_id || assignmentForm.doctor_ids.length > 0) && (
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <h4 className="font-medium text-blue-900 mb-2">Assignment Summary:</h4>
+                    {assignmentForm.radiologist_id && (
+                      <div className="text-sm text-blue-800 mb-1">
+                        <User className="w-3 h-3 inline mr-1" />
+                        Radiologist: {mockRadiologists.find(r => r.id.toString() === assignmentForm.radiologist_id)?.name}
+                      </div>
+                    )}
+                    {assignmentForm.doctor_ids.length > 0 && (
+                      <div className="text-sm text-blue-800">
+                        <Users className="w-3 h-3 inline mr-1" />
+                        Doctors ({assignmentForm.doctor_ids.length}): {
+                          assignmentForm.doctor_ids
+                            .map(id => mockDoctors.find(d => d.id.toString() === id)?.name)
+                            .join(', ')
+                        }
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-gray-200">
+                  <button
+                    onClick={() => setIsAssignModalOpen(false)}
+                    className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleAssignStaff}
+                    disabled={!assignmentForm.radiologist_id}
+                    className="px-6 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  >
+                    Assign Staff
                   </button>
                 </div>
               </div>
