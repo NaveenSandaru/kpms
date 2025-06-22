@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/Components/ui/tabs'
 import { Switch } from '@/Components/ui/switch'
 import { Search, Plus, Phone, Mail, Calendar, Clock, User, DollarSign, FileText, CheckCircle, CreditCard } from 'lucide-react'
 import axios from 'axios';
+import { AppointmentDialog } from '@/Components/AppointmentDialog'
 
 interface Patient {
   patient_id: string
@@ -129,18 +130,17 @@ export default function AppointmentsPage() {
   const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([])
   const [allAppointments, setAllAppointments] = useState<Appointment[]>([])
   const [checkedInAppointments, setCheckedInAppointments] = useState<Appointment[]>([])
-
-
   const [filteredAppointments, setFilteredAppointments] = useState<Appointment[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [activeTab, setActiveTab] = useState('today')
   const [receptionistId, setReceptionistId] = useState<string>('123')
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
 
   // Get receptionist ID from auth token (defaulting to 123)
   useEffect(() => {
     // In a real app, you would decode the auth token here
     // For now, we'll use the default value or the param
-    // This supports both [receptionistID] and [receptionistID] in different folder structures
+    // This supports both [receptionistID] and [receptionistId] in different folder structures
     const id = (params.receptionistID || params.receptionistId) as string || '123'
     setReceptionistId(id)
   }, [params])
@@ -292,6 +292,43 @@ export default function AppointmentsPage() {
     })
   }
 
+  const handleAppointmentCreated = () => {
+    // Fetch appointments from API
+    const fetchAppointments = async () => {
+      try {
+        const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
+        const [todayRes, allRes, checkedInRes] = await Promise.all([
+          axios.get(`${backendURL}/appointments/today`),
+          axios.get(`${backendURL}/appointments`),
+          axios.get(`${backendURL}/appointments/checkedin`)
+        ]);
+
+        const todayData = todayRes.data;
+        const allData = allRes.data;
+        const checkedInData = checkedInRes.data;
+
+        setTodayAppointments(todayData);
+        setCheckedInAppointments(checkedInData);
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Normalize to midnight for accurate comparison
+
+        // Get only appointments where date > today
+        const upcoming = allData.filter((appointment: Appointment) => {
+          const appointmentDate = new Date(appointment.date);
+          appointmentDate.setHours(0, 0, 0, 0);
+          return appointmentDate > today;
+        });
+
+        setAllAppointments(upcoming);
+      } catch (error) {
+        console.error("Failed to fetch appointments:", error);
+      }
+    };
+
+    fetchAppointments();
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
@@ -314,7 +351,7 @@ export default function AppointmentsPage() {
             />
           </div>
 
-          <Button className="bg-emerald-500 hover:bg-emerald-600 text-white" >
+          <Button className="bg-emerald-500 hover:bg-emerald-600 text-white" onClick={() => setIsDialogOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Add Appointment
           </Button>
@@ -551,6 +588,12 @@ export default function AppointmentsPage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      <AppointmentDialog 
+        open={isDialogOpen} 
+        onOpenChange={setIsDialogOpen}
+        onAppointmentCreated={handleAppointmentCreated}
+      />
     </div>
   )
 }

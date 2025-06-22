@@ -40,8 +40,34 @@ router.post('/', upload.single('file'), (req, res) => {
     const fileUrl = `/uploads/files/${req.file.filename}`;
     res.status(201).json({ url: fileUrl });
   } catch (error) {
-    console.error(error);
+    console.error('File upload error:', error);
     res.status(500).json({ error: 'File upload failed' });
+  }
+});
+
+// Delete file
+router.delete('/:fileName', (req, res) => {
+  try {
+    const { fileName } = req.params;
+    
+    if (!fileName) {
+      return res.status(400).json({ error: 'File name is required' });
+    }
+
+    const filePath = path.join(UPLOAD_DIR, fileName);
+    
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+
+    // Delete the file
+    fs.unlinkSync(filePath);
+    
+    res.status(200).json({ message: 'File deleted successfully' });
+  } catch (error) {
+    console.error('File deletion error:', error);
+    res.status(500).json({ error: 'Failed to delete file' });
   }
 });
 

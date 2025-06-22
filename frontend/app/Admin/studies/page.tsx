@@ -387,9 +387,29 @@ const MedicalStudyInterface: React.FC = () => {
     }
   };
 
-  const handleDeleteStudy = (studyId: number) => {
-    if (confirm('Are you sure you want to delete this study?')) {
+  const handleDeleteStudy = async (studyId: number) => {
+    if (!confirm('Are you sure you want to delete this study? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`http://localhost:5000/studies/${studyId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete study: ${response.statusText}`);
+      }
+
+      // Only update the UI if the backend deletion was successful
       setStudies(prev => prev.filter(study => study.study_id !== studyId));
+      
+      // Show success message
+      alert('Study deleted successfully');
+    } catch (error) {
+      console.error('Error deleting study:', error);
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      alert(`Error deleting study: ${errorMessage}`);
     }
   };
 
