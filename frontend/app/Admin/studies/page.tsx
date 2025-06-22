@@ -86,12 +86,12 @@ const MedicalStudyInterface: React.FC = () => {
       setError(null);
       try {
         const response = await fetch('http://localhost:5000/studies');
-        console.log(response);
         if (!response.ok) {
           throw new Error(`Error: ${response.status}`);
         }
         const data = await response.json();
         setStudies(data);
+        console.log(data);
       } catch (err) {
         console.error('Failed to fetch studies:', err);
         setError('Failed to load studies. Please try again later.');
@@ -211,8 +211,30 @@ const MedicalStudyInterface: React.FC = () => {
     }));
   };
 
-  // Filter studies based on search and modality
+  // Filter studies based on time period, modality, and search term
   const filteredStudies = studies.filter(study => {
+    // Filter by time period based on selected tab
+    const studyDate = new Date(study.date);
+    const now = new Date();
+    let dateMatch = true;
+    if (activeTab !== 'ALL') {
+      const diffMs = now.getTime() - studyDate.getTime();
+      const diffDays = diffMs / (1000 * 60 * 60 * 24);
+      if (activeTab.endsWith('D')) {
+        const days = parseInt(activeTab, 10);
+        dateMatch = diffDays <= days;
+      } else if (activeTab.endsWith('W')) {
+        const weeks = parseInt(activeTab, 10);
+        dateMatch = diffDays <= weeks * 7;
+      } else if (activeTab.endsWith('M')) {
+        const months = parseInt(activeTab, 10);
+        dateMatch = diffDays <= months * 30;
+      } else if (activeTab.endsWith('Y')) {
+        const years = parseInt(activeTab, 10);
+        dateMatch = diffDays <= years * 365;
+      }
+    }
+
     // Filter by modality if not 'All'
     const modalityMatch = activeModality === 'All' || study.modality === activeModality;
 
@@ -222,7 +244,7 @@ const MedicalStudyInterface: React.FC = () => {
       (study.description && study.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (study.assertion_number && study.assertion_number.toString().includes(searchTerm));
 
-    return modalityMatch && searchMatch;
+    return dateMatch && modalityMatch && searchMatch;
   });
 
   const displayedStudies = filteredStudies.slice((currentPage - 1) * 10, currentPage * 10);
@@ -230,11 +252,11 @@ const MedicalStudyInterface: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6 overflow-auto">
-    {loading && (
-          <div className="bg-blue-50 p-4 rounded-lg text-center">
-            <p className="text-blue-700">Loading studies...</p>
-          </div>
-        )}
+      {loading && (
+        <div className="bg-blue-50 p-4 rounded-lg text-center">
+          <p className="text-blue-700">Loading studies...</p>
+        </div>
+      )}
       <div className="max-w-7xl mx-auto space-y-8">
         {/* Header */}
         <div className="flex justify-between items-start">
@@ -282,8 +304,8 @@ const MedicalStudyInterface: React.FC = () => {
                   key={tab}
                   onClick={() => setActiveTab(tab)}
                   className={`px-3 py-1 rounded text-sm font-medium transition-colors ${activeTab === tab
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-emerald-100 text-emerald-600 hover:bg-emerald-200'
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-emerald-100 text-emerald-600 hover:bg-emerald-200'
                     }`}
                 >
                   {tab}
@@ -299,8 +321,8 @@ const MedicalStudyInterface: React.FC = () => {
                   key={modality}
                   onClick={() => setActiveModality(modality)}
                   className={`px-3 py-1 rounded text-sm font-medium transition-colors ${activeModality === modality
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-emerald-100 text-emerald-600 hover:bg-emerald-200'
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-emerald-100 text-emerald-600 hover:bg-emerald-200'
                     }`}
                 >
                   {modality}
@@ -356,12 +378,13 @@ const MedicalStudyInterface: React.FC = () => {
                 <tr>
                   <th className="px-4 py-3 text-left text-sm font-medium">ID</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">Name</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Report</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Status</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">Accession</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">Modality</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">Description</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">Date</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">Time</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Report</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">Source AE</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">Radiologist</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">Doctors</th>
@@ -373,12 +396,13 @@ const MedicalStudyInterface: React.FC = () => {
                   <tr key={study.study_id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm text-gray-900">{study.patient_id}</td>
                     <td className="px-4 py-3 text-sm text-gray-900">John Doe</td>
-                    <td className="px-4 py-3 text-sm text-blue-600 underline cursor-pointer">Report_001.pdf</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">{study.status}</td>
                     <td className="px-4 py-3 text-sm text-gray-900">ACC-{study.assertion_number}</td>
                     <td className="px-4 py-3 text-sm text-gray-900">{study.modality}</td>
                     <td className="px-4 py-3 text-sm text-gray-900">{study.description}</td>
                     <td className="px-4 py-3 text-sm text-gray-900">{study.date}</td>
                     <td className="px-4 py-3 text-sm text-gray-900">{study.time}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">{study.report?.status ?? 'No status'}</td>
                     <td className="px-4 py-3 text-sm text-gray-900">{study.source}</td>
                     <td className="px-4 py-3 text-sm">
                       {study.radiologist ? (
