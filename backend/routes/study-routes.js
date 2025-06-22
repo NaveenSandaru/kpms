@@ -111,7 +111,7 @@ router.put('/:study_id', /* authenticateToken, */ async (req, res) => {
       data.assertion_number = parseInt(data.assertion_number);
     }
     
-    // Update the study
+    // Update study
     const updatedStudy = await prisma.study.update({
       where: { study_id: studyId },
       data,

@@ -290,5 +290,5 @@ model DentistAssign {
   dentist     dentists   @relation(fields: [dentist_id], references: [dentist_id])
 
   @@id([study_id, dentist_id])
-  @@map("dentist_assign")
+  @@map("dentistassign")
 }
