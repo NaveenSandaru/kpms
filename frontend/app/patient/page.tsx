@@ -51,19 +51,19 @@ interface Message {
 const HealthcareDashboard: React.FC = () => {
   const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
   const { user, isLoggedIn, isLoadingAuth } = useContext(AuthContext);
-  
+
   const [activeTab, setActiveTab] = useState<'today' | 'upcoming'>('today');
   const [loadingTodaysAppointments, setLoadingTodaysAppointments] = useState(false);
   const [loadingUpcomingAppointments, setLoadingUpcomingAppointments] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [changingStatus, setChangingStatus] = useState(false);
-  
+
   const [todaysAppointments, setTodaysAppointments] = useState<Appointment[]>([]);
   const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [totalCosts, setTotalCosts] = useState(0);
   const [lastVisitDate, setLastVisitDate] = useState<string>('');
-  
+
   const [status, setStatus] = useState("");
   const [appointment_id, setAppointment_id] = useState("");
 
@@ -130,11 +130,6 @@ const HealthcareDashboard: React.FC = () => {
       }
     }
   };
-
- 
-
-
- 
 
   // Update appointment status
   const updateStatusChange = async () => {
@@ -209,8 +204,8 @@ const HealthcareDashboard: React.FC = () => {
       bgColor: 'bg-red-50',
       iconColor: 'text-red-600'
     },
-    
-    
+
+
   ];
 
   // Auth check effect
@@ -234,7 +229,7 @@ const HealthcareDashboard: React.FC = () => {
     if (!user) return;
     fetchTodaysAppointments();
     fetchUpcomingAppointments();
-    
+
     fetchTotalCosts();
   }, [user]);
 
@@ -296,11 +291,10 @@ const HealthcareDashboard: React.FC = () => {
             <div className="flex">
               <button
                 onClick={() => setActiveTab('today')}
-                className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === 'today'
+                className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'today'
                     ? 'border-emerald-600 text-emerald-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
+                  }`}
               >
                 Today
                 {loadingTodaysAppointments && (
@@ -309,11 +303,10 @@ const HealthcareDashboard: React.FC = () => {
               </button>
               <button
                 onClick={() => setActiveTab('upcoming')}
-                className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === 'upcoming'
+                className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'upcoming'
                     ? 'border-emerald-600 text-emerald-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
+                  }`}
               >
                 Upcoming
                 {loadingUpcomingAppointments && (
@@ -338,8 +331,8 @@ const HealthcareDashboard: React.FC = () => {
                       {/* Dentist Avatar */}
                       <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
                         {appointment.dentist?.profile_picture ? (
-                          <img 
-                            src={appointment.dentist.profile_picture} 
+                          <img
+                            src={appointment.dentist.profile_picture}
                             alt={appointment.dentist?.name || 'Dentist'}
                             className="w-full h-full object-cover"
                           />
@@ -349,7 +342,7 @@ const HealthcareDashboard: React.FC = () => {
                           </span>
                         )}
                       </div>
-                      
+
                       {/* Appointment Details */}
                       <div className="min-w-0 flex-1">
                         <h3 className="text-lg font-semibold text-gray-900 truncate">
@@ -366,7 +359,7 @@ const HealthcareDashboard: React.FC = () => {
                             ⏰ {appointment.time_from || 'TBD'} {appointment.time_to ? `- ${appointment.time_to}` : ''}
                           </p>
                           {appointment.fee && (
-                            <p className="text-sm text-gray-500">💰 ${appointment.fee}</p>
+                            <p className="text-sm text-gray-500">💰 Rs. {appointment.fee}</p>
                           )}
                         </div>
                         {appointment.note && (
@@ -380,32 +373,19 @@ const HealthcareDashboard: React.FC = () => {
                       <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(appointment.status)}`}>
                         {appointment.status}
                       </span>
-                      
+
                       {/* Action buttons for patient */}
                       <div className="flex items-center space-x-1">
                         {appointment.status.toLowerCase() === 'pending' && (
-                          <>
-                            <button 
-                              className="p-2 text-green-600 hover:text-green-800 transition-colors"
-                              onClick={() => handleStatusChange(appointment.appointment_id, 'confirmed')}
-                              disabled={changingStatus}
-                              title="Confirm appointment"
-                            >
-                              <Check className="w-4 h-4" />
-                            </button>
-                            <button 
-                              className="p-2 text-red-600 hover:text-red-800 transition-colors"
-                              onClick={() => handleStatusChange(appointment.appointment_id, 'cancelled')}
-                              disabled={changingStatus}
-                              title="Cancel appointment"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          </>
+                          <button
+                            className="p-2 text-red-600 hover:text-red-800 transition-colors"
+                            onClick={() => handleStatusChange(appointment.appointment_id, 'cancelled')}
+                            disabled={changingStatus}
+                            title="Cancel appointment"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
                         )}
-                        <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
-                          <Edit2 className="w-4 h-4" />
-                        </button>
                       </div>
                     </div>
                   </div>

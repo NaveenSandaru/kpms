@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
+import { useState, useEffect, useContext } from 'react'
+import { useRouter } from 'next/navigation'
 import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/Components/ui/button'
+import { Card, CardContent } from '@/Components/ui/card'
 import { Search, Phone, Mail, Calendar, Clock, User } from 'lucide-react'
+import { AuthContext } from '@/context/auth-context'
 import axios from 'axios';
 
 interface Patient {
@@ -39,121 +40,64 @@ interface Appointment {
   dentist: Dentist
 }
 
-// Mock data based on your DB structure
-const mockAppointments: Appointment[] = [
-  {
-    appointment_id: 1,
-    patient_id: 'P001',
-    dentist_id: 'D001',
-    date: '2025-06-20',
-    time_from: '09:00',
-    time_to: '09:30',
-    fee: 150.00,
-    note: 'andjerlajkwmdi',
-    status: 'confirmed',
-    payment_status: 'paid',
-    patient: {
-      patient_id: 'P001',
-      name: 'Jane Doe',
-      email: 'jane@example.com',
-      phone_number: '+1234567890',
-      hospital_patient_id: 'H001'
-    },
-    dentist: {
-      dentist_id: 'D001',
-      name: 'John Doe',
-      email: 'john@example.com',
-      phone_number: '+1234567891',
-      appointment_fee: 150.00
-    }
-  },
-  {
-    appointment_id: 2,
-    patient_id: 'P002',
-    dentist_id: 'D002',
-    date: '2025-06-21',
-    time_from: '14:00',
-    time_to: '14:45',
-    fee: 200.00,
-    note: 'Routine cleaning and checkup',
-    status: 'pending',
-    payment_status: 'pending',
-    patient: {
-      patient_id: 'P002',
-      name: 'Mike Smith',
-      email: 'mike@example.com',
-      phone_number: '+1234567892',
-      hospital_patient_id: 'H002'
-    },
-    dentist: {
-      dentist_id: 'D002',
-      name: 'Dr. Sarah Wilson',
-      email: 'sarah@example.com',
-      phone_number: '+1234567893',
-      appointment_fee: 200.00
-    }
-  },
-  {
-    appointment_id: 3,
-    patient_id: 'P003',
-    dentist_id: 'D001',
-    date: '2025-06-22',
-    time_from: '11:00',
-    time_to: '11:30',
-    fee: 150.00,
-    note: 'Follow-up appointment for dental implant',
-    status: 'confirmed',
-    payment_status: 'paid',
-    patient: {
-      patient_id: 'P003',
-      name: 'Emma Brown',
-      email: 'emma@example.com',
-      phone_number: '+1234567894',
-      hospital_patient_id: 'H003'
-    },
-    dentist: {
-      dentist_id: 'D001',
-      name: 'John Doe',
-      email: 'john@example.com',
-      phone_number: '+1234567891',
-      appointment_fee: 150.00
-    }
-  }
-]
-
 export default function AppointmentsPage() {
-  const params = useParams()
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [filteredAppointments, setFilteredAppointments] = useState<Appointment[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [receptionistId, setReceptionistId] = useState<string>('123')
    const [loading, setLoading] = useState(true);
 
+   const {user, isLoadingAuth, isLoggedIn} = useContext(AuthContext);
+
   const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
+
+  const router = useRouter();
 
    const fetchPendingAppointments = async () => {
       try {
         const response = await axios.get(`${backendURL}/appointments/pending`);
-        console.log("Fetched dentists:", response.data);
         setAppointments(response.data);
         setFilteredAppointments(response.data);
       } catch (error) {
-        console.error('Error fetching dentists:', error);
+        console.error('Error fetching pending appointments:', error);
       } finally {
         setLoading(false);
       }
     };
 
-  // Get receptionist ID from auth token (defaulting to 123)
-  useEffect(() => {
-    const id = (params.receptionistID || params.receptionistId) as string || '123'
-    setReceptionistId(id)
-  }, [params])
+    const handleAcceptance = async (appointment_id: number) => {
+      try{
+        const response = await axios.put(
+          `${backendURL}/appointments/${appointment_id}`,
+          {
+            status: "confirmed"
+          }
+        );
+        if(response.status != 202){
+          throw new Error("Error Updating Status");
+        }
+        fetchPendingAppointments();
+      }
+      catch(err: any){
+
+      }
+    }
 
   // Load appointments
   useEffect(() => {
-    fetchPendingAppointments()
-  }, [])
+    if(isLoadingAuth) return;
+    if(!isLoggedIn){
+      window.alert("Login please");
+      router.push("/");
+      return;
+    }
+    else if(user.role != "receptionist"){
+      window.alert("Access Denied");
+      router.push("/");
+      return;
+    }
+    fetchPendingAppointments();
+  }, [isLoadingAuth])
 
   // Filter appointments based on search
   useEffect(() => {
@@ -275,6 +219,7 @@ export default function AppointmentsPage() {
                         size="sm"
                         variant="outline"
                         className="text-xs px-3 py-1 h-auto border-green-200 text-green-700 hover:bg-green-50"
+                        onClick={()=>{handleAcceptance(appointment.appointment_id)}}
                       >
                         Accept
                       </Button>

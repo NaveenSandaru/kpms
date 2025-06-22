@@ -118,24 +118,22 @@ const PaymentsInterface: React.FC = () => {
   }, [searchTerm, payments]);
 
   useEffect(()=>{
-    fetchPayments();
-  },[]);
-
-  useEffect(()=>{
-    if(!isLoadingAuth){
-      if(!isLoggedIn){
-        toast.error("Session Error", {
-          description: "Your session is expired, please login again"
-        });
-        router.push("/");
-      }
-      else if(user.role != "patient"){
-        toast.error("Access Error", {
-          description: "You do not have access, redirecting..."
-        });
-        router.push("/");
-      }
+    if(isLoadingAuth) return;
+    if(!isLoggedIn){
+      toast.error("Session Error", {
+        description: "Your session is expired, please login again"
+      });
+      router.push("/");
+      return;
     }
+    else if(user.role != "patient"){
+      toast.error("Access Error", {
+        description: "You do not have access, redirecting..."
+      });
+      router.push("/");
+      return;
+    }
+    fetchPayments();
   },[isLoadingAuth]);
 
   const formatDate = (date: string) => {

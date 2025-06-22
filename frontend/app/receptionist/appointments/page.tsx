@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card'
 import { Button } from '@/Components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -42,90 +41,7 @@ interface Appointment {
   dentist: Dentist
 }
 
-// Mock data based on your DB structure
-const mockAppointments: Appointment[] = [
-  {
-    appointment_id: 1,
-    patient_id: 'P001',
-    dentist_id: 'D001',
-    date: '2025-06-20',
-    time_from: '09:00',
-    time_to: '09:30',
-    fee: 150.00,
-    note: 'Right upper molar needs filling',
-    status: 'confirmed',
-    payment_status: 'paid',
-    patient: {
-      patient_id: 'P001',
-      name: 'Jane Doe',
-      email: 'jane@example.com',
-      phone_number: '+1234567890',
-      hospital_patient_id: 'H001'
-    },
-    dentist: {
-      dentist_id: 'D001',
-      name: 'Dr. John Doe',
-      email: 'john@example.com',
-      phone_number: '+1234567891',
-      appointment_fee: 150.00
-    }
-  },
-  {
-    appointment_id: 2,
-    patient_id: 'P002',
-    dentist_id: 'D002',
-    date: '2025-06-21',
-    time_from: '14:00',
-    time_to: '14:45',
-    fee: 200.00,
-    note: 'Routine cleaning and checkup',
-    status: 'pending',
-    payment_status: 'pending',
-    patient: {
-      patient_id: 'P002',
-      name: 'Mike Smith',
-      email: 'mike@example.com',
-      phone_number: '+1234567892',
-      hospital_patient_id: 'H002'
-    },
-    dentist: {
-      dentist_id: 'D002',
-      name: 'Dr. Sarah Wilson',
-      email: 'sarah@example.com',
-      phone_number: '+1234567893',
-      appointment_fee: 200.00
-    }
-  },
-  {
-    appointment_id: 3,
-    patient_id: 'P003',
-    dentist_id: 'D001',
-    date: '2025-06-19',
-    time_from: '11:00',
-    time_to: '11:30',
-    fee: 150.00,
-    note: 'Follow-up appointment',
-    status: 'completed',
-    payment_status: 'paid',
-    patient: {
-      patient_id: 'P003',
-      name: 'Emma Brown',
-      email: 'emma@example.com',
-      phone_number: '+1234567894',
-      hospital_patient_id: 'H003'
-    },
-    dentist: {
-      dentist_id: 'D001',
-      name: 'Dr. John Doe',
-      email: 'john@example.com',
-      phone_number: '+1234567891',
-      appointment_fee: 150.00
-    }
-  }
-]
-
 export default function AppointmentsPage() {
-  const params = useParams()
   const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([])
   const [allAppointments, setAllAppointments] = useState<Appointment[]>([])
   const [checkedInAppointments, setCheckedInAppointments] = useState<Appointment[]>([])
@@ -134,16 +50,8 @@ export default function AppointmentsPage() {
   const [filteredAppointments, setFilteredAppointments] = useState<Appointment[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [activeTab, setActiveTab] = useState('today')
-  const [receptionistId, setReceptionistId] = useState<string>('123')
 
-  // Get receptionist ID from auth token (defaulting to 123)
-  useEffect(() => {
-    // In a real app, you would decode the auth token here
-    // For now, we'll use the default value or the param
-    // This supports both [receptionistID] and [receptionistID] in different folder structures
-    const id = (params.receptionistID || params.receptionistId) as string || '123'
-    setReceptionistId(id)
-  }, [params])
+  const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
   // Load appointments
   useEffect(() => {
@@ -185,18 +93,29 @@ export default function AppointmentsPage() {
 
   // Handle payment status toggle
   const handlePaymentToggle = async (appointmentId: number, currentStatus: string) => {
-    // Prevent toggling if already paid
     if (currentStatus === 'paid') {
       return;
     }
 
     try {
-      const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
-
       // Update payment status to paid
-      await axios.patch(`${backendURL}/appointments/${appointmentId}/payment`, {
+      await axios.put(`${backendURL}/appointments/${appointmentId}`, {
         payment_status: 'paid'
       });
+
+      const now = new Date();
+      const payment_date = now.toISOString().split('T')[0];
+      const payment_time = now.toTimeString().split(':').slice(0, 2).join(':');
+
+      await axios.post(
+        `${backendURL}/payment-history`,
+        {
+          appointment_id: appointmentId,
+          payment_date: payment_date,
+          payment_time: payment_time,
+          reference_number: "<reference number here>"
+        }
+      )
 
       // Update local state
       const updateAppointmentPayment = (appointments: Appointment[]) =>
@@ -215,6 +134,35 @@ export default function AppointmentsPage() {
       // You might want to show a toast notification here
     }
   };
+
+  const handleCheckIn = async (appointmentID: number) => {
+    try {
+      const response = await axios.put(
+        `${backendURL}/appointments/${appointmentID}`,
+        {
+          status: "checkedin"
+        }
+      );
+      if (response.status != 202) {
+        throw new Error("Error Updating Status");
+      }
+
+      const updateAppointmentStatus = (appointments: Appointment[]) =>
+        appointments.map(appointment =>
+          appointment.appointment_id === appointmentID
+            ? { ...appointment, status: 'checkedin' }
+            : appointment
+        );
+
+      setTodayAppointments(prev => updateAppointmentStatus(prev));
+      setAllAppointments(prev => updateAppointmentStatus(prev));
+      setCheckedInAppointments(prev => updateAppointmentStatus(prev));
+
+    }
+    catch (err: any) {
+      window.alert(err.message);
+    }
+  }
 
   // Filter appointments based on search and tab
   useEffect(() => {
@@ -415,6 +363,7 @@ export default function AppointmentsPage() {
                                   <Button
                                     size="sm"
                                     className="bg-yellow-100 hover:bg-yellow-200 text-yellow-800"
+                                    onClick={() => { handleCheckIn(appointment.appointment_id) }}
                                   >
                                     Check In
                                   </Button>

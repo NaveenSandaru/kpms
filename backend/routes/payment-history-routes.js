@@ -5,7 +5,7 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 const router = express.Router();
 
-router.get('/', /* authenticateToken, */ async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const payments = await prisma.payment_history.findMany({
       include: {
@@ -34,12 +34,30 @@ router.get('/', /* authenticateToken, */ async (req, res) => {
       }
     });
 
-    res.json(payments);
+    // Replace patient info if it's "<Former_Patient>"
+    const formatted = payments.map(payment => {
+      const appt = payment.appointment;
+
+      if (appt?.patient?.patient_id === '<Former_Patient>') {
+        appt.patient = {
+          patient_id: '<former_patient>',
+          name: '<Former Patient>',
+          email: 'N/A',
+          phone_number: 'N/A',
+          profile_picture: "N/A"
+        };
+      }
+
+      return payment;
+    });
+
+    res.json(formatted);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to fetch payment histories' });
   }
 });
+
 
 
 router.get('/trends', /* authenticateToken, */ async (req, res) => {
