@@ -17,20 +17,20 @@ import {
 } from "@/Components/ui/dialog";
 import { Textarea } from "@/Components/ui/textarea";
 
-
-interface Provider {
+interface Dentist {
+  dentist_id: string;
   email: string;
   name: string;
   profile_picture: string;
-  company_name: string;
-  company_address: string;
-  company_phone_number: string;
-  appointment_fee: number;
+  phone_number: string;
+  language: string;
+  service_types: string;
+  work_days_from: string;
+  work_days_to: string;
+  work_time_from: string;
+  work_time_to: string;
   appointment_duration: string;
-  work_hours_from: string;
-  work_hours_to: string;
-  service_type: string;
-  specialization: string;
+  appointment_fee: number;
 }
 
 interface Service {
@@ -42,18 +42,18 @@ interface Service {
 interface Appointment {
   appointment_id: string;
   client_email: string;
-  service_provider_email: string;
+  dentist_email: string;
   date: string; // YYYY-MM-DD
   time_from: string; // HH:MM:SS
   time_to: string; // HH:MM:SS
   note?: string;
 }
 
-export default function BookingPage() {
+export default function DentistBookingPage() {
   const { user, isLoadingAuth } = useContext(AuthContext);
   const { email } = useParams();
   const decodedEmail = decodeURIComponent(email as string);
-  const [provider, setProvider] = useState<Provider | null>(null);
+  const [dentist, setDentist] = useState<Dentist | null>(null);
   const [service, setService] = useState<Service | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
@@ -67,19 +67,19 @@ export default function BookingPage() {
     return currentAppointments.map(app => new Date(app.date));
   }, [currentAppointments]);
 
-  const fetchProvider = async () => {
+  const fetchDentist = async () => {
     try {
       setIsLoading(true);
       const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/service-providers/sprovider/${decodedEmail}`
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/dentists/${decodedEmail}`
       );
       if (response.data) {
-        setProvider(response.data);
+        setDentist(response.data);
       }
     }
     catch (error: any) {
       toast.error("Error", {
-        description: error.message || "Failed to fetch provider details"
+        description: error.message || "Failed to fetch dentist details"
       });
     }
     finally {
@@ -111,7 +111,7 @@ export default function BookingPage() {
     try {
       setIsLoading(true);
       const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/appointments/sprovider/${provider?.email}`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/appointments/fordentist/${dentist?.dentist_id}`,
       );
       if (response.data) {
         setCurrentAppointments(response.data);
@@ -130,7 +130,7 @@ export default function BookingPage() {
   const pad = (n: number) => n.toString().padStart(2, '0');
 
   const isTimeSlotAvailable = (date: Date | undefined, timeSlot: string): boolean => {
-    if (!provider || !date) return true;
+    if (!dentist || !date) return true;
   
     // Get date string in YYYY-MM-DD format for comparison
     const selectedDate = new Date(date);
@@ -144,7 +144,7 @@ export default function BookingPage() {
     slotStart.setHours(hours, minutes, 0, 0);
   
     const slotEnd = new Date(slotStart);
-    const durationMatch = provider.appointment_duration.match(/\d+/);
+    const durationMatch = dentist.appointment_duration.match(/\d+/);
     const durationInMinutes = durationMatch ? parseInt(durationMatch[0]) : 0;
     slotEnd.setMinutes(slotEnd.getMinutes() + durationInMinutes);
   
@@ -169,7 +169,7 @@ export default function BookingPage() {
       // Check for time overlap
       const isOverlap = slotStart < appEnd && slotEnd > appStart;
       
-      // If it's a provider blocked time (no client_email), return the overlap status
+      // If it's a dentist blocked time (no client_email), return the overlap status
       if (!app.client_email) {
         return isOverlap;
       }
@@ -247,8 +247,8 @@ export default function BookingPage() {
       return 'user-booked';
     }
   
-    // Check if this specific time slot is blocked by the provider
-    const isProviderBlocked = currentAppointments.some(app => {
+    // Check if this specific time slot is blocked by the dentist
+    const isDentistBlocked = currentAppointments.some(app => {
       if (!app.client_email) {
         const appDate = new Date(app.date + 'T00:00:00');
         appDate.setHours(0, 0, 0, 0);
@@ -285,7 +285,7 @@ export default function BookingPage() {
       return false;
     });
   
-    if (isProviderBlocked) {
+    if (isDentistBlocked) {
       return 'blocked';
     }
   
@@ -307,14 +307,12 @@ export default function BookingPage() {
   };
 
   const handleConfirmBooking = () => {
-    if (!selectedDate || !selectedTime || !provider?.email || !user?.email) {
+    if (!selectedDate || !selectedTime || !dentist?.email || !user?.email) {
       toast.error("Missing Information", {
         description: "Please select a date and time for your appointment."
       });
       return;
     }
-
-   
 
     // Check if selected date is in the past
     const now = new Date();
@@ -344,7 +342,7 @@ export default function BookingPage() {
   const processBooking = async () => {
     try {
       setIsLoading(true);
-      if (!selectedDate || !selectedTime || !provider || !user) {
+      if (!selectedDate || !selectedTime || !dentist || !user) {
         throw new Error("Missing required booking information");
       }
 
@@ -357,7 +355,7 @@ export default function BookingPage() {
       const [hours, minutes] = selectedTime.split(':').map(Number);
       const timeFromStr = `${pad(hours)}:${pad(minutes)}:00`;
       
-      const durationMatch = provider.appointment_duration.match(/\d+/);
+      const durationMatch = dentist.appointment_duration.match(/\d+/);
       const durationInMinutes = durationMatch ? parseInt(durationMatch[0]) : 0;
 
       if (durationInMinutes === 0) {
@@ -375,7 +373,7 @@ export default function BookingPage() {
         `${process.env.NEXT_PUBLIC_BACKEND_URL}/appointments`,
         {
           client_email: user.email,
-          service_provider_email: provider.email,
+          dentist_email: dentist.email,
           date: dateStr,
           time_from: timeFromStr,
           time_to: timeToStr,
@@ -429,23 +427,23 @@ export default function BookingPage() {
     return slots;
   };
 
-  const timeSlots = provider
+  const timeSlots = dentist
     ? generateTimeSlots(
-      provider.work_hours_from,
-      provider.work_hours_to,
-      parseInt(provider.appointment_duration)
+      dentist.work_time_from,
+      dentist.work_time_to,
+      parseInt(dentist.appointment_duration)
     ): [];
 
   useEffect(() => {
-    fetchProvider();
+    fetchDentist();
   }, [decodedEmail]);
 
   useEffect(() => {
-    if (provider) {
-      fetchServices(provider.service_type);
+    if (dentist) {
+      fetchServices(dentist.service_types);
       fetchCurrentAppointments();
     }
-  }, [provider]);
+  }, [dentist]);
 
   useEffect(() => {
     if (isLoadingAuth) return;
@@ -460,8 +458,8 @@ export default function BookingPage() {
   }, [user, isLoadingAuth]);
   
 
-  if (!provider || !service) {
-    return <p className="p-4 text-gray-500">Loading provider details...</p>;
+  if (!dentist || !service) {
+    return <p className="p-4 text-gray-500">Loading dentist details...</p>;
   }
 
   return (
@@ -470,20 +468,19 @@ export default function BookingPage() {
         <div className="max-w-7xl mx-auto">
           <Card className="overflow-hidden bg-white shadow-lg rounded-lg">
             <div className="flex flex-col lg:flex-row">
-              {/* Provider Profile Section */}
+              {/* Dentist Profile Section */}
               <div className="w-full lg:w-80 xl:w-96 p-4 sm:p-6 bg-gray-50 border-b lg:border-b-0 lg:border-r">
                 <div className="text-center lg:text-left">
                   <div className="flex flex-col sm:flex-row lg:flex-col items-center sm:items-start lg:items-center gap-4 sm:gap-6 lg:gap-3">
                     <img
-                      src={`${process.env.NEXT_PUBLIC_BACKEND_URL}${provider.profile_picture}`}
-                      alt={provider.name}
+                      src={`${process.env.NEXT_PUBLIC_BACKEND_URL}${dentist.profile_picture}`}
+                      alt={dentist.name}
                       className="w-16 h-16 sm:w-20 sm:h-20 lg:w-20 lg:h-20 rounded-lg object-cover flex-shrink-0"
                     />
                     <div className="flex-1 sm:text-left lg:text-center">
-                      <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-1 capitalize">{provider.name}</h2>
+                      <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-1 capitalize">Dr. {dentist.name}</h2>
                       <h4 className="text-emerald-500 text-sm sm:text-base capitalize">{service?.service}</h4>
-                      <h4 className="text-gray-600 font-semibold text-sm capitalize">{provider.specialization}</h4>
-                      <h3 className="text-emerald-600 font-medium text-sm sm:text-base capitalize">{provider.company_name}</h3>
+                      <h4 className="text-gray-600 font-semibold text-sm capitalize">Dentist</h4>
                     </div>
                   </div>
 
@@ -491,30 +488,51 @@ export default function BookingPage() {
                     <div className="pt-3 border-t border-gray-200">
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3 sm:gap-4 lg:gap-3">
                         <div>
-                          <div className="font-medium text-gray-700 mb-1">Location: </div>
-                          <div className="text-xs sm:text-sm leading-relaxed text-gray-600">
-                            {provider.company_address}
+                          <div className="font-medium text-gray-700 mb-1">Contact:</div>
+                          <div className="font-medium text-gray-800 text-sm">
+                            {dentist.phone_number}
                           </div>
                         </div>
 
                         <div>
-                          <div className="font-medium text-gray-700 mb-1">Call Us:</div>
-                          <div className="font-medium text-gray-800 text-sm">
-                            {provider.company_phone_number}
+                          <div className="font-medium text-gray-700 mb-1">Email:</div>
+                          <div className="text-xs sm:text-sm leading-relaxed text-gray-600">
+                            {dentist.email}
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="font-medium text-gray-700 mb-1">Language:</div>
+                          <div className="text-gray-600 capitalize">
+                            {dentist.language}
                           </div>
                         </div>
 
                         <div>
                           <div className="font-medium text-gray-700 mb-1">Price:</div>
                           <div className="text-emerald-600 font-semibold">
-                            ${provider.appointment_fee}
+                            ${dentist.appointment_fee}
                           </div>
                         </div>
 
                         <div>
                           <div className="font-medium text-gray-700 mb-1">Duration:</div>
                           <div className="text-gray-600">
-                            {provider.appointment_duration}
+                            {dentist.appointment_duration} minutes
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="font-medium text-gray-700 mb-1">Working Days:</div>
+                          <div className="text-gray-600 capitalize">
+                            {dentist.work_days_from} - {dentist.work_days_to}
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="font-medium text-gray-700 mb-1">Working Hours:</div>
+                          <div className="text-gray-600">
+                            {dentist.work_time_from} - {dentist.work_time_to}
                           </div>
                         </div>
                       </div>
@@ -526,7 +544,7 @@ export default function BookingPage() {
               {/* Booking Section */}
               <div className="flex-1 p-4 sm:p-6">
                 <div className="mb-4 sm:mb-6">
-                  <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-1">Book Your Appointment</h3>
+                  <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-1">Book Your Dental Appointment</h3>
                   <p className="text-sm text-gray-600">Select Date & Time</p>
                 </div>
 
@@ -620,7 +638,7 @@ export default function BookingPage() {
                       className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 text-white font-medium h-12 px-8 text-base"
                       onClick={handleConfirmBooking}
                     >
-                      Confirm Appointment
+                      Confirm Dental Appointment
                     </Button>
                   </div>
                 </div>
@@ -637,7 +655,7 @@ export default function BookingPage() {
           </DialogHeader>
           <div className="py-4">
             <Textarea
-              placeholder="Enter any special requests or notes for your appointment..."
+              placeholder="Enter any special requests or notes for your dental appointment..."
               value={note}
               onChange={(e) => setNote(e.target.value)}
               className="min-h-[100px]"
