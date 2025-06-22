@@ -230,7 +230,8 @@ const MedicalStudyInterface: React.FC = () => {
 
     try {
       const payload: any = {
-        radiologist_id: assignmentForm.radiologist_id ? parseInt(assignmentForm.radiologist_id) : null,
+        radiologist_id: assignmentForm.radiologist_id,
+        //radiologist_id: assignmentForm.radiologist_id ? parseInt(assignmentForm.radiologist_id) : null,
         doctor_ids: assignmentForm.doctor_ids
       };
 
