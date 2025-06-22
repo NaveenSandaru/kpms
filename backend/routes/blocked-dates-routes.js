@@ -35,15 +35,27 @@ router.get('/:blocked_date_id', /* authenticateToken, */ async (req, res) => {
   }
 });
 
-router.post('/', /* authenticateToken, */ async (req, res) => {
+router.post('/', async (req, res) => {
   try {
-    const data = req.body;
-    const newBlockedDate = await prisma.blocked_dates.create({ data });
+    const { dentist_id, date, time_from, time_to } = req.body;
+
+    // No need to convert date to Date here since your model uses String
+    const newBlockedDate = await prisma.blocked_dates.create({
+      data: {
+        dentist_id,
+        date,          // just pass as string
+        time_from,
+        time_to,
+      }
+    });
+
     res.status(201).json(newBlockedDate);
-  } catch {
+  } catch(err) {
+    console.log(err);
     res.status(500).json({ error: 'Failed to create blocked date' });
   }
 });
+
 
 router.put('/:blocked_date_id', /* authenticateToken, */ async (req, res) => {
   try {

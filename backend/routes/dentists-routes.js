@@ -37,6 +37,27 @@ router.get('/:dentist_id', /* authenticateToken, */ async (req, res) => {
   }
 });
 
+router.get('/getworkinfo/:dentist_id', /* authenticateToken, */ async (req, res) => {
+  try {
+    const dentist = await prisma.dentists.findUnique({
+      where: { dentist_id: req.params.dentist_id },
+      select: {
+        work_days_from: true,
+        work_days_to: true,
+        work_time_from: true,
+        work_time_to: true,
+        appointment_duration: true,
+        appointment_fee: true
+      },
+    });
+    if (!dentist) return res.status(404).json({ error: 'Not found' });
+    res.json(dentist);
+  } catch(err) {
+    console.log(err)
+    res.status(500).json({ error: 'Failed to fetch dentist' });
+  }
+});
+
 router.post('/', /* authenticateToken, */ async (req, res) => {
   try {
     const { dentist_id, password, ...rest } = req.body;

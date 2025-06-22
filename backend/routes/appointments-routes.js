@@ -444,12 +444,38 @@ router.get('/:appointment_id', /* authenticateToken, */ async (req, res) => {
   }
 });
 
-router.post('/', /* authenticateToken, */ async (req, res) => {
+router.post('/', async (req, res) => {
   try {
-    const data = { ...req.body, date: new Date(req.body.date) };
-    const newAppointment = await prisma.appointments.create({ data });
+    // Explicitly extract only allowed fields
+    const {
+      patient_id,
+      dentist_id,
+      date,
+      time_from,
+      time_to,
+      fee,
+      note,
+      status,
+      payment_status
+    } = req.body;
+
+    const newAppointment = await prisma.appointments.create({
+      data: {
+        patient_id,
+        dentist_id,
+        date: new Date(date),
+        time_from,
+        time_to,
+        fee,
+        note,
+        status,
+        payment_status,
+      },
+    });
+
     res.status(201).json(newAppointment);
-  } catch {
+  } catch (err) {
+    console.log(err);
     res.status(500).json({ error: 'Failed to create appointment' });
   }
 });

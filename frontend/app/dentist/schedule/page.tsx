@@ -48,11 +48,14 @@ interface DentistScheduleProps {
   };
 }
 
-const timeSlots = [
-  "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
-  "12:00", "12:30", "13:00", "13:30", "14:00", "14:30",
-  "15:00", "15:30", "16:00", "16:30", "17:00", "17:30"
-];
+interface DentistWorkInfo {
+  work_days_from: string,
+  work_days_to: string,
+  work_time_from: string,
+  work_time_to: string,
+  appointment_duration: string,
+  appointment_fee: number
+}
 
 // Date formatting utility function
 const formatDate = (dateString: string) => {
@@ -71,8 +74,41 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
   const [isBlockTimeOpen, setIsBlockTimeOpen] = useState(false);
   const [loadingAppointments, setLoadingAppointments] = useState(false);
   const [loadingBlockedSlots, setLoadingBlockedSlots] = useState(false);
+  const [creatingAppointment, setCreatingAppointment] = useState(false);
+  const [creatingBlockSlot, setCreatingBlockSlot] = useState(false);
+  const [deletingBlock, setDeletingBlock] = useState(false);
+  const [dentistWorkInfo, setDentistWorkInfo] = useState<DentistWorkInfo>();
+
+  //States for creating new appointment
+  const [patient_id, setPatient_id] = useState("");
+  const [date, setDate] = useState("");
+  const [time_from, setTimeFrom] = useState("");
+  const [time_to, setTimeTo] = useState("");
+  const [note, setNote] = useState("");
+
+  //States for creating new block slot
+  const [blockDate, setBlockDate] = useState("");
+  const [blockTimeFrom, setBlockTimeFrom] = useState("");
+  const [blockTimeTo, setBlockTimeTo] = useState("");
+
+  const [timeSlots, setTimeSlots] = useState([""]);
 
   const today = new Date().toISOString().split('T')[0];
+
+  function addMinutesToTime(timeFrom: string, durationMinutesStr: string): string {
+    const [hoursFrom, minutesFrom] = timeFrom.split(":").map(Number);
+    const durationMinutes = Number(durationMinutesStr);
+
+    let totalMinutes = hoursFrom * 60 + minutesFrom + durationMinutes;
+
+    const newHours = Math.floor(totalMinutes / 60) % 24;
+    const newMinutes = totalMinutes % 60;
+
+    const hh = newHours.toString().padStart(2, "0");
+    const mm = newMinutes.toString().padStart(2, "0");
+
+    return `${hh}:${mm}`;
+  };
 
   const fetchAppointments = async () => {
     setLoadingAppointments(true);
@@ -116,11 +152,127 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
     }
   };
 
+  const handleBlockDeletion = async (blocked_date_id: number) => {
+    setDeletingBlock(true);
+    try{
+      const response = await axios.delete(
+        `${backendURL}/blocked-dates/${blocked_date_id}`
+      );
+      if(response.status == 500){
+        throw new Error("Error Deleting Block Slot");
+      }
+      window.alert("Block Slot Successfully Deleted");
+    }
+    catch(err: any){
+      window.alert(err.message);
+    }
+    finally{
+      setDeletingBlock(false);
+    }
+  }
+
+  const fetchDentistWorkInfo = async () => {
+    try {
+      const response = await axios.get(
+        `${backendURL}/dentists/getworkinfo/${user.id}`
+      );
+      if (response.status == 500) {
+        throw new Error("Internal Server Error");
+      }
+      setDentistWorkInfo(response.data);
+    }
+    catch (err: any) {
+      window.alert(err.message);
+    }
+    finally {
+
+    }
+  };
+
+  const generateTimeSlots = (workInfo: DentistWorkInfo) => {
+    const slots: string[] = [];
+
+    const [startHour, startMin] = workInfo.work_time_from.split(":").map(Number);
+    const [endHour, endMin] = workInfo.work_time_to.split(":").map(Number);
+    const duration = parseInt(workInfo.appointment_duration, 10); // in minutes
+
+    let start = startHour * 60 + startMin;
+    const end = endHour * 60 + endMin;
+
+    while (start + duration <= end) {
+      const hour = Math.floor(start / 60);
+      const min = start % 60;
+      const formatted = `${String(hour).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
+      slots.push(formatted);
+      start += duration;
+    }
+
+    setTimeSlots(slots);
+  };
+
+  const handleAppointmentCreation = async () => {
+    setCreatingAppointment(true);
+    try {
+      const timeTo = addMinutesToTime(time_from, dentistWorkInfo?.appointment_duration || "0");
+
+      const response = await axios.post(
+        `${backendURL}/appointments/`,
+        {
+          patient_id: patient_id,
+          dentist_id: user.id,
+          date: date,
+          time_from: time_from,
+          time_to: timeTo,
+          fee: dentistWorkInfo?.appointment_fee,
+          note: note,
+          status: "confirmed",
+          payment_status: "not-paid"
+        }
+      );
+
+      if (response.status !== 201) {
+        throw new Error("Error Creating Appointment");
+      } else {
+        window.alert("Appointment Created Successfully");
+      }
+    } catch (err: any) {
+      window.alert(err.message);
+    } finally {
+      setCreatingAppointment(false);
+    }
+  };
+
+  const handleBlockSlotCreation = async () => {
+    setCreatingBlockSlot(true);
+    try {
+      const response = await axios.post(
+        `${backendURL}/blocked-dates/`,
+        {
+          dentist_id: user.id,
+          date: blockDate,
+          time_from: blockTimeFrom,
+          time_to: blockTimeTo
+        }
+      );
+      if (response.status != 201) {
+        throw new Error("Internal Server Error");
+      }
+      window.alert("Block Slot Created Successfully");
+    }
+    catch (err: any) {
+      window.alert(err.message);
+    }
+    finally {
+      setCreatingBlockSlot(false);
+    }
+  }
+
+
   // Filter appointments based on selected date and search term
   const filteredAppointments = appointments.filter(apt => {
     const aptDate = formatDate(apt.date); // Format the appointment date
     const matchesDate = aptDate === selectedDate;
-    const matchesSearch = searchTerm === "" || 
+    const matchesSearch = searchTerm === "" ||
       apt.patient?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       apt.note?.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesDate && matchesSearch;
@@ -133,8 +285,8 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
 
   // Filter by search term for each category
   const getFilteredAppointmentsByTab = (tabAppointments: Appointment[]) => {
-    return tabAppointments.filter(apt => 
-      searchTerm === "" || 
+    return tabAppointments.filter(apt =>
+      searchTerm === "" ||
       apt.patient?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       apt.note?.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -185,8 +337,15 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
     if (user?.id) {
       fetchAppointments();
       fetchBlockedSlots();
+      fetchDentistWorkInfo();
     }
   }, [user, isLoadingAuth, isLoggedIn]);
+
+  useEffect(() => {
+    if (dentistWorkInfo) {
+      generateTimeSlots(dentistWorkInfo);
+    }
+  }, [dentistWorkInfo]);
 
   const NewAppointmentForm = () => (
     <DialogContent className="max-w-md max-h-screen overflow-y-auto">
@@ -196,51 +355,54 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
       <div className="space-y-4">
         <div>
           <Label htmlFor="patient">Patient</Label>
-          <Input id="patient" placeholder="Search patient..." />
+          <Input
+            id="patient"
+            placeholder="Enter Patient ID"
+            value={patient_id}
+            onChange={(e) => setPatient_id(e.target.value)}
+          />
         </div>
         <div>
           <Label htmlFor="date">Date</Label>
-          <Input id="date" type="date" value={selectedDate} />
+          <Input
+            id="date"
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+          />
         </div>
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <Label htmlFor="time_from">From</Label>
-            <Select>
+            <Label htmlFor="time_from">Time</Label>
+            <Select value={time_from} onValueChange={(value) => setTimeFrom(value)}>
               <SelectTrigger>
                 <SelectValue placeholder="Start time" />
               </SelectTrigger>
               <SelectContent>
-                {timeSlots.map(time => (
-                  <SelectItem key={time} value={time}>{time}</SelectItem>
+                {timeSlots.map((time) => (
+                  <SelectItem key={time} value={time}>
+                    {time}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-          <div>
-            <Label htmlFor="time_to">To</Label>
-            <Select>
-              <SelectTrigger>
-                <SelectValue placeholder="End time" />
-              </SelectTrigger>
-              <SelectContent>
-                {timeSlots.map(time => (
-                  <SelectItem key={time} value={time}>{time}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        <div>
-          <Label htmlFor="fee">Fee</Label>
-          <Input id="fee" type="number" placeholder="0.00" />
         </div>
         <div>
           <Label htmlFor="note">Note</Label>
-          <Textarea id="note" placeholder="Appointment notes..." />
+          <Textarea
+            id="note"
+            placeholder="Appointment notes..."
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+          />
         </div>
-        <Button className="w-full">Create Appointment</Button>
+        <Button className="w-full" onClick={handleAppointmentCreation}>
+          Create Appointment
+        </Button>
       </div>
     </DialogContent>
+
   );
 
   const BlockTimeForm = () => (
@@ -251,37 +413,52 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
       <div className="space-y-4">
         <div>
           <Label htmlFor="block_date">Date</Label>
-          <Input id="block_date" type="date" value={selectedDate} />
+          <Input
+            id="block_date"
+            type="date"
+            value={blockDate}
+            onChange={(e) => setBlockDate(e.target.value)}
+          />
         </div>
         <div className="grid grid-cols-2 gap-2">
           <div>
             <Label htmlFor="block_from">From</Label>
-            <Select>
+            <Select
+              value={blockTimeFrom}
+              onValueChange={(value) => setBlockTimeFrom(value)}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Start time" />
               </SelectTrigger>
               <SelectContent>
                 {timeSlots.map(time => (
-                  <SelectItem key={time} value={time}>{time}</SelectItem>
+                  <SelectItem key={time} value={time}>
+                    {time}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div>
             <Label htmlFor="block_to">To</Label>
-            <Select>
+            <Select
+              value={blockTimeTo}
+              onValueChange={(value) => setBlockTimeTo(value)}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="End time" />
               </SelectTrigger>
               <SelectContent>
                 {timeSlots.map(time => (
-                  <SelectItem key={time} value={time}>{time}</SelectItem>
+                  <SelectItem key={time} value={time}>
+                    {time}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
         </div>
-        <Button className="w-full">Block Time</Button>
+        <Button className="w-full" onClick={handleBlockSlotCreation}>Block Time</Button>
       </div>
     </DialogContent>
   );
@@ -506,7 +683,7 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
                         </div>
                         <div className="text-xs text-red-600">Blocked</div>
                       </div>
-                      <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 text-xs">
+                      <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 text-xs" onClick={()=>{handleBlockDeletion(block.blocked_date_id)}}>
                         Cancel Block
                       </Button>
                     </div>
