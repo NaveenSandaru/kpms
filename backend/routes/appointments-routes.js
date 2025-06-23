@@ -242,6 +242,56 @@ router.get('/today', /* authenticateToken, */ async (req, res) => {
   }
 });
 
+router.get('/count/today', /* authenticateToken, */ async (req, res) => {
+  try {
+    const colomboNow = DateTime.now().setZone('Asia/Colombo');
+    const count = await prisma.appointments.count({
+      where: {
+        date: new Date(colomboNow)
+      }
+    });
+
+    res.json(count);
+  } catch (error) {
+    console.error("Error fetching today's appointments count", error);
+    res.status(500).json({ error: "Failed to fetch today's appointments" });
+  }
+});
+
+router.get('/count/today-checked-in', /* authenticateToken, */ async (req, res) => {
+  try {
+    const colomboNow = DateTime.now().setZone('Asia/Colombo');
+    const count = await prisma.appointments.count({
+      where: {
+        date: new Date(colomboNow),
+        status: "checkedin"
+      }
+    });
+
+    res.json(count);
+  } catch (error) {
+    console.error("Error fetching today's appointments count", error);
+    res.status(500).json({ error: "Failed to fetch today's appointments" });
+  }
+});
+
+router.get('/count/today-not-checked-in', /* authenticateToken, */ async (req, res) => {
+  try {
+    const colomboNow = DateTime.now().setZone('Asia/Colombo');
+    const count = await prisma.appointments.count({
+      where: {
+        date: new Date(colomboNow),
+        status: "confirmed"
+      }
+    });
+
+    res.json(count);
+  } catch (error) {
+    console.error("Error fetching today's appointments count", error);
+    res.status(500).json({ error: "Failed to fetch today's appointments" });
+  }
+});
+
 router.get('/fordentist/upcoming/:dentist_id', /* authenticateToken, */ async (req, res) => {
   try {
     // Get today's date in Asia/Colombo (without time)
@@ -505,8 +555,6 @@ router.delete('/:appointment_id', /* authenticateToken, */ async (req, res) => {
   }
 });
 
-/*check*/ 
-// Get payment summary for patient dashboard
 router.get('/payment-summary/:patient_id', /* authenticateToken, */ async (req, res) => {
   try {
     const { patient_id } = req.params;

@@ -201,7 +201,7 @@ export default function AppointmentsPage() {
         return 'bg-gray-100 text-gray-800'
       case 'completed':
         return 'bg-green-100 text-green-800'
-      case 'checked-in':
+      case 'checkedin':
         return 'bg-purple-100 text-purple-800'
       case 'cancelled':
         return 'bg-red-100 text-red-800'
@@ -214,9 +214,7 @@ export default function AppointmentsPage() {
     switch (status) {
       case 'paid':
         return 'bg-green-100 text-green-800'
-      case 'pending':
-        return 'bg-gray-200 text-gray-800'
-      case 'overdue':
+      case 'not-paid':
         return 'bg-red-100 text-red-800'
       default:
         return 'bg-gray-100 text-gray-800'
@@ -346,29 +344,39 @@ export default function AppointmentsPage() {
                                     <CreditCard className="w-4 h-4 text-gray-500" />
                                     <Switch
                                       checked={appointment.payment_status === 'paid'}
-                                      onCheckedChange={() => handlePaymentToggle(appointment.appointment_id, appointment.payment_status)}
-                                      disabled={appointment.payment_status === 'paid'}
+                                      onCheckedChange={() =>
+                                        handlePaymentToggle(appointment.appointment_id, appointment.payment_status)
+                                      }
+                                      disabled={appointment.payment_status === 'paid' || appointment.status === 'cancelled'}
                                       className="data-[state=checked]:bg-green-500"
                                     />
                                     <span className="text-xs text-gray-500">
-                                      {appointment.payment_status === 'paid' ? 'Paid' : 'Mark as Paid'}
+                                      {appointment.status === 'cancelled'
+                                        ? 'Payment Disabled'
+                                        : appointment.payment_status === 'paid'
+                                          ? 'Paid'
+                                          : 'Mark as Paid'}
                                     </span>
                                   </div>
                                 </div>
                               </td>
+
                               <td className="py-4 px-4">
-                                {appointment.status === 'checkedin' ? (
+                                {appointment.status === 'cancelled' ? (
+                                  <span className="text-red-500 text-sm font-medium">Cancelled</span>
+                                ) : appointment.status === 'checkedin' ? (
                                   <CheckCircle className="text-green-600 w-5 h-5" />
                                 ) : (
                                   <Button
                                     size="sm"
                                     className="bg-yellow-100 hover:bg-yellow-200 text-yellow-800"
-                                    onClick={() => { handleCheckIn(appointment.appointment_id) }}
+                                    onClick={() => handleCheckIn(appointment.appointment_id)}
                                   >
                                     Check In
                                   </Button>
                                 )}
                               </td>
+
                             </tr>
                           ))}
                         </tbody>
