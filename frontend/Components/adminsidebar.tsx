@@ -207,7 +207,7 @@ const AdminSidebar = () => {
         {/* Mobile Header */}
         <div className="p-4 border-b border-gray-100">
           <div className="flex items-center justify-center">
-            <h1 className="text-lg font-bold text-gray-900">Logo</h1>
+            <span className="h-10 w-10 mx-auto"><Image src={Logo} alt="" className="h-10 w-10 mx-auto"/></span>
             {/*<Image
               src={"/logo.jpg"}
               alt="Logo"
