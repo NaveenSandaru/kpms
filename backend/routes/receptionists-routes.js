@@ -90,11 +90,13 @@ router.put('/:receptionist_id', /* authenticateToken, */ async (req, res) => {
 
 router.delete('/:receptionist_id', /* authenticateToken, */ async (req, res) => {
   try {
+    console.log(req.params.receptionist_id);
     await prisma.receptionists.delete({
       where: { receptionist_id: req.params.receptionist_id },
     });
     res.json({ message: 'Receptionist deleted' });
-  } catch {
+  } catch(err) {
+    console.log(err);
     res.status(500).json({ error: 'Failed to delete receptionist' });
   }
 });

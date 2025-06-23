@@ -17,12 +17,12 @@ const transporter = nodemailer.createTransport({
 
 const sendVerificationCode = async (email, code) => {
     const mailOptions = {
-        from: `"Global Pearl Ventures" <${process.env.EMAIL_USER}>`,
+        from: `"Kinross Dental Care" <${process.env.EMAIL_USER}>`,
         to: email,
-        subject: 'Verification Code for Your simplyBooked Account',
+        subject: 'Verification Code for Your Kinross Dental Care Account',
         html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e0e0e0; padding: 20px; border-radius: 10px;">
-                <h2 style="color: #4A90E2;">simplyBooked Email Verification</h2>
+                <h2 style="color: #4A90E2;">Kinross Dental Clinic Email Verification</h2>
                 <p>Dear user,</p>
                 <p>Please use the following verification code to verify your email address:</p>
                 <div style="text-align: center; margin: 30px 0;">
@@ -31,9 +31,9 @@ const sendVerificationCode = async (email, code) => {
                     </span>
                 </div>
                 <p>If you did not request this, you can safely ignore this email.</p>
-                <p>Best regards,<br><strong>simplyBooked Team</strong></p>
+                <p>Best regards,<br><strong>Kinross Dental Clinic Team</strong></p>
                 <hr style="margin-top: 40px;">
-                <p style="font-size: 12px; color: #888;">Global Pearl Ventures | simplyBooked</p>
+                <p style="font-size: 12px; color: #888;">Kinross Dental Clinic | Kinross Dental Clinic</p>
             </div>
         `,
     };
@@ -49,7 +49,7 @@ const sendVerificationCode = async (email, code) => {
 
 const sendAppointmentConfirmation = async (email, date, start_time) => {
     const mailOptions = {
-        from: `"Global Pearl Ventures" <${process.env.EMAIL_USER}>`,
+        from: `"Kinross Dental Clinic" <${process.env.EMAIL_USER}>`,
         to: email,
         subject: 'Appointment Confirmation Notice',
         html: `
@@ -68,9 +68,9 @@ const sendAppointmentConfirmation = async (email, date, start_time) => {
                     </tr>
                 </table>
                 <p style="margin-top: 20px;">Please ensure to be on time. If you have any questions or need to reschedule, feel free to contact us.</p>
-                <p>Best regards,<br><strong>simplyBooked Team</strong></p>
+                <p>Best regards,<br><strong>Kinross Dental Clinic Team</strong></p>
                 <hr style="margin-top: 40px;">
-                <p style="font-size: 12px; color: #888;">Global Pearl Ventures | simplyBooked</p>
+                <p style="font-size: 12px; color: #888;">Kinross Dental Clinic | Kinross Dental Clinic</p>
             </div>
         `,
     };
@@ -86,7 +86,7 @@ const sendAppointmentConfirmation = async (email, date, start_time) => {
 
 const sendAppointmentCancelation = async (email, date, start_time, provider) => {
     const mailOptions = {
-      from: `"Global Pearl Ventures" <${process.env.EMAIL_USER}>`,
+      from: `"Kinross Dental Clinic" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: 'Appointment Cancellation Notice',
       html: `
@@ -105,9 +105,9 @@ const sendAppointmentCancelation = async (email, date, start_time, provider) => 
             </tr>
           </table>
           <p style="margin-top: 20px;">You can reschedule another appointment with ${provider} at your convenience. If you have any questions, feel free to contact us.</p>
-          <p>Best regards,<br><strong>simplyBooked Team</strong></p>
+          <p>Best regards,<br><strong>Kinross Dental Clinic Team</strong></p>
           <hr style="margin-top: 40px;">
-          <p style="font-size: 12px; color: #888;">Global Pearl Ventures | simplyBooked</p>
+          <p style="font-size: 12px; color: #888;">Kinross Dental Clinic | Kinross Dental Clinic</p>
         </div>
       `,
     };
@@ -124,14 +124,14 @@ const sendAppointmentCancelation = async (email, date, start_time, provider) => 
 
   const sendAccountCreationInvite = async (email, role, link) => {
     const mailOptions = {
-      from: `"Global Pearl Ventures" <${process.env.EMAIL_USER}>`,
+      from: `"Kinross Dental Clinic" <${process.env.EMAIL_USER}>`,
       to: email,
-      subject: 'Your simplyBooked Account Invitation',
+      subject: 'Your Kinross Dental Clinic Account Invitation',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e0e0e0; padding: 20px; border-radius: 10px;">
-          <h2 style="color: #43a047;">You're Invited to Join simplyBooked</h2>
+          <h2 style="color: #43a047;">You're Invited to Join Kinross Dental Clinic</h2>
           <p>Dear user,</p>
-          <p>You’ve been invited to join <strong>simplyBooked</strong> as a <strong>${role}</strong>.</p>
+          <p>You’ve been invited to join <strong>Kinross Dental Clinic</strong> as a <strong>${role}</strong>.</p>
           <p>Please click the button below to create your account and get started:</p>
           <div style="text-align: center; margin: 30px 0;">
             <a href="${link}" style="background-color: #43a047; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px;">Create Account</a>
@@ -139,9 +139,9 @@ const sendAppointmentCancelation = async (email, date, start_time, provider) => 
           <p>If the button doesn't work, copy and paste the following link into your browser:</p>
           <p style="word-break: break-all;">${link}</p>
           <p>We're excited to have you on board. If you have any questions, feel free to reach out to our support team.</p>
-          <p>Best regards,<br><strong>simplyBooked Team</strong></p>
+          <p>Best regards,<br><strong>Kinross Dental Clinic Team</strong></p>
           <hr style="margin-top: 40px;">
-          <p style="font-size: 12px; color: #888;">Global Pearl Ventures | simplyBooked</p>
+          <p style="font-size: 12px; color: #888;">Kinross Dental Clinic | Kinross Dental Clinic</p>
         </div>
       `,
     };
@@ -158,20 +158,20 @@ const sendAppointmentCancelation = async (email, date, start_time, provider) => 
 
   const sendAccountCreationNotice = async (email, ID) => {
     const mailOptions = {
-      from: `"Global Pearl Ventures" <${process.env.EMAIL_USER}>`,
+      from: `"Kinross Dental Clinic" <${process.env.EMAIL_USER}>`,
       to: email,
-      subject: 'Your simplyBooked Account Has Been Created',
+      subject: 'Your Kinross Dental Clinic Account Has Been Created',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e0e0e0; padding: 20px; border-radius: 10px;">
-          <h2 style="color: #43a047;">Welcome to simplyBooked</h2>
+          <h2 style="color: #43a047;">Welcome to Kinross Dental Clinic</h2>
           <p>Dear user,</p>
-          <p>Your account has been successfully created on <strong>simplyBooked</strong>.</p>
+          <p>Your account has been successfully created on <strong>Kinross Dental Clinic</strong>.</p>
           <p><strong>Your Account ID:</strong> ${ID}</p>
           <p>You can now log in using your account ID and the password provided by your administrator.</p>
           <p>If you have any questions or need help accessing your account, please contact our support team.</p>
-          <p>Best regards,<br><strong>simplyBooked Team</strong></p>
+          <p>Best regards,<br><strong>Kinross Dental Clinic Team</strong></p>
           <hr style="margin-top: 40px;">
-          <p style="font-size: 12px; color: #888;">Global Pearl Ventures | simplyBooked</p>
+          <p style="font-size: 12px; color: #888;">Kinross Dental Clinic | Kinross Dental Clinic</p>
         </div>
       `,
     };

@@ -80,19 +80,11 @@ router.delete('/:admin_id', /* authenticateToken, */ async (req, res) => {
   }
 });
 
-router.post('/sendDentistInvite', /* authenticateToken, */ async (req, res) => {
-  try{
-    sendAccountCreationInvite(req.body.email, "Dentist", "http://localhost:3000");
-  }
-  catch(err){
-    console.log(err);
-    res.status(500).json({error: "Failed Sending Invite"});
-  }
-});
-
 router.post('/invite', /* authenticateToken, */ async (req, res) => {
   try{
-    sendAccountCreationInvite(req.body.email, req.body.role, "http://localhost:3000");
+    const role = req.body.role.toLowerCase();
+    const URL = `http://localhost:3000/${role}Signup`
+    sendAccountCreationInvite(req.body.email, req.body.role, URL);
   }
   catch(err){
     console.log(err);

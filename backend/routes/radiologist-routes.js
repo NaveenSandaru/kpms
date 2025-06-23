@@ -157,7 +157,7 @@ router.put('/:radiologist_id', /* authenticateToken, */ async (req, res) => {
 // Delete radiologist
 router.delete('/:radiologist_id', /* authenticateToken, */ async (req, res) => {
   try {
-    const radiologistId = parseInt(req.params.radiologist_id);
+    const radiologistId = req.params.radiologist_id;
 
     // Check if radiologist exists
     const existingRadiologist = await prisma.radiologists.findUnique({

@@ -1,5 +1,5 @@
 "use client";
-import { useContext, useEffect, useState } from "react";
+import { use, useContext, useEffect, useState } from "react";
 import { Button } from "@/Components/ui/button";
 import { Eye, Trash2, Search, Plus, User, Phone, Mail, UserCheck } from "lucide-react";
 import ViewUserDialog from "@/Components/ViewUserDialog";
@@ -9,7 +9,7 @@ import { AuthContext } from "@/context/auth-context";
 import { useRouter } from 'next/navigation';
 import {toast} from 'sonner';
 
-type Role = "Dentist" | "Receptionist" | "Rediologist";
+type Role = "Dentist" | "Receptionist" | "Radiologist";
 
 interface User {
   id: string;
@@ -31,17 +31,19 @@ export default function UserTable() {
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [deletingUser, setDeletingUser] = useState(false);
   const [users, setUsers] = useState<User[]>();
 
   const fetchUsers = async () => {
     setLoadingUsers(true);
     try {
-      const [dentistsRes, receptionistsRes] = await Promise.all([
+      const [dentistsRes, receptionistsRes, radiologistRes] = await Promise.all([
         axios.get(`${backendURL}/dentists`),
-        axios.get(`${backendURL}/receptionists`)
+        axios.get(`${backendURL}/receptionists`),
+        axios.get(`${backendURL}/radiologists`)
       ]);
 
-      if (dentistsRes.status === 500 || receptionistsRes.status === 500) {
+      if (dentistsRes.status === 500 || receptionistsRes.status === 500 || radiologistRes.status === 500) {
         throw new Error("Internal Server Error");
       }
 
@@ -61,7 +63,15 @@ export default function UserTable() {
         role: "Receptionist"
       }));
 
-      const allUsers: User[] = [...dentistUsers, ...receptionistUsers];
+      const radiolodistUsers: User[] = radiologistRes.data.map((radiolodist: any) => ({
+        id: radiolodist.radiologist_id,
+        name: radiolodist.name,
+        email: radiolodist.email,
+        phone: radiolodist.phone_number || '',
+        role: "Radiologist"
+      }));
+
+      const allUsers: User[] = [...dentistUsers, ...receptionistUsers, ...radiolodistUsers];
       setUsers(allUsers);
     } catch (err: any) {
       toast.error(err.message);
@@ -69,6 +79,38 @@ export default function UserTable() {
       setLoadingUsers(false);
     }
   };
+
+  const handleDelete = async (user_id: string, role: string) => {
+    setDeletingUser(true);
+    try {
+      let deleteURL = "";
+      switch (role) {
+        case "Dentist":
+          deleteURL = `${backendURL}/dentists/${user_id}`;
+          break;
+        case "Receptionist":
+          deleteURL = `${backendURL}/receptionists/${user_id}`;
+          break;
+        case "Radiologist":
+          deleteURL = `${backendURL}/radiologists/${user_id}`;
+          break;
+        default:
+          throw new Error("Invalid role");
+      }
+  
+      const res = await axios.delete(deleteURL);
+      if (res.status !== 200) throw new Error("Failed to delete user");
+  
+      // Update state to remove deleted user
+      setUsers(prev => prev?.filter(u => u.id !== user_id));
+      toast.success(`${role} deleted successfully`);
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setDeletingUser(false);
+    }
+  };
+  
 
   // Filter users based on search term
   const filteredUsers = users?.filter(user =>
@@ -162,16 +204,16 @@ export default function UserTable() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {filteredUsers?.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+                {filteredUsers?.map((inuser) => (
+                  <tr key={inuser.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
                           <User size={20} className="text-gray-600" />
                         </div>
                         <div>
-                          <div className="font-semibold text-gray-900">{user.name}</div>
-                          <div className="text-sm text-gray-500">ID: {user.id}</div>
+                          <div className="font-semibold text-gray-900">{inuser.name}</div>
+                          <div className="text-sm text-gray-500">ID: {inuser.id}</div>
                         </div>
                       </div>
                     </td>
@@ -179,33 +221,33 @@ export default function UserTable() {
                       <div className="space-y-1">
                         <div className="flex items-center gap-2 text-sm">
                           <Mail size={14} className="text-gray-400" />
-                          <span className="text-gray-900">{user.email}</span>
+                          <span className="text-gray-900">{inuser.email}</span>
                         </div>
                         <div className="flex items-center gap-2 text-sm">
                           <Phone size={14} className="text-gray-400" />
-                          <span className="text-gray-900">{user.phone}</span>
+                          <span className="text-gray-900">{inuser.phone}</span>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
                         <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                          {getRoleIcon(user.role)}
+                          {getRoleIcon(inuser.role)}
                         </div>
-                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium border ${getRoleColor(user.role)} w-fit`}>
-                          {user.role}
+                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium border ${getRoleColor(inuser.role)} w-fit`}>
+                          {inuser.role}
                         </span>
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <button
-                          onClick={() => setSelectedUser(user)}
+                          onClick={() => setSelectedUser(inuser)}
                           className="p-2 hover:bg-blue-50 rounded-lg transition-colors"
                         >
                           <Eye className="h-5 w-5 text-blue-600" />
                         </button>
-                        <button className="p-2 hover:bg-red-50 rounded-lg transition-colors">
+                        <button className="p-2 hover:bg-red-50 rounded-lg transition-colors" onClick={()=>{handleDelete(inuser.id, inuser.role)}}>
                           <Trash2 className="h-5 w-5 text-red-500" />
                         </button>
                       </div>
