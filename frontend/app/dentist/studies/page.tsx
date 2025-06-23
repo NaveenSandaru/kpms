@@ -895,7 +895,6 @@ const MedicalStudyInterface: React.FC = () => {
                   <th className="px-4 py-3 text-left text-sm font-medium">Source AE</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">Radiologist</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">Doctors</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -942,31 +941,6 @@ const MedicalStudyInterface: React.FC = () => {
                         ) : (
                           <span className="text-gray-400 text-xs">Not assigned</span>
                         )}
-                      </td>
-                      <td className="px-4 py-3 text-sm">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleEditStudy(study.study_id); }}
-                            className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-                            title="Edit Study"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleDeleteStudy(study.study_id); }}
-                            className="p-1 text-red-600 hover:bg-red-50 rounded"
-                            title="Delete Study"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); openAssignModal(study.study_id); }}
-                            className="p-1 text-green-600 hover:bg-green-50 rounded"
-                            title="Assign Staff"
-                          >
-                            <UserPlus className="w-4 h-4" />
-                          </button>
-                        </div>
                       </td>
                     </tr>
                     {expandedStudyId === study.study_id && (
