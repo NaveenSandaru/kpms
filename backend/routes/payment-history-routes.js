@@ -58,8 +58,6 @@ router.get('/', async (req, res) => {
   }
 });
 
-
-
 router.get('/trends', /* authenticateToken, */ async (req, res) => {
 
   const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -151,7 +149,6 @@ router.get('/income/this-month', /* authenticateToken, */ async (req, res) => {
   }
 });
 
-
 router.get('/:appointment_id', /* authenticateToken, */ async (req, res) => {
   try {
     const payment = await prisma.payment_history.findUnique({
@@ -164,10 +161,14 @@ router.get('/:appointment_id', /* authenticateToken, */ async (req, res) => {
   }
 });
 
-
 router.post('/', /* authenticateToken, */ async (req, res) => {
   try {
-    const { appointment_id, payment_date, payment_time, reference_number } = req.body;
+    const { appointment_id, reference_number } = req.body;
+
+    // Get current date and time
+    const now = new Date();
+    const payment_date = now.toISOString().split('T')[0]; // "YYYY-MM-DD"
+    const payment_time = now.toTimeString().slice(0, 5);   // "HH:MM"
 
     // Check if payment history already exists for appointment_id
     const existing = await prisma.payment_history.findUnique({
@@ -178,6 +179,7 @@ router.post('/', /* authenticateToken, */ async (req, res) => {
     const created = await prisma.payment_history.create({
       data: { appointment_id, payment_date, payment_time, reference_number },
     });
+
     res.status(201).json(created);
   } catch {
     res.status(500).json({ error: 'Failed to create payment history' });

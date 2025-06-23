@@ -8,7 +8,7 @@ import { Button } from '@/Components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/Components/ui/dialog';
 import { RadioGroup, RadioGroupItem } from '@/Components/ui/radio-group';
 import { Label } from '@/Components/ui/label';
-import { Separator } from '@/Components/ui/separator';
+import { Separator } from '@/components/ui/separator';
 import axios from 'axios';
 import { AuthContext } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
@@ -67,19 +67,20 @@ const PaymentsInterface: React.FC = () => {
 
   const router = useRouter()
 
-  const {isLoadingAuth, isLoggedIn, user} = useContext(AuthContext);
+  const { isLoadingAuth, isLoggedIn, user } = useContext(AuthContext);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [filteredPayments, setFilteredPayments] = useState<PaymentRecord[]>([]);
   const [loadingPayments, setLoadingPayments] = useState(false);
-  
+
   // New state for make payment dialog
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [unpaidAppointments, setUnpaidAppointments] = useState<Appointment[]>([]);
   const [selectedAppointment, setSelectedAppointment] = useState<string>('');
   const [loadingUnpaidAppointments, setLoadingUnpaidAppointments] = useState(false);
   const [processingPayment, setProcessingPayment] = useState(false);
+  const [referenceNumber, setReferenceNumber] = useState("<reference_number>");
 
   const fetchPayments = async () => {
     setLoadingPayments(true);
@@ -124,14 +125,15 @@ const PaymentsInterface: React.FC = () => {
     setLoadingUnpaidAppointments(true);
     try {
       const response = await axios.get(`${backendURL}/appointments/forpatient/${user.id}`);
-      
+
       if (response.status === 500) {
         throw new Error("Internal Server Error");
       }
 
       // Filter appointments with payment_status of 'not-paid'
-      const unpaid = response.data.filter((appointment: any) => 
-        appointment.payment_status === 'not-paid'
+      const unpaid = response.data.filter((appointment: any) =>
+        appointment.payment_status === 'not-paid' &&
+        appointment.status !== "cancelled"
       );
 
       const formatted: Appointment[] = unpaid.map((item: any) => ({
@@ -159,7 +161,7 @@ const PaymentsInterface: React.FC = () => {
     }
   };
 
-  const handleMakePayment = async () => {
+  const handleMakePayment = async (appointment_id: number) => {
     if (!selectedAppointment) {
       toast.error("Error", {
         description: "Please select an appointment to pay for"
@@ -169,28 +171,39 @@ const PaymentsInterface: React.FC = () => {
 
     setProcessingPayment(true);
     try {
-      // Here you would integrate with your payment gateway
-      // For now, I'll show a placeholder implementation
-      
-      // Simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // After successful payment, you would typically:
-      // 1. Update the appointment payment status
-      // 2. Create a payment record
-      // 3. Refresh the data
-      
+      const response = await axios.put(
+        `${backendURL}/appointments/${appointment_id}`,
+        {
+          payment_status: "paid"
+        }
+      );
+      const response2 = await axios.post(
+        `${backendURL}/payment-history`,
+        {
+          appointment_id: appointment_id,
+          reference_number: referenceNumber
+        }
+      );
+
+      if (response.status != 202) {
+        throw new Error("Error Updating Payment Status");
+      }
+
+      if (response2.status != 201) {
+        throw new Error("Error Creating Payment History Entry");
+      }
+
       toast.success("Payment Successful", {
         description: "Your payment has been processed successfully"
       });
-      
+
       setIsPaymentDialogOpen(false);
       setSelectedAppointment('');
-      fetchPayments(); // Refresh payment history
-      
+      fetchPayments();
+
     } catch (err: any) {
       toast.error("Payment Failed", {
-        description: "There was an error processing your payment"
+        description: err.message
       });
     } finally {
       setProcessingPayment(false);
@@ -206,16 +219,16 @@ const PaymentsInterface: React.FC = () => {
     setFilteredPayments(filtered);
   }, [searchTerm, payments]);
 
-  useEffect(()=>{
-    if(isLoadingAuth) return;
-    if(!isLoggedIn){
+  useEffect(() => {
+    if (isLoadingAuth) return;
+    if (!isLoggedIn) {
       toast.error("Session Error", {
         description: "Your session is expired, please login again"
       });
       router.push("/");
       return;
     }
-    else if(user.role != "patient"){
+    else if (user.role != "patient") {
       toast.error("Access Error", {
         description: "You do not have access, redirecting..."
       });
@@ -223,7 +236,7 @@ const PaymentsInterface: React.FC = () => {
       return;
     }
     fetchPayments();
-  },[isLoadingAuth]);
+  }, [isLoadingAuth]);
 
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('en-US', {
@@ -258,11 +271,11 @@ const PaymentsInterface: React.FC = () => {
             <h1 className="text-3xl font-bold mt-7 md:mt-0 text-gray-900 mb-2">Payments</h1>
             <p className="text-gray-600">View Payments database entries</p>
           </div>
-          
+
           {/* Make Payment Button */}
           <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
             <DialogTrigger asChild>
-              <Button 
+              <Button
                 className="mt-7 md:mt-0 bg-emerald-500 hover:bg-emerald-600 text-white"
                 onClick={fetchUnpaidAppointments}
               >
@@ -274,12 +287,12 @@ const PaymentsInterface: React.FC = () => {
               <DialogHeader>
                 <DialogTitle className="text-xl font-semibold">Make Payment</DialogTitle>
               </DialogHeader>
-              
+
               <div className="space-y-6">
                 {/* Appointment Selection */}
                 <div>
                   <h3 className="text-lg font-medium mb-4">Select Appointment to Pay</h3>
-                  
+
                   {loadingUnpaidAppointments ? (
                     <div className="flex items-center justify-center py-8">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
@@ -298,8 +311,8 @@ const PaymentsInterface: React.FC = () => {
                         {unpaidAppointments.map((appointment) => (
                           <div key={appointment.appointment_id} className="flex items-center space-x-3">
                             <RadioGroupItem value={appointment.appointment_id.toString()} id={`appointment-${appointment.appointment_id}`} />
-                            <Label 
-                              htmlFor={`appointment-${appointment.appointment_id}`} 
+                            <Label
+                              htmlFor={`appointment-${appointment.appointment_id}`}
                               className="flex-1 cursor-pointer"
                             >
                               <Card className="p-4 hover:bg-gray-50 transition-colors">
@@ -340,7 +353,7 @@ const PaymentsInterface: React.FC = () => {
                     <Separator />
                     <div>
                       <h3 className="text-lg font-medium mb-4">Payment Details</h3>
-                      
+
                       {/* Payment Summary */}
                       <Card className="mb-4">
                         <CardContent className="p-4">
@@ -369,8 +382,8 @@ const PaymentsInterface: React.FC = () => {
                             This is where you would integrate with your payment gateway
                             (Stripe, PayPal, local payment providers, etc.)
                           </p>
-                          <Button 
-                            onClick={handleMakePayment}
+                          <Button
+                            onClick={() => { handleMakePayment(selectedAppointmentData.appointment_id) }}
                             disabled={processingPayment}
                             className="bg-green-600 hover:bg-green-700 text-white"
                           >
@@ -397,7 +410,7 @@ const PaymentsInterface: React.FC = () => {
         </div>
 
         {/* Search Bar */}
-         <div className="bg-white rounded-lg shadow-sm border p-4 mb-6">
+        <div className="bg-white rounded-lg shadow-sm border p-4 mb-6">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
             <input
@@ -413,77 +426,77 @@ const PaymentsInterface: React.FC = () => {
         {/* Desktop Table View */}
         <div className="hidden lg:block bg-white rounded-lg shadow-sm border overflow-hidden">
           {filteredPayments.length > 0 && (
-          <div className="overflow-x-auto">
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-green-50 border-b">
-                  <tr>
-                    <th className="text-left px-6 py-4 font-medium text-gray-700">Patient</th>
-                    <th className="text-left px-6 py-4 font-medium text-gray-700">Dentist</th>
-                    <th className="text-left px-6 py-4 font-medium text-gray-700">Fee (Rs)</th>
-                    <th className="text-left px-6 py-4 font-medium text-gray-700">Date & Time</th>
-                    <th className="text-left px-6 py-4 font-medium text-gray-700">Reference no</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredPayments.map((payment) => (
-                    <tr key={payment.appointment_id} className="border-b hover:bg-gray-50">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center space-x-3">
-                          <Avatar className="h-10 w-10">
-                            <AvatarImage src={payment.appointment.patient.profile_picture} />
-                            <AvatarFallback className="bg-blue-100 text-blue-600">
-                              {getInitials(payment.appointment.patient.name)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className="font-medium text-gray-900">{payment.appointment.patient.name}</div>
-                            <div className="text-sm text-gray-500">{payment.appointment.patient.email}</div>
-                            <div className="text-sm text-gray-500">{payment.appointment.patient.phone_number}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center space-x-3">
-                          <Avatar className="h-10 w-10">
-                            <AvatarImage src={payment.appointment.dentist.profile_picture} />
-                            <AvatarFallback className="bg-green-100 text-green-600">
-                              {getInitials(payment.appointment.dentist.name)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className="font-medium text-gray-900">{payment.appointment.dentist.name}</div>
-                            <div className="text-sm text-gray-500">{payment.appointment.dentist.email}</div>
-                            <div className="text-sm text-gray-500">{payment.appointment.dentist.phone_number}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center space-x-1">
-                          <span className="font-semibold text-gray-900">{payment.appointment.fee}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="space-y-1">
-                          <div className="text-sm font-medium text-gray-900">
-                            {formatDate(payment.payment_date)}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {formatTime(payment.payment_time)}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <Badge variant="outline" className="font-mono text-xs">
-                          {payment.reference_number}
-                        </Badge>
-                      </td>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-green-50 border-b">
+                    <tr>
+                      <th className="text-left px-6 py-4 font-medium text-gray-700">Patient</th>
+                      <th className="text-left px-6 py-4 font-medium text-gray-700">Dentist</th>
+                      <th className="text-left px-6 py-4 font-medium text-gray-700">Fee (Rs)</th>
+                      <th className="text-left px-6 py-4 font-medium text-gray-700">Date & Time</th>
+                      <th className="text-left px-6 py-4 font-medium text-gray-700">Reference no</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {filteredPayments.map((payment) => (
+                      <tr key={payment.appointment_id} className="border-b hover:bg-gray-50">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center space-x-3">
+                            <Avatar className="h-10 w-10">
+                              <AvatarImage src={payment.appointment.patient.profile_picture} />
+                              <AvatarFallback className="bg-blue-100 text-blue-600">
+                                {getInitials(payment.appointment.patient.name)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="font-medium text-gray-900">{payment.appointment.patient.name}</div>
+                              <div className="text-sm text-gray-500">{payment.appointment.patient.email}</div>
+                              <div className="text-sm text-gray-500">{payment.appointment.patient.phone_number}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center space-x-3">
+                            <Avatar className="h-10 w-10">
+                              <AvatarImage src={payment.appointment.dentist.profile_picture} />
+                              <AvatarFallback className="bg-green-100 text-green-600">
+                                {getInitials(payment.appointment.dentist.name)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="font-medium text-gray-900">{payment.appointment.dentist.name}</div>
+                              <div className="text-sm text-gray-500">{payment.appointment.dentist.email}</div>
+                              <div className="text-sm text-gray-500">{payment.appointment.dentist.phone_number}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center space-x-1">
+                            <span className="font-semibold text-gray-900">{payment.appointment.fee}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="space-y-1">
+                            <div className="text-sm font-medium text-gray-900">
+                              {formatDate(payment.payment_date)}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {formatTime(payment.payment_time)}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <Badge variant="outline" className="font-mono text-xs">
+                            {payment.reference_number}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
           )}
         </div>
 

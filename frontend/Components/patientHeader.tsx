@@ -1,11 +1,52 @@
 "use client";
 
 import { Bell } from "lucide-react";
-import Image from "next/image";
 import { Avatar, AvatarFallback, AvatarImage } from "@/Components/ui/avatar";
 import { Button } from "@/Components/ui/button";
+import { AuthContext } from "@/context/auth-context";
+import { useContext, useEffect, useState } from "react";
+import axios from "axios";
+
+interface Patient{
+  patient_id: string,
+  name: string,
+  profile_picture: string
+}
 
 const PatientHeader = () => {
+  const {isLoggedIn, isLoadingAuth, user} = useContext(AuthContext);
+  const [patient, setPatient] = useState<Patient>();
+  const [loadingPatient, setLoadingPatient] = useState(false);
+  const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
+
+  const fetchPatient = async () => {
+    setLoadingPatient(true);
+    try{
+      const response = await axios.get(
+        `${backendURL}/patients/${user.id}`
+      );
+      if(response.status == 500){
+        throw new Error("Error fetching patient");
+      }
+      setPatient({patient_id: response.data.patient_id, name: response.data.name, profile_picture: response.data.profile_picture});
+      response.data = null;
+    }
+    catch(err: any){
+      window.alert(err.message);
+    }
+    finally{
+      setLoadingPatient(false);
+    }
+  }
+
+  useEffect(()=>{
+    if(isLoadingAuth) return;
+    if(!isLoggedIn) return;
+    if(user){
+      fetchPatient();
+    }
+  },[isLoadingAuth]);
+  
   return (
     <header className="flex items-center justify-end px-6 py-4 bg-white shadow-sm">
       
@@ -23,11 +64,11 @@ const PatientHeader = () => {
         {/* User Profile */}
         <div className="flex items-center gap-2">
           <Avatar>
-            <AvatarImage src="/avatar.jpg" alt="Emily Johnson" />
+            <AvatarImage src={patient?.profile_picture} alt="Emily Johnson" />
             <AvatarFallback className="text-xs font-semibold">PR</AvatarFallback>
           </Avatar>
           <div className="text-right leading-tight">
-            <p className="text-sm font-medium text-gray-900">Emily Johnson</p>
+            <p className="text-sm font-medium text-gray-900">{patient?.name}</p>
            
           </div>
         </div>
