@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect, useMemo } from "react";
+import Logo from '@/app/logo.png';
 // import { AuthContext } from "@/context/auth-context";
 // import { toast } from "sonner";
 import {
@@ -24,6 +25,7 @@ import {
   X,
   Image as ImageIcon,
 } from "lucide-react";
+import Image from "next/image";
 
 const RadiologistSidebar = () => {
   // const { setUser, setAccessToken } = useContext(AuthContext);
@@ -96,7 +98,7 @@ const RadiologistSidebar = () => {
       {/* Desktop sidebar */}
       <Sidebar className="hidden md:flex w-56 lg:w-64 bg-white shadow-sm min-h-screen border-r border-gray-200">
         <SidebarHeader className="p-4 md:p-6 border-b border-gray-100">
-          <h1 className="text-xl font-bold text-gray-900 text-center w-full">Logo</h1>
+          <span className="h-15 w-15 mx-auto"><Image src={Logo} alt=""/></span>
           <p className="text-sm text-gray-600 text-center mt-1">Radiologist Dashboard</p>
           <p className="text-xs text-gray-500 text-center mt-1">ID: {radiologistId}</p>
         </SidebarHeader>

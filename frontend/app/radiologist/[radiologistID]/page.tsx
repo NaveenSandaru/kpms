@@ -84,6 +84,8 @@ const MedicalStudyInterface: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [todayCount, setTodayCount] = useState<number>(0);
+  const [assignedTodayCount, setAssignedTodayCount] = useState<number>(0);
+  const [reportedTodayCount, setReportedTodayCount] = useState<number>(0);
   const [radiologists, setRadiologists] = useState<Radiologist[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
 
@@ -102,23 +104,36 @@ const MedicalStudyInterface: React.FC = () => {
     } as Study;
   };
 
-  // Fetch today's study count
+  // Calculate studies assigned today
+  const calculateAssignedToday = (studies: Study[]) => {
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+    return studies.filter(study => {
+      // Convert study date to YYYY-MM-DD format for comparison
+      const studyDate = study.date.split('T')[0];
+      return studyDate === today;
+    }).length;
+  };
+
+  // Update assigned today count, total assigned count, and reported today count when studies change
   useEffect(() => {
-    const fetchTodayCount = async () => {
-      try {
-        const res = await fetch('http://localhost:5000/studies/today/count');
-        if (res.ok) {
-          const data = await res.json();
-          setTodayCount(data.count);
-        } else {
-          console.error('Failed to fetch today count:', res.status);
-        }
-      } catch (err) {
-        console.error('Error fetching today count:', err);
-      }
-    };
-    fetchTodayCount();
-  }, []);
+    if (studies.length > 0) {
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+      
+      setAssignedTodayCount(calculateAssignedToday(studies));
+      // The total count is simply the length of the filtered studies array
+      setTodayCount(studies.length);
+      
+      // Calculate reported today count
+      const reportedToday = studies.filter(study => {
+        // Check if study has a report and was reported today
+        return study.report_id && study.date.startsWith(today);
+      }).length;
+      
+      setReportedTodayCount(reportedToday);
+    }
+  }, [studies]);
+
+  // No need for separate API call for today's count as we calculate it from the studies data
 
   // Fetch studies from the backend
   useEffect(() => {
@@ -299,7 +314,6 @@ const MedicalStudyInterface: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      console.log('Updating study:', newStudy, studyToEdit);
 
       if (!studyToEdit) {
         setError('No study to edit');
@@ -307,54 +321,7 @@ const MedicalStudyInterface: React.FC = () => {
         return;
       }
 
-      // Step 1: Handle DICOM file if a new one was uploaded
-      let dicomFileUrl = studyToEdit.dicom_file_url || '';
-      if (newStudy.dicom_files.length > 0) {
-        try {
-          // Delete the old DICOM file if it exists
-          if (studyToEdit.dicom_file_url) {
-            try {
-              // Extract the file name from the URL
-              const fileName = studyToEdit.dicom_file_url.split('/').pop();
-              if (fileName) {
-                const deleteResponse = await fetch(`http://localhost:5000/files/${fileName}`, {
-                  method: 'DELETE'
-                });
-
-                if (!deleteResponse.ok) {
-                  console.warn(`Warning: Could not delete old DICOM file: ${deleteResponse.status}`);
-                }
-              }
-            } catch (error) {
-              console.error('Error deleting old DICOM file:', error);
-            }
-          }
-
-          // Upload the new DICOM file
-          const dicomFormData = new FormData();
-          dicomFormData.append('file', newStudy.dicom_files[0]);
-
-          const dicomResponse = await fetch('http://localhost:5000/files', {
-            method: 'POST',
-            body: dicomFormData
-          });
-
-          if (!dicomResponse.ok) {
-            throw new Error(`DICOM file upload failed with status: ${dicomResponse.status}`);
-          }
-
-          const dicomData = await dicomResponse.json();
-          dicomFileUrl = dicomData.url;
-          console.log('DICOM file uploaded successfully:', dicomFileUrl);
-        } catch (error) {
-          console.error('Error uploading DICOM file:', error);
-          setError('Failed to upload DICOM file. Please try again.');
-          setLoading(false);
-          return;
-        }
-      }
-
-      // Step 2: Handle report file if a new one was uploaded
+      // Only handle report file if a new one was uploaded
       let reportFileUrl = '';
       // If there's an existing report, get its file URL
       if (studyToEdit.report_id) {
@@ -405,6 +372,49 @@ const MedicalStudyInterface: React.FC = () => {
           const reportData = await reportResponse.json();
           reportFileUrl = reportData.url;
           console.log('Report file uploaded successfully:', reportFileUrl);
+
+          // Update or create report
+          let reportStatus = 'new';
+          if (studyToEdit.report_id && studyToEdit.report) {
+            reportStatus = studyToEdit.report.status || 'new';
+          }
+
+          const reportPayload = {
+            report_file_url: reportFileUrl,
+            status: reportStatus,
+            study_id: studyToEdit.study_id,  // use the original study ID
+          };
+
+          const reportMethod = studyToEdit.report_id ? 'PUT' : 'POST';
+          const reportEndpoint = studyToEdit.report_id
+            ? `http://localhost:5000/reports/${studyToEdit.report_id}`
+            : 'http://localhost:5000/reports';
+
+          const reportUpdateResponse = await fetch(reportEndpoint, {
+            method: reportMethod,
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(reportPayload)
+          });
+
+          if (!reportUpdateResponse.ok) {
+            console.error(`Report ${reportMethod} failed with status: ${reportUpdateResponse.status}`);
+          } else {
+            const reportUpdateData = await reportUpdateResponse.json();
+            console.log(`Report ${reportMethod === 'POST' ? 'created' : 'updated'} successfully:`, reportUpdateData);
+
+            // Refetch the study to update the UI
+            const studyResponse = await fetch(`http://localhost:5000/studies/${studyToEdit.study_id}`);
+            if (studyResponse.ok) {
+              const studyData = await studyResponse.json();
+              const normalizedStudy = normalizeStudy(studyData);
+
+              setStudies(prev => prev.map(study =>
+                study.study_id === normalizedStudy.study_id ? normalizedStudy : study
+              ));
+            }
+          }
         } catch (error) {
           console.error('Error uploading report file:', error);
           // Report is optional, so we can continue without it
@@ -412,79 +422,10 @@ const MedicalStudyInterface: React.FC = () => {
         }
       }
 
-      // Step 3: Update study in the database
-      const studyPayload = {
-        patient_id: newStudy.patient_id,
-        date: studyToEdit.date, // Keep original date
-        time: studyToEdit.time, // Keep original time
-        modality: newStudy.modality,
-        assertion_number: parseInt(newStudy.assertion_number) || studyToEdit.assertion_number,
-        description: newStudy.description,
-        dicom_file_url: dicomFileUrl,
-        source: newStudy.server_type || studyToEdit.source,
-        isurgent: studyToEdit.isurgent
-      };
-
-      // Update study via PUT request
-      const studyResponse = await fetch(`http://localhost:5000/studies/${studyToEdit.study_id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(studyPayload)
-      });
-
-      if (!studyResponse.ok) {
-        throw new Error(`Study update failed with status: ${studyResponse.status}`);
-      }
-
-      const updatedStudyData = await studyResponse.json();
-      console.log('Study updated successfully:', updatedStudyData);
-
-      // Step 4: Update or create report if needed
-      if (reportFileUrl) {
-        // Safe access to report status with a type assertion if needed
-        let reportStatus = 'new';
-        if (studyToEdit.report_id && studyToEdit.report) {
-          reportStatus = studyToEdit.report.status || 'new';
-        }
-
-        const reportPayload = {
-          report_file_url: reportFileUrl,
-          status: reportStatus,
-          study_id: updatedStudyData.study_id,
-        };
-
-        const reportMethod = studyToEdit.report_id ? 'PUT' : 'POST';
-        const reportEndpoint = studyToEdit.report_id
-          ? `http://localhost:5000/reports/${studyToEdit.report_id}`
-          : 'http://localhost:5000/reports';
-
-        const reportResponse = await fetch(reportEndpoint, {
-          method: reportMethod,
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(reportPayload)
-        });
-
-        if (!reportResponse.ok) {
-          console.error(`Report ${reportMethod} failed with status: ${reportResponse.status}`);
-        } else {
-          const reportData = await reportResponse.json();
-          console.log(`Report ${reportMethod === 'POST' ? 'created' : 'updated'} successfully:`, reportData);
-        }
-      }
-
-      // Step 5: Update studies list with the updated study
-      setStudies(prev => prev.map(study =>
-        study.study_id === updatedStudyData.study_id ? normalizeStudy(updatedStudyData) : study
-      ));
-
       // Show success message
-      alert('Study updated successfully!');
+      alert('Report updated successfully!');
 
-      // Step 6: Reset state and close modal
+      // Reset state and close modal
       setIsAddStudyOpen(false);
       setIsEditMode(false);
       setStudyToEdit(null);
@@ -500,8 +441,8 @@ const MedicalStudyInterface: React.FC = () => {
       });
 
     } catch (error) {
-      console.error('Error updating study:', error);
-      setError('Failed to update study. Please try again.');
+      console.error('Error updating report:', error);
+      setError('Failed to update report. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -595,7 +536,7 @@ const MedicalStudyInterface: React.FC = () => {
             <div className="flex justify-between items-start">
               <div>
                 <div className="text-sm font-medium text-gray-600 mb-1">Assigned Today</div>
-                <div className="text-3xl font-bold text-gray-900">{studies.length}</div>
+                <div className="text-3xl font-bold text-gray-900">{assignedTodayCount}</div>
               </div>
               <Calendar className="w-8 h-8 text-blue-500" />
             </div>
@@ -615,7 +556,7 @@ const MedicalStudyInterface: React.FC = () => {
             <div className="flex justify-between items-start">
               <div>
                 <div className="text-sm font-medium text-gray-600 mb-1">Reported Today</div>
-                <div className="text-3xl font-bold text-gray-900">3</div>
+                <div className="text-3xl font-bold text-gray-900">{reportedTodayCount}</div>
               </div>
               <CheckCircle className="w-8 h-8 text-green-500" />
             </div>
@@ -793,12 +734,12 @@ const MedicalStudyInterface: React.FC = () => {
                     >
                       <Edit className="w-4 h-4" />
                     </button>
-                    <button
+                    {/*<button
                       onClick={() => handleDeleteStudy(study.study_id)}
                       className="p-1 text-red-600 hover:bg-red-50 rounded"
                     >
                       <Trash2 className="w-4 h-4" />
-                    </button>
+                    </button>*/}
                     <button
                       onClick={() => openAssignModal(study.study_id)}
                       className="p-1 text-green-600 hover:bg-green-50 rounded"
@@ -832,7 +773,9 @@ const MedicalStudyInterface: React.FC = () => {
           <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold text-gray-900">Add New Study</h2>
+                <h2 className="text-xl font-semibold text-gray-900">
+                  {isEditMode ? 'Edit Study' : 'Add New Study'}
+                </h2>
                 <button
                   onClick={() => setIsAddStudyOpen(false)}
                   className="text-gray-400 hover:text-gray-600"
@@ -842,132 +785,28 @@ const MedicalStudyInterface: React.FC = () => {
               </div>
 
               <div className="space-y-6">
-                {/* Patient Information */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {isEditMode ? (
+                  // Edit mode: only show report upload
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Patient ID
+                      Report Files
                     </label>
-                    <input
-                      type="text"
-                      value={newStudy.patient_id}
-                      onChange={(e) => setNewStudy(prev => ({ ...prev, patient_id: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Patient Name
-                    </label>
-                    <input
-                      type="text"
-                      value={newStudy.patient_name}
-                      onChange={(e) => setNewStudy(prev => ({ ...prev, patient_name: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-
-                {/* Study Details */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Modality
-                    </label>
-                    <select
-                      value={newStudy.modality}
-                      onChange={(e) => setNewStudy(prev => ({ ...prev, modality: e.target.value }))}
-                      className="w-full px-3 py-2 border border-emerald-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                    >
-                      <option value="">Select Modality</option>
-                      <option value="CT">CT</option>
-                      <option value="MRI">MRI</option>
-                      <option value="DX">DX</option>
-                      <option value="CR">CR</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Server Type
-                    </label>
-                    <select
-                      value={newStudy.server_type}
-                      onChange={(e) => setNewStudy(prev => ({ ...prev, server_type: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                    >
-                      <option value="">Select Server Type</option>
-                      <option value="PACS">PACS</option>
-                      <option value="DICOM">DICOM</option>
-                      <option value="CLOUD">CLOUD</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Accession Number
-                  </label>
-                  <input
-                    type="text"
-                    value={newStudy.assertion_number}
-                    onChange={(e) => setNewStudy(prev => ({ ...prev, assertion_number: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Description
-                  </label>
-                  <textarea
-                    value={newStudy.description}
-                    onChange={(e) => setNewStudy(prev => ({ ...prev, description: e.target.value }))}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                  />
-                </div>
-
-                {/* File Uploads */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    DICOM Files
-                  </label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                    <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                    <p className="text-sm text-gray-600 mb-2">
-                      <span className="text-blue-600 underline cursor-pointer">Upload a file</span> or drag and drop
-                    </p>
-                    <p className="text-xs text-gray-500">DCM, DOC, DOCX files up to 10MB</p>
-                    <input
-                      type="file"
-                      multiple
-                      accept=".dcm,.doc,.docx"
-                      onChange={(e) => handleFileUpload(e.target.files, 'dicom')}
-                      className="hidden"
-                      id="dicom-upload"
-                    />
-                    <label htmlFor="dicom-upload" className="cursor-pointer">
-                      <div className="mt-2">
-                        {newStudy.dicom_files.length > 0 && (
-                          <p className="text-sm text-green-600">
-                            {newStudy.dicom_files.length} file(s) selected
-                          </p>
-                        )}
+                    <label htmlFor="report-upload" className="cursor-pointer">
+                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                        <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                        <p className="text-sm text-gray-600 mb-2">
+                          <span className="text-blue-600 underline cursor-pointer">Upload a file</span> or drag and drop
+                        </p>
+                        <p className="text-xs text-gray-500">PDF, DOC, DOCX files up to 10MB</p>
+                        <div className="mt-2">
+                          {newStudy.report_files.length > 0 && (
+                            <p className="text-sm text-green-600">
+                              {newStudy.report_files.length} file(s) selected
+                            </p>
+                          )}
+                        </div>
                       </div>
                     </label>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Report Files
-                  </label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                    <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                    <p className="text-sm text-gray-600 mb-2">
-                      <span className="text-blue-600 underline cursor-pointer">Upload a file</span> or drag and drop
-                    </p>
-                    <p className="text-xs text-gray-500">PDF, DOC, DOCX files up to 10MB</p>
                     <input
                       type="file"
                       multiple
@@ -976,17 +815,157 @@ const MedicalStudyInterface: React.FC = () => {
                       className="hidden"
                       id="report-upload"
                     />
-                    <label htmlFor="report-upload" className="cursor-pointer">
-                      <div className="mt-2">
-                        {newStudy.report_files.length > 0 && (
-                          <p className="text-sm text-green-600">
-                            {newStudy.report_files.length} file(s) selected
-                          </p>
-                        )}
-                      </div>
-                    </label>
                   </div>
-                </div>
+                ) : (
+                  // Add mode: show the full form
+                  <>
+                    {/* Patient Information */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Patient ID
+                        </label>
+                        <input
+                          type="text"
+                          value={newStudy.patient_id}
+                          onChange={(e) => setNewStudy(prev => ({ ...prev, patient_id: e.target.value }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Patient Name
+                        </label>
+                        <input
+                          type="text"
+                          value={newStudy.patient_name}
+                          onChange={(e) => setNewStudy(prev => ({ ...prev, patient_name: e.target.value }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Study Details */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Modality
+                        </label>
+                        <select
+                          value={newStudy.modality}
+                          onChange={(e) => setNewStudy(prev => ({ ...prev, modality: e.target.value }))}
+                          className="w-full px-3 py-2 border border-emerald-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                        >
+                          <option value="">Select Modality</option>
+                          <option value="CT">CT</option>
+                          <option value="MRI">MRI</option>
+                          <option value="DX">DX</option>
+                          <option value="CR">CR</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Server Type
+                        </label>
+                        <select
+                          value={newStudy.server_type}
+                          onChange={(e) => setNewStudy(prev => ({ ...prev, server_type: e.target.value }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                        >
+                          <option value="">Select Server Type</option>
+                          <option value="PACS">PACS</option>
+                          <option value="DICOM">DICOM</option>
+                          <option value="CLOUD">CLOUD</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Accession Number
+                      </label>
+                      <input
+                        type="text"
+                        value={newStudy.assertion_number}
+                        onChange={(e) => setNewStudy(prev => ({ ...prev, assertion_number: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Description
+                      </label>
+                      <textarea
+                        value={newStudy.description}
+                        onChange={(e) => setNewStudy(prev => ({ ...prev, description: e.target.value }))}
+                        rows={3}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                      />
+                    </div>
+
+                    {/* File Uploads */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        DICOM Files
+                      </label>
+                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                        <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                        <p className="text-sm text-gray-600 mb-2">
+                          <span className="text-blue-600 underline cursor-pointer">Upload a file</span> or drag and drop
+                        </p>
+                        <p className="text-xs text-gray-500">DCM, DOC, DOCX files up to 10MB</p>
+                        <input
+                          type="file"
+                          multiple
+                          accept=".dcm,.doc,.docx"
+                          onChange={(e) => handleFileUpload(e.target.files, 'dicom')}
+                          className="hidden"
+                          id="dicom-upload"
+                        />
+                        <label htmlFor="dicom-upload" className="cursor-pointer">
+                          <div className="mt-2">
+                            {newStudy.dicom_files.length > 0 && (
+                              <p className="text-sm text-green-600">
+                                {newStudy.dicom_files.length} file(s) selected
+                              </p>
+                            )}
+                          </div>
+                        </label>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Report Files
+                      </label>
+                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                        <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                        <p className="text-sm text-gray-600 mb-2">
+                          <span className="text-blue-600 underline cursor-pointer">Upload a file</span> or drag and drop
+                        </p>
+                        <p className="text-xs text-gray-500">PDF, DOC, DOCX files up to 10MB</p>
+                        <input
+                          type="file"
+                          multiple
+                          accept=".pdf,.doc,.docx"
+                          onChange={(e) => handleFileUpload(e.target.files, 'report')}
+                          className="hidden"
+                          id="report-upload"
+                        />
+                        <label htmlFor="report-upload" className="cursor-pointer">
+                          <div className="mt-2">
+                            {newStudy.report_files.length > 0 && (
+                              <p className="text-sm text-green-600">
+                                {newStudy.report_files.length} file(s) selected
+                              </p>
+                            )}
+                          </div>
+                        </label>
+                      </div>
+                    </div>
+                  </>
+                )}
 
                 {/* Action Buttons */}
                 <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-gray-200">
@@ -1000,7 +979,7 @@ const MedicalStudyInterface: React.FC = () => {
                     onClick={isEditMode ? handleUpdateStudy : handleSubmitStudy}
                     className="px-6 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600"
                   >
-                    {isEditMode ? 'Update Study' : 'Upload Study'}
+                    {isEditMode ? 'Update Report' : 'Upload Study'}
                   </button>
                 </div>
               </div>
