@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, Plus, Search, MoreHorizontal, X, Upload, FileText, Edit, Trash2, UserPlus, User, Users } from 'lucide-react';
+import { Calendar, Clock, Plus, Search, MoreHorizontal, X, Upload, FileText, Edit, Trash2, UserPlus, User, Users, ChevronDown, ChevronRight, Eye, File } from 'lucide-react';
 
 // Types based on the database structure
 interface Doctor {
@@ -60,6 +60,49 @@ const MedicalStudyInterface: React.FC = () => {
   const [activeModality, setActiveModality] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [expandedStudyId, setExpandedStudyId] = useState<number | null>(null);
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000';
+
+  // Helper: open DICOM viewer in a new tab using POST (required by backend)
+  const openDicomInNewTab = (dicomUrl: string) => {
+    if (!dicomUrl) return;
+
+    const fullUrl = dicomUrl.startsWith('http') ? dicomUrl : `${backendUrl}${dicomUrl}`;
+    const htmlContent = `
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+      <meta charset="UTF-8">
+      <title>Opening DICOM...</title>
+  </head>
+  <body>
+      <p>Opening DICOM file: ${dicomUrl}</p>
+      <script>
+          fetch('http://localhost:4000/open-dicom', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ url: '${fullUrl}' })
+          })
+          .then(response => {
+              if (response.redirected) {
+                  window.location.href = response.url;
+              } else {
+                  document.body.innerHTML = '<p>DICOM request sent successfully!</p>';
+              }
+          })
+          .catch(error => {
+              document.body.innerHTML = '<p>Error: ' + error.message + '</p>';
+          });
+      </script>
+  </body>
+  </html>`;
+
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
 
   const [newStudy, setNewStudy] = useState<NewStudyForm>({
     patient_id: '',
@@ -403,7 +446,7 @@ const MedicalStudyInterface: React.FC = () => {
 
       // Only update the UI if the backend deletion was successful
       setStudies(prev => prev.filter(study => study.study_id !== studyId));
-      
+
       // Show success message
       alert('Study deleted successfully');
     } catch (error) {
@@ -708,6 +751,7 @@ const MedicalStudyInterface: React.FC = () => {
   const totalPages = Math.ceil(filteredStudies.length / 10);
 
   return (
+    <>
     <div className="min-h-screen bg-gray-50 p-6 overflow-auto">
       {loading && (
         <div className="bg-blue-50 p-4 rounded-lg text-center">
@@ -856,63 +900,138 @@ const MedicalStudyInterface: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {displayedStudies.map((study) => (
-                  <tr key={study.study_id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm text-gray-900">{study.patient_id}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">John Doe</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{study.status}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">ACC-{study.assertion_number}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{study.modality}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{study.description}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{study.date}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{study.time}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{study.report?.status ?? 'No status'}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{study.source}</td>
-                    <td className="px-4 py-3 text-sm">
-                      {study.radiologist ? (
-                        <div className="flex items-center gap-1 text-green-600">
-                          <User className="w-3 h-3" />
-                          <span className="text-xs">{study.radiologist.name}</span>
+                  <React.Fragment key={study.study_id}>
+                    <tr
+                      className={`hover:bg-gray-50 cursor-pointer ${expandedStudyId === study.study_id ? 'bg-gray-50' : ''}`}
+                      onClick={() => setExpandedStudyId(expandedStudyId === study.study_id ? null : study.study_id)}
+                    >
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        <div className="flex items-center">
+                          {expandedStudyId === study.study_id ?
+                            <ChevronDown className="w-4 h-4 mr-1 text-gray-500" /> :
+                            <ChevronRight className="w-4 h-4 mr-1 text-gray-500" />
+                          }
+                          {study.patient_id}
                         </div>
-                      ) : (
-                        <span className="text-gray-400 text-xs">Not assigned</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-sm">
-                      {study.doctors && study.doctors.length > 0 ? (
-                        <div className="flex items-center gap-1 text-blue-600">
-                          <Users className="w-3 h-3" />
-                          <span className="text-xs">{study.doctors.length} doctor(s)</span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900">John Doe</td>
+                      <td className="px-4 py-3 text-sm text-gray-900">{study.status}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900">ACC-{study.assertion_number}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900">{study.modality}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900">{study.description}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900">{study.date}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900">{study.time}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900">{study.report?.status ?? 'No status'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900">{study.source}</td>
+                      <td className="px-4 py-3 text-sm">
+                        {study.radiologist ? (
+                          <div className="flex items-center gap-1 text-green-600">
+                            <User className="w-3 h-3" />
+                            <span className="text-xs">{study.radiologist.name}</span>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 text-xs">Not assigned</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        {study.doctors && study.doctors.length > 0 ? (
+                          <div className="flex items-center gap-1 text-blue-600">
+                            <Users className="w-3 h-3" />
+                            <span className="text-xs">{study.doctors.length} doctor(s)</span>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 text-xs">Not assigned</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleEditStudy(study.study_id); }}
+                            className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                            title="Edit Study"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDeleteStudy(study.study_id); }}
+                            className="p-1 text-red-600 hover:bg-red-50 rounded"
+                            title="Delete Study"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); openAssignModal(study.study_id); }}
+                            className="p-1 text-green-600 hover:bg-green-50 rounded"
+                            title="Assign Staff"
+                          >
+                            <UserPlus className="w-4 h-4" />
+                          </button>
                         </div>
-                      ) : (
-                        <span className="text-gray-400 text-xs">Not assigned</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-sm">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleEditStudy(study.study_id)}
-                          className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-                          title="Edit Study"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteStudy(study.study_id)}
-                          className="p-1 text-red-600 hover:bg-red-50 rounded"
-                          title="Delete Study"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => openAssignModal(study.study_id)}
-                          className="p-1 text-green-600 hover:bg-green-50 rounded"
-                          title="Assign Staff"
-                        >
-                          <UserPlus className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                      </td>
+                    </tr>
+                    {expandedStudyId === study.study_id && (
+                      <tr className="bg-gray-50 border-b">
+                        <td colSpan={13} className="p-4">
+                          <div className="bg-white p-4 rounded-md shadow-sm border border-gray-200">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                              {/* Study Details */}
+                              <div className="space-y-2">
+                                <h4 className="font-medium text-sm text-gray-700">Study Details</h4>
+                                <div className="rounded-md bg-green-50 p-3">
+                                  <p className="text-xs text-gray-600"><span className="font-medium">Status:</span> {study.status || 'Unknown'}</p>
+                                  <p className="text-xs text-gray-600"><span className="font-medium">Report Status:</span> {study.report?.status || 'No Report'}</p>
+                                  <p className="text-xs text-gray-600"><span className="font-medium">Description:</span> {study.description || 'No description'}</p>
+                                </div>
+                              </div>
+
+                              {/* Staff Assignment */}
+                              <div className="space-y-2">
+                                <h4 className="font-medium text-sm text-gray-700">Staff Assignment</h4>
+                                <div className="rounded-md bg-blue-50 p-3">
+                                  <p className="text-xs text-gray-600">
+                                    <span className="font-medium">Radiologist:</span> {study.radiologist ? study.radiologist.name : 'Not assigned'}
+                                  </p>
+                                  <p className="text-xs text-gray-600">
+                                    <span className="font-medium">Doctors:</span> {study.doctors && study.doctors.length > 0
+                                      ? study.doctors.map(d => d.name).join(', ')
+                                      : 'None assigned'}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* Actions */}
+                              <div className="space-y-2">
+                                <h4 className="font-medium text-sm text-gray-700">Actions</h4>
+                                <div className="flex flex-col space-y-2">
+                                  {study.dicom_file_url && (
+                                    <button
+                                      onClick={() => {
+                                        openDicomInNewTab(study.dicom_file_url!);
+                                      }}
+                                      className="flex items-center justify-center gap-2 py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded transition-colors"
+                                    >
+                                      <Eye className="w-3 h-3" /> View DICOM
+                                    </button>
+                                  )}
+
+
+                                  {study.report_id && (
+                                    <button
+                                      onClick={() => {
+                                        window.open(`${backendUrl}/reports/${study.report_id}`, '_blank');
+                                      }}
+                                      className="flex items-center justify-center gap-2 py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium rounded transition-colors">
+                                      <File className="w-3 h-3" /> Open Report
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>
@@ -1269,6 +1388,7 @@ const MedicalStudyInterface: React.FC = () => {
         </div>
       )}
     </div>
+    </>
   );
 };
 
