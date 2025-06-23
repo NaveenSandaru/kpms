@@ -381,12 +381,15 @@ const DentalDashboard = () => {
                   <div key={index} className="aspect-square">
                     {day && (
                       <button
-                        className={`w-full h-full flex items-center justify-center text-sm rounded hover:bg-gray-100 ${day === 13 ? 'bg-emerald-500 text-emerald-800 hover:bg-emerald-600' :
-                            day === new Date().getDate() &&
-                              currentDate.getMonth() === new Date().getMonth() &&
-                              currentDate.getFullYear() === new Date().getFullYear()
-                              ? 'bg-emerald-50 text-emerald-800' : 'text-emrald-700'
-                          }`}
+                        className={`w-full h-full flex items-center justify-center text-sm rounded hover:bg-gray-100 '
+                            ${
+                              day === new Date().getDate() &&
+                                currentDate.getMonth() === new Date().getMonth() &&
+                                currentDate.getFullYear() === new Date().getFullYear()
+                                ? 'bg-emerald-100 text-emerald-800' : 'text-emrald-700'
+                          
+                        }
+                          `}
                       >
                         {day}
                       </button>
@@ -395,10 +398,7 @@ const DentalDashboard = () => {
                 ))}
               </div>
 
-              <button className="w-full mt-4 bg-emerald-500 hover:bg-emerald-600 text-white py-2 px-4 rounded-lg font-medium transition-colors flex items-center justify-center">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Appointment
-              </button>
+              
             </div>
           </div>
 
