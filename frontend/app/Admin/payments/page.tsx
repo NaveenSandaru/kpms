@@ -100,7 +100,9 @@ const PaymentsInterface: React.FC = () => {
       setPayments(formatted);
       setFilteredPayments(formatted);
     } catch (err: any) {
-      window.alert(err.message);
+      toast.error("Error", {
+        description: err.message
+      });
     } finally {
       setLoadingPayments(false);
     }

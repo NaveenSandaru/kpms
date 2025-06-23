@@ -152,10 +152,10 @@ const PatientManagement = () => {
         if(response.status != 202){
           throw new Error("Error updating patient");
         }
-        window.alert("Patient updated succesfully");
+        toast.success("Patient updated successfully");
       }
       catch(err: any){
-        window.alert(err.message);
+        toast.error("Error updating patient");
       }
       finally{
 
@@ -198,12 +198,12 @@ const PatientManagement = () => {
           throw new Error("Error Creating Patient");
         }
         else{
-          window.alert("Patient Created Succesfully");
+          toast.success("Patient created successfully");
           setPatients(prev => [...prev, { ...formData, patient_id: newPatientId }]);
         }
       }
       catch (err: any) {
-        window.alert(err.message);
+        toast.error("Error Creating Patient");
       }
       finally {
 
@@ -224,7 +224,7 @@ const PatientManagement = () => {
       setPatients(prev => prev.filter(patient => patient.patient_id !== patientId));
     }
     catch (err: any) {
-      window.alert(err.message);
+     toast.error("Error deleting patient");
     }
     finally {
 
@@ -254,7 +254,7 @@ const PatientManagement = () => {
       setPatients(response.data);
     }
     catch (err: any) {
-      window.alert(err.message);
+      toast.error("Error fetching patients");
     }
     finally {
       setLoadingPatient(false);
@@ -361,7 +361,8 @@ const PatientManagement = () => {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => { window.alert(patient.patient_id); handleDeletePatient(patient.patient_id) }}
+                      onClick={() => { toast.success("Patient deleted successfully");
+                         handleDeletePatient(patient.patient_id) }}
                       className="p-1 h-8 w-8 hover:text-red-600"
                     >
                       <Trash2 size={16} />

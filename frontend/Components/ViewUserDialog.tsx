@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Badge } from "@/Components/ui/badge";
+import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Card, CardContent } from "@/Components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { 
   User, 
   Mail, 
@@ -11,16 +11,19 @@ import {
   DollarSign, 
   Globe, 
   Briefcase,
-  Timer
+  Timer,
+  Stethoscope,
+  Monitor,
+  MapPin
 } from "lucide-react";
 
-// Extended User interface to include all fields from both tables
+// Extended User interface to include all fields from the three tables
 interface User {
   // Common fields
   name: string;
   email: string;
   phone_number?: string;
-  id: string
+  id: string;
   
   // Dentist-specific fields
   profile_picture?: string;
@@ -33,9 +36,17 @@ interface User {
   appointment_duration?: string;
   appointment_fee?: number;
   
+  // Role identifier - now includes radiologist
+  role: 'Dentist' | 'Receptionist' | 'Radiologist';
   
-  // Role identifier
-  role: 'Dentist' | 'Receptionist';
+  // Additional fields that might exist
+  created_at?: string;
+  updated_at?: string;
+  status?: string;
+  department?: string;
+  experience?: string;
+  specialization?: string;
+  bio?: string;
 }
 
 interface Props {
@@ -47,6 +58,9 @@ export default function ViewUserDialog({ user, onClose }: Props) {
   if (!user) return null;
 
   const isDentist = user.role === 'Dentist';
+  const isRadiologist = user.role === 'Radiologist';
+  const isReceptionist = user.role === 'Receptionist';
+  
   const userInitials = user.name
     .split(' ')
     .map(n => n[0])
@@ -68,176 +82,181 @@ export default function ViewUserDialog({ user, onClose }: Props) {
     return user.service_types.split(',').map(service => service.trim());
   };
 
+  // Helper function to get role-specific styling
+  const getRoleStyles = () => {
+    switch (user.role) {
+      case 'Dentist':
+        return {
+          badgeColor: "bg-blue-100 text-blue-800",
+          icon: <Stethoscope className="w-4 h-4" />,
+          accentColor: "text-blue-600"
+        };
+      case 'Radiologist':
+        return {
+          badgeColor: "bg-emerald-100 text-emerald-800",
+          icon: <Monitor className="w-4 h-4" />,
+          accentColor: "text-emerald-600"
+        };
+      case 'Receptionist':
+        return {
+          badgeColor: "bg-purple-100 text-purple-800",
+          icon: <User className="w-4 h-4" />,
+          accentColor: "text-purple-600"
+        };
+      default:
+        return {
+          badgeColor: "bg-gray-100 text-gray-800",
+          icon: <User className="w-4 h-4" />,
+          accentColor: "text-gray-600"
+        };
+    }
+  };
+
+  const roleStyles = getRoleStyles();
+
+  // Helper function to render info item
+  const renderInfoItem = (
+    icon: React.ReactNode,
+    label: string,
+    value: string | number | null | undefined
+  ) => {
+    if (!value) return null;
+    
+    return (
+      <div className="flex items-start gap-3">
+        <div className="text-gray-400 mt-0.5">
+          {icon}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-gray-900">{label}</p>
+          <p className="text-sm text-gray-600 break-words">{value}</p>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <Dialog open={!!user} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader className="pb-6">
-          <DialogTitle className="text-2xl font-bold text-center">
-            {isDentist ? 'Dentist Profile' : 'Receptionist Profile'}
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader className="border-b border-gray-100 pb-6">
+          <DialogTitle className="text-xl font-semibold text-gray-900">
+            Staff Profile
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6 overflow-auto">
-          {/* Profile Section */}
-          <Card className="border-2 border-blue-100 bg-gradient-to-r from-blue-50 to-indigo-50">
-            <CardContent className="pt-6">
-              <div className="flex flex-col sm:flex-row items-center gap-6">
-                <Avatar className="w-24 h-24 border-4 border-white shadow-lg">
-                  <AvatarImage 
-                    src={user.profile_picture} 
-                    alt={user.name}
-                    className="object-cover"
-                  />
-                  <AvatarFallback className="text-2xl font-bold bg-gradient-to-br from-blue-500 to-purple-600 text-white">
-                    {userInitials}
-                  </AvatarFallback>
-                </Avatar>
-                
-                <div className="text-center sm:text-left flex-1">
-                  <h3 className="text-2xl font-bold text-gray-800">{user.name}</h3>
-                  <div className="mt-2">
-                    <Badge 
-                      variant={isDentist ? "default" : "secondary"}
-                      className="text-sm px-3 py-1"
-                    >
-                      {isDentist ? 'Dentist' : 'Receptionist'}
+        <div className="space-y-6 py-6">
+          {/* Profile Header */}
+          <div className="flex items-start gap-6">
+            <Avatar className="w-20 h-20 border border-gray-200">
+              <AvatarImage 
+                src={user.profile_picture} 
+                alt={user.name}
+                className="object-cover"
+              />
+              <AvatarFallback className="text-lg font-semibold bg-gray-100 text-gray-600">
+                {userInitials}
+              </AvatarFallback>
+            </Avatar>
+            
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-1">{user.name}</h3>
+                  <div className="flex items-center gap-3 mb-2">
+                    <Badge className={`${roleStyles.badgeColor} border-0 font-medium`}>
+                      <div className="flex items-center gap-1.5">
+                        {roleStyles.icon}
+                        {user.role}
+                      </div>
                     </Badge>
+                    {user.status && (
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        user.status.toLowerCase() === 'active' 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {user.status}
+                      </span>
+                    )}
                   </div>
-                  <p className="text-sm text-gray-600 mt-2">
-                    ID: {user.id}
-                  </p>
+                  <p className="text-sm text-gray-500">ID: {user.id}</p>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           {/* Contact Information */}
-          <Card>
-            <CardContent className="pt-6">
-              <h4 className="font-semibold text-lg mb-4 flex items-center gap-2">
-                <User className="w-5 h-5 text-blue-600" />
-                Contact Information
-              </h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                  <Mail className="w-5 h-5 text-blue-600 flex-shrink-0" />
-                  <div>
-                    <p className="text-sm text-gray-600">Email</p>
-                    <p className="font-medium break-all">{user.email}</p>
-                  </div>
-                </div>
-                
-                {user.phone_number && (
-                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                    <Phone className="w-5 h-5 text-green-600 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm text-gray-600">Phone</p>
-                      <p className="font-medium">{user.phone_number}</p>
-                    </div>
-                  </div>
-                )}
+          <Card className="border border-gray-200">
+            <CardContent className="p-6">
+              <h4 className="font-semibold text-gray-900 mb-4">Contact Information</h4>
+              <div className="space-y-4">
+                {renderInfoItem(<Mail className="w-4 h-4" />, "Email", user.email)}
+                {renderInfoItem(<Phone className="w-4 h-4" />, "Phone", user.phone_number)}
+                {user.department && renderInfoItem(<MapPin className="w-4 h-4" />, "Department", user.department)}
               </div>
             </CardContent>
           </Card>
 
-          {/* Dentist-specific Information */}
-          {isDentist && (
-            <>
-              {/* Professional Details */}
-              <Card>
-                <CardContent className="pt-6">
-                  <h4 className="font-semibold text-lg mb-4 flex items-center gap-2">
-                    <Briefcase className="w-5 h-5 text-purple-600" />
-                    Professional Details
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {user.language && (
-                      <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                        <Globe className="w-5 h-5 text-purple-600 flex-shrink-0" />
-                        <div>
-                          <p className="text-sm text-gray-600">Language</p>
-                          <p className="font-medium">{user.language}</p>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {user.appointment_fee && (
-                      <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                        <DollarSign className="w-5 h-5 text-green-600 flex-shrink-0" />
-                        <div>
-                          <p className="text-sm text-gray-600">Appointment Fee</p>
-                          <p className="font-medium">${user.appointment_fee.toFixed(2)}</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+          {/* Professional Information */}
+          {(isDentist || isRadiologist) && (
+            <Card className="border border-gray-200">
+              <CardContent className="p-6">
+                <h4 className="font-semibold text-gray-900 mb-4">Professional Details</h4>
+                <div className="space-y-4">
+                  {user.specialization && renderInfoItem(<Briefcase className="w-4 h-4" />, "Specialization", user.specialization)}
+                  {user.experience && renderInfoItem(<Clock className="w-4 h-4" />, "Experience", user.experience)}
+                  {user.language && renderInfoItem(<Globe className="w-4 h-4" />, "Language", user.language)}
+                  {isDentist && user.appointment_fee && renderInfoItem(
+                    <DollarSign className="w-4 h-4" />, 
+                    "Consultation Fee", 
+                    `$${user.appointment_fee.toFixed(2)}`
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
-              {/* Schedule Information */}
-              <Card>
-                <CardContent className="pt-6">
-                  <h4 className="font-semibold text-lg mb-4 flex items-center gap-2">
-                    <Calendar className="w-5 h-5 text-orange-600" />
-                    Schedule Information
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {formatWorkDays() && (
-                      <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                        <Calendar className="w-5 h-5 text-orange-600 flex-shrink-0" />
-                        <div>
-                          <p className="text-sm text-gray-600">Work Days</p>
-                          <p className="font-medium">{formatWorkDays()}</p>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {formatWorkTime() && (
-                      <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                        <Clock className="w-5 h-5 text-blue-600 flex-shrink-0" />
-                        <div>
-                          <p className="text-sm text-gray-600">Work Hours</p>
-                          <p className="font-medium">{formatWorkTime()}</p>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {user.appointment_duration && (
-                      <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg col-span-1 sm:col-span-2">
-                        <Timer className="w-5 h-5 text-indigo-600 flex-shrink-0" />
-                        <div>
-                          <p className="text-sm text-gray-600">Appointment Duration</p>
-                          <p className="font-medium">{user.appointment_duration}</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+          {/* Schedule Information - Only for Dentists */}
+          {isDentist && (formatWorkDays() || formatWorkTime() || user.appointment_duration) && (
+            <Card className="border border-gray-200">
+              <CardContent className="p-6">
+                <h4 className="font-semibold text-gray-900 mb-4">Schedule</h4>
+                <div className="space-y-4">
+                  {formatWorkDays() && renderInfoItem(<Calendar className="w-4 h-4" />, "Working Days", formatWorkDays())}
+                  {formatWorkTime() && renderInfoItem(<Clock className="w-4 h-4" />, "Working Hours", formatWorkTime())}
+                  {user.appointment_duration && renderInfoItem(<Timer className="w-4 h-4" />, "Appointment Duration", user.appointment_duration)}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
-              {/* Service Types */}
-              {formatServiceTypes() && (
-                <Card>
-                  <CardContent className="pt-6">
-                    <h4 className="font-semibold text-lg mb-4 flex items-center gap-2">
-                      <Briefcase className="w-5 h-5 text-teal-600" />
-                      Services Offered
-                    </h4>
-                    <div className="flex flex-wrap gap-2">
-                      {formatServiceTypes()?.map((service, index) => (
-                        <Badge 
-                          key={index} 
-                          variant="outline" 
-                          className="px-3 py-1 bg-teal-50 text-teal-700 border-teal-200"
-                        >
-                          {service}
-                        </Badge>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </>
+          {/* Services - Only for Dentists */}
+          {isDentist && formatServiceTypes() && (
+            <Card className="border border-gray-200">
+              <CardContent className="p-6">
+                <h4 className="font-semibold text-gray-900 mb-4">Services</h4>
+                <div className="flex flex-wrap gap-2">
+                  {formatServiceTypes()?.map((service, index) => (
+                    <span 
+                      key={index}
+                      className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200"
+                    >
+                      {service}
+                    </span>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Bio - if available */}
+          {user.bio && (
+            <Card className="border border-gray-200">
+              <CardContent className="p-6">
+                <h4 className="font-semibold text-gray-900 mb-4">About</h4>
+                <p className="text-gray-700 leading-relaxed">{user.bio}</p>
+              </CardContent>
+            </Card>
           )}
         </div>
       </DialogContent>

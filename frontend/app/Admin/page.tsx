@@ -119,7 +119,7 @@ const DentalDashboard: React.FC = () => {
       });
     }
     catch (err: any) {
-      window.alert(err.message);
+      toast.error(err.message);
     }
     finally {
       setLoadingMainCounts(false);
@@ -151,7 +151,7 @@ const DentalDashboard: React.FC = () => {
       
       ]);
     } catch (err: any) {
-      window.alert(err.message);
+      toast.error(err.message);
     } finally {
       setLoadingAppointmentCounts(false);
     }
@@ -169,7 +169,7 @@ const DentalDashboard: React.FC = () => {
       setPaymentTrends(paymenttrends.data);
     }
     catch(err: any){
-      window.alert(err.message);
+      toast.error(err.message);
     }
     finally{
       setLoadingPaymentTrends(false);
