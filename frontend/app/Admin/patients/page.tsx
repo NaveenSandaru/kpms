@@ -176,7 +176,6 @@ const PatientManagement = () => {
           `${backendURL}/patients`, {
           hospital_patient_id: formData.hospital_patient_id,
           patient_id: newPatientId,
-          password: Math.floor(100000 + Math.random() * 900000).toString(),
           name: formData.name,
           profile_picture: formData.profile_picture,
           email: formData.email,

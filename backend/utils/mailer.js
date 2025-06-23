@@ -185,6 +185,37 @@ const sendAppointmentCancelation = async (email, date, start_time, provider) => 
       throw new Error(`Failed to send account creation notice: ${error.message}`);
     }
   };
+
+  const sendAccountCreationNoticeWithPassword = async (email, ID, password) => {
+    const mailOptions = {
+      from: `"Kinross Dental Clinic" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: 'Your Kinross Dental Clinic Account Has Been Created',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e0e0e0; padding: 20px; border-radius: 10px;">
+          <h2 style="color: #43a047;">Welcome to Kinross Dental Clinic</h2>
+          <p>Dear user,</p>
+          <p>Your account has been successfully created on <strong>Kinross Dental Clinic</strong>.</p>
+          <p><strong>Your Account ID:</strong> ${ID}</p>
+          <p><strong>Your Account Password:</strong> ${password}</p>
+          <p>You can now log in using your account ID and the password provided by your administrator.</p>
+          <p>If you have any questions or need help accessing your account, please contact our support team.</p>
+          <p>Best regards,<br><strong>Kinross Dental Clinic Team</strong></p>
+          <hr style="margin-top: 40px;">
+          <p style="font-size: 12px; color: #888;">Kinross Dental Clinic | Kinross Dental Clinic</p>
+        </div>
+      `,
+    };
+  
+    try {
+      const info = await transporter.sendMail(mailOptions);
+      console.log(info);
+      return info;
+    } catch (error) {
+      console.error(`Error sending account creation notice to ${email}:`, error);
+      throw new Error(`Failed to send account creation notice: ${error.message}`);
+    }
+  };
   
 
-export {sendVerificationCode, sendAppointmentConfirmation, sendAppointmentCancelation, sendAccountCreationInvite, sendAccountCreationNotice};
+export {sendVerificationCode, sendAppointmentConfirmation, sendAppointmentCancelation, sendAccountCreationInvite, sendAccountCreationNotice, sendAccountCreationNoticeWithPassword};

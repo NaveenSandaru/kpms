@@ -1,7 +1,7 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
-import { sendAccountCreationNotice } from '../utils/mailer.js';
+import { sendAccountCreationNotice, sendAccountCreationNoticeWithPassword } from '../utils/mailer.js';
 // import { authenticateToken } from '../middleware/authentication.js';
 
 const prisma = new PrismaClient();
@@ -39,8 +39,9 @@ router.get('/:patient_id', /* authenticateToken, */ async (req, res) => {
 });
 
 router.post('/', /* authenticateToken, */ async (req, res) => {
+  let passwordGenerated = false;
   try {
-    const {
+    let {
       password,
       name,
       profile_picture,
@@ -55,8 +56,23 @@ router.post('/', /* authenticateToken, */ async (req, res) => {
 
     console.log(req.body);
 
-    const count = await prisma.patients.count();
-    const newPatient_id = `P${String(count).padStart(3, '0')}`;
+    if (!password || password.trim() === '') {
+      password = Math.floor(100000 + Math.random() * 900000).toString();
+      passwordGenerated = true;
+    }
+
+    const latest = await prisma.patients.findFirst({
+      orderBy: {
+        patient_id: 'desc'
+      }
+    });
+    
+    let newPatient_id = 'P001';
+    if (latest) {
+      const latestNum = parseInt(latest.patient_id.replace('P', '')) || 0;
+      newPatient_id = 'P' + String(latestNum + 1).padStart(3, '0');
+    }
+    
 
     const existingByEmail = await prisma.patients.findUnique({ where: { email } });
     if (existingByEmail) return res.status(409).json({ error: 'Email already exists' });
@@ -84,7 +100,14 @@ router.post('/', /* authenticateToken, */ async (req, res) => {
       },
     });
 
-    sendAccountCreationNotice(email, newPatient_id);
+    if(!passwordGenerated){
+      console.log("sending email with ID");
+      sendAccountCreationNotice(email, newPatient_id);
+    }
+    else{
+      console.log("sending email with ID and password");
+      sendAccountCreationNoticeWithPassword(email, newPatient_id, password);
+    }
     res.status(201).json(created);
   } catch(err) {
     console.log(err);

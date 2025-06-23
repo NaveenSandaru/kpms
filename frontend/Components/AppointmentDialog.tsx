@@ -344,7 +344,8 @@ export function AppointmentDialog({ open, onOpenChange, onAppointmentCreated }: 
         date: dateString,
         time_from: startTime,
         time_to: endTime,
-        note: formData.note
+        note: formData.note,
+        fee: selectedDentist?.appointment_fee
       })
       
       onAppointmentCreated()
