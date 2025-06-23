@@ -1,10 +1,9 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useContext } from "react";
 import Logo from '@/app/logo.png';
-// import { AuthContext } from "@/context/auth-context";
-// import { toast } from "sonner";
+import { AuthContext } from "@/context/auth-context";
 import {
   Sidebar,
   SidebarContent,
@@ -26,23 +25,23 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 import Image from "next/image";
+import axios from "axios";
+import { toast } from "sonner";
 
 const RadiologistSidebar = () => {
-  // const { setUser, setAccessToken } = useContext(AuthContext);
+  const { setUser, setAccessToken } = useContext(AuthContext);
   const pathname = usePathname();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [radiologistId,setRadiologistId] = useState("");
+  const {isLoggedIn, isLoadingAuth, user} = useContext(AuthContext);
 
-  // Extract radiologistID
-  const radiologistId = useMemo(() => {
-    const parts = pathname.split("/");
-    const idx = parts.findIndex((p) => p === "radiologist");
-    if (idx !== -1 && parts[idx + 1]) {
-      return parts[idx + 1];
-    }
-    return null;
-  }, [pathname]);
+  useEffect(()=>{
+    if(isLoadingAuth) return;
+    if(!isLoggedIn) return;
+    setRadiologistId(user.id);
+  },[isLoadingAuth]);
 
   // Build menu items
   const items = useMemo(() => {
@@ -50,7 +49,7 @@ const RadiologistSidebar = () => {
     return [
       {
         title: "Dashboard",
-        url: `/radiologist/${radiologistId}`,
+        url: `/radiologist`,
         icon: LayoutGrid,
       },
     ];
@@ -64,11 +63,11 @@ const RadiologistSidebar = () => {
   const handleLogout = async () => {
     setIsLoading(true);
     try {
-      // await axios.delete(`${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/delete_token`, { withCredentials: true });
-      // setUser(null); setAccessToken("");
+      await axios.delete(`${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/delete_token`, { withCredentials: true });
+      setUser(null); setAccessToken("");
       router.push("/");
     } catch (e) {
-      // toast.error("Logout failed");
+      toast.error("Logout failed");
     } finally {
       setIsLoading(false);
     }

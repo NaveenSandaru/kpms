@@ -97,7 +97,7 @@ const DentalDashboard: React.FC = () => {
         `${backendURL}/patients/count`
       );
       const receptionistscount = await axios.get(
-        `${backendURL}/patients/count`
+        `${backendURL}/receptionists/count`
       );
       const appointmentscount = await axios.get(
         `${backendURL}/appointments/count`

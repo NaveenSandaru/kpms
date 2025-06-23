@@ -25,8 +25,8 @@ interface Dentist {
 
 interface Appointment {
   appointment_id: number;
-  patient_id: string;
-  dentist_id: string;
+  patient_id?: string;
+  dentist_id?: string;
   date: string;
   time_from: string;
   time_to: string;
@@ -34,8 +34,8 @@ interface Appointment {
   note: string | null;
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
   payment_status: 'not-paid' | 'paid';
-  patient: Patient;
-  dentist: Dentist;
+  patient?: Patient;
+  dentist?: Dentist;
 }
 
 interface ApiError {

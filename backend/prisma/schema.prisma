@@ -84,8 +84,8 @@ model admins {
 
 model appointments {
   appointment_id          Int      @id @default(autoincrement())
-  patient_id              String
-  dentist_id              String
+  patient_id              String?
+  dentist_id              String?
   date                    DateTime
   time_from               String
   time_to                 String
@@ -94,8 +94,8 @@ model appointments {
   status                  String?
   payment_status          String?
 
-  patient                 patients  @relation(fields: [patient_id], references: [patient_id])
-  dentist                 dentists  @relation(fields: [dentist_id], references: [dentist_id])
+  patient                 patients?  @relation(fields: [patient_id], references: [patient_id])
+  dentist                 dentists?  @relation(fields: [dentist_id], references: [dentist_id])
   payment_history         payment_history?
 }
 

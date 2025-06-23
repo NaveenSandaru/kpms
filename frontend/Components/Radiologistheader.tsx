@@ -1,10 +1,12 @@
 "use client";
 
 import { Bell } from "lucide-react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/Components/ui/avatar";
 import { Button } from "@/Components/ui/button";
-import { useMemo, useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
+import { AuthContext } from "@/context/auth-context";
+import axios from "axios";
 
 interface RadiologistInfo {
   id: string;
@@ -15,19 +17,11 @@ interface RadiologistInfo {
 
 const RadiologistHeader = () => {
   const router = useRouter();
-  const pathname = usePathname();
   const [radiologistInfo, setRadiologistInfo] = useState<RadiologistInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
-  // Extract radiologistID from pathname
-  const radiologistId = useMemo(() => {
-    const segments = pathname.split("/");
-    const idx = segments.findIndex((seg) => seg === "radiologist");
-    if (idx !== -1 && segments[idx + 1]) {
-      return segments[idx + 1];
-    }
-    return null;
-  }, [pathname]);
+  const [radiologistId, setRadiologistId] = useState("");
+  const {isLoadingAuth, isLoggedIn, user} = useContext(AuthContext);
+  const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
   const getCurrentDate = () => {
     return new Date().toLocaleDateString("en-US", {
@@ -47,39 +41,39 @@ const RadiologistHeader = () => {
       .slice(0, 2);
 
   useEffect(() => {
-    const fetchInfo = async () => {
-      if (!radiologistId) {
-        setIsLoading(false);
-        return;
-      }
-      setIsLoading(true);
-      try {
-        // Replace with real API call when backend is ready
-        const mock: Record<string, RadiologistInfo> = {
-          "101": { id: "101", name: "Dr. Amy Lee", specialization: "Neuroradiology", avatar: "/avatar-amy.jpg" },
-          "102": { id: "102", name: "Dr. John Park", specialization: "Musculoskeletal", avatar: "/avatar-john.jpg" },
-        };
-        setRadiologistInfo(
-          mock[radiologistId] || {
-            id: radiologistId,
-            name: `Dr. User ${radiologistId}`,
-            specialization: "Radiologist",
-          }
-        );
-      } catch (e) {
-        console.error(e);
-        setRadiologistInfo({ id: radiologistId, name: `Dr. User ${radiologistId}`, specialization: "Radiologist" });
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    if(isLoadingAuth) return;
+    if(!isLoggedIn) return;
+    setRadiologistId(user.id);
+  },[isLoadingAuth]);
 
-    fetchInfo();
+  const fetchRadiologist = async () => {
+    setIsLoading(true);
+    try{
+      const response = await axios.get(
+        `${backendURL}/radiologists/${radiologistId}`
+      );
+      if(response.status == 500){
+        throw new Error("Error Fetching Radiologist");
+      }
+      setRadiologistInfo(response.data);
+    }
+    catch(err: any){
+      window.alert(err.message);
+    }
+    finally{
+      setIsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if(radiologistId != ""){
+      fetchRadiologist();
+    }
   }, [radiologistId]);
 
   const handleProfileClick = () => {
     if (radiologistId) {
-      router.push(`/radiologist/${radiologistId}/profile`);
+      router.push(`/radiologist/profile`);
     }
   };
 
@@ -99,7 +93,7 @@ const RadiologistHeader = () => {
           {isLoading ? (
             <span className="animate-pulse h-8 w-64 bg-gray-200 rounded" />
           ) : (
-            `Welcome back, ${radiologistInfo?.name || "Radiologist"}`
+            `Welcome back, ${radiologistInfo?.name.split(" ")[0] || "Radiologist"}`
           )}
         </h1>
         <p className="text-sm text-gray-500">{getCurrentDate()}</p>
@@ -127,9 +121,9 @@ const RadiologistHeader = () => {
               className="h-8 w-8 sm:h-10 sm:w-10 cursor-pointer hover:ring-2 hover:ring-emerald-300"
               onClick={handleProfileClick}
             >
-              <AvatarImage src={radiologistInfo?.avatar} alt={radiologistInfo?.name} />
+              <AvatarImage src={radiologistInfo?.avatar} alt={radiologistInfo?.name.split(" ")[0]} />
               <AvatarFallback className="text-xs sm:text-sm font-semibold bg-emerald-100 text-emerald-800">
-                {radiologistInfo ? getInitials(radiologistInfo.name) : "RD"}
+                {radiologistInfo ? getInitials(radiologistInfo.name.split(" ")[0]) : "RD"}
               </AvatarFallback>
             </Avatar>
           )}
@@ -143,7 +137,7 @@ const RadiologistHeader = () => {
             ) : (
               <>
                 <p className="text-sm font-medium text-gray-900">
-                  {radiologistInfo?.name || "Radiologist"}
+                  {radiologistInfo?.name.split(" ")[0] || "Radiologist"}
                 </p>
                 <p className="text-xs text-gray-500">
                   {radiologistInfo?.specialization || "Radiology"}

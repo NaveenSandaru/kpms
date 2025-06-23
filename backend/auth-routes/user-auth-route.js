@@ -11,6 +11,9 @@ const findUserById = async (id) => {
   let user = await prisma.patients.findUnique({ where: { patient_id: id } });
   if (user) return { user, role: 'patient' };
 
+  user = await prisma.radiologists.findUnique({ where: { radiologist_id: id } });
+  if (user) return { user, role: 'radiologist' };
+
   user = await prisma.dentists.findUnique({ where: { dentist_id: id } });
   if (user) return { user, role: 'dentist' };
 

@@ -31,7 +31,7 @@ router.get('/', /* authenticateToken, */ async (req, res) => {
 router.get('/:radiologist_id', /* authenticateToken, */ async (req, res) => {
   try {
     const radiologist = await prisma.radiologists.findUnique({
-      where: { radiologist_id: parseInt(req.params.radiologist_id) },
+      where: { radiologist_id: req.params.radiologist_id },
       select: {
         radiologist_id: true,
         name: true,

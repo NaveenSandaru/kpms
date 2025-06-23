@@ -518,8 +518,8 @@ router.post('/', async (req, res) => {
         time_to,
         fee,
         note,
-        status,
-        payment_status,
+        status: status || "pending",
+        payment_status: payment_status || "not-paid",
       },
     });
 

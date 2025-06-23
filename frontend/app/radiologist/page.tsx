@@ -1,7 +1,8 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Calendar, Clock, Plus, Search, MoreHorizontal, CheckCircle, X, Upload, FileText, Edit, Trash2, UserPlus, User, Users, Check, FileUp, ChevronDown, ChevronRight, Eye, File } from 'lucide-react';
 import { useParams } from 'next/navigation';
+import { AuthContext } from '@/context/auth-context';
 
 // Types based on the database structure
 interface Doctor {
@@ -38,9 +39,9 @@ interface Study {
 interface NewStudyForm {
   patient_id: string;
   patient_name: string;
-  modality: string;
-  server_type: string;
-  assertion_number: string;
+  modality?: string;
+  server_type?: string;
+  assertion_number?: string;
   description: string;
   dicom_files: File[];
   report_files: File[];
@@ -52,8 +53,8 @@ interface AssignmentForm {
 }
 
 const MedicalStudyInterface: React.FC = () => {
-  // Get radiologist ID from route params
-  const { radiologistID } = useParams() as { radiologistID?: string };
+
+  const [radiologistID, setRadiologistID] = useState("");
   const [isAddStudyOpen, setIsAddStudyOpen] = useState(false);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [selectedStudyId, setSelectedStudyId] = useState<number | null>(null);
@@ -64,10 +65,11 @@ const MedicalStudyInterface: React.FC = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [studyToEdit, setStudyToEdit] = useState<Study | null>(null);
   const [expandedStudyId, setExpandedStudyId] = useState<number | null>(null);
+  
 
+  const {user, isLoadingAuth, isLoggedIn} = useContext(AuthContext);
   const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
-  // Helper: open DICOM viewer in a new tab using POST (required by backend)
   const openDicomInNewTab = (dicomUrl: string) => {
     if (!dicomUrl) return;
 
@@ -177,7 +179,18 @@ const MedicalStudyInterface: React.FC = () => {
     }
   }, [studies]);
 
-  // No need for separate API call for today's count as we calculate it from the studies data
+  useEffect(()=>{
+    if(isLoadingAuth) return;
+    if(!isLoggedIn){
+      window.alert("Please Log in");
+      window.location.href = "/";
+    }
+    else if(user.role != "radiologist"){
+      window.alert("Access Denied");
+      window.location.href = "/"
+    }
+    setRadiologistID(user.id)
+  },[isLoadingAuth]);
 
   // Fetch studies from the backend
   useEffect(() => {
@@ -263,7 +276,7 @@ const MedicalStudyInterface: React.FC = () => {
       date: new Date().toISOString().split('T')[0],
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       modality: newStudy.modality,
-      assertion_number: parseInt(newStudy.assertion_number) || Math.floor(Math.random() * 1000000),
+      assertion_number: parseInt(newStudy.assertion_number || "") || Math.floor(Math.random() * 1000000),
       description: newStudy.description,
       source: 'MANUAL-UPLOAD',
       isurgent: false
@@ -345,7 +358,7 @@ const MedicalStudyInterface: React.FC = () => {
       //patient_name: '', // Assuming we don't have this in the Study type yet
       modality: study.modality,
       server_type: study.source,
-      assertion_number: study.assertion_number.toString(),
+      assertion_number: study.assertion_number?.toString(),
       description: study.description,
       dicom_files: [], // Cannot pre-fill file inputs due to security restrictions
       report_files: []
