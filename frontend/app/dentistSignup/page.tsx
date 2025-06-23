@@ -70,7 +70,9 @@ const DentistSignUp: React.FC = () => {
 
   const [securityQuestions, setSecurityQuestions] = useState<SecurityQuestion[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState('');
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
+  const [generatedId, setGeneratedId] = useState('');
 
   useEffect(() => {
     const fetchSecurityQuestions = async () => {
@@ -199,77 +201,52 @@ const DentistSignUp: React.FC = () => {
 
   const handleSubmit = async () => {
     if (!validateStep2()) {
+      setError('Please fill in all required fields');
       return;
     }
 
     setIsLoading(true);
-    setError(null);
+    setError('');
 
     try {
       // First, create the dentist
       const { securityQuestions: securityAnswers, profilePicture, ...dentistData } = formData;
       
-      // Prepare dentist data
+      // Prepare dentist data in the exact format expected by the backend
       const dentistPayload = {
-        ...dentistData,
-        name: dentistData.name.trim(),
         email: dentistData.email.trim().toLowerCase(),
+        password: dentistData.password,
+        name: dentistData.name.trim(),
         phone_number: dentistData.phoneNumber,
-        work_days_from: dentistData.workDaysFrom,
-        work_days_to: dentistData.workDaysTo,
-        work_time_from: dentistData.workTimeFrom,
-        work_time_to: dentistData.workTimeTo,
-        appointment_duration: dentistData.appointmentDuration ? parseInt(dentistData.appointmentDuration) : 30, // default 30 minutes
-        appointment_fee: dentistData.appointmentFee ? parseFloat(dentistData.appointmentFee) : 0, // default 0
-        is_active: true,
-        is_verified: false,
+        language: dentistData.language || '',
+        service_types: dentistData.serviceTypes || 'general',
+        work_days_from: dentistData.workDaysFrom || 'Monday',
+        work_days_to: dentistData.workDaysTo || 'Friday',
+        work_time_from: dentistData.workTimeFrom || '08:00',
+        work_time_to: dentistData.workTimeTo || '17:00',
+        appointment_duration: dentistData.appointmentDuration || '30',
+        appointment_fee: dentistData.appointmentFee ? parseFloat(dentistData.appointmentFee) : 0,
       };
 
-      console.log('Sending dentist data:', JSON.stringify(dentistPayload, null, 2));
-
       // Create dentist
-      let response;
-      try {
-        response = await fetch('http://localhost:5000/dentists', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(dentistPayload),
-        });
-      } catch (networkError) {
-        console.error('Network error:', networkError);
-        throw new Error('Failed to connect to the server. Please check your connection.');
+      const receptionistResponse = await fetch('http://localhost:5000/dentists', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(dentistPayload),
+      });
+
+      if (!receptionistResponse.ok) {
+        const errorData = await receptionistResponse.json();
+        throw new Error(errorData.error || 'Failed to create dentist account');
       }
 
-      let responseData;
-      try {
-        responseData = await response.json();
-      } catch (parseError) {
-        console.error('Failed to parse response:', parseError);
-        throw new Error('Received invalid response from server');
-      }
-
-      if (!response.ok) {
-        console.error('Dentist creation failed with status:', response.status);
-        console.error('Response headers:', Object.fromEntries(response.headers.entries()));
-        console.error('Error details:', responseData);
-        
-        // Handle specific error cases
-        if (response.status === 400) {
-          throw new Error(responseData.error || 'Invalid data provided. Please check your input.');
-        } else if (response.status === 409) {
-          throw new Error('A dentist with this email already exists. Please use a different email.');
-        } else if (response.status === 500) {
-          console.error('Server error details:', responseData);
-          throw new Error('Server error occurred. Please try again later.');
-        } else {
-          throw new Error(responseData?.error || `Failed to register dentist (Status: ${response.status})`);
-        }
-      }
-
-      const dentist = responseData;
+      const dentist = await receptionistResponse.json();
       const dentistId = dentist.dentist_id;
+      
+      // Store the generated ID for display
+      setGeneratedId(dentistId);
 
       // Upload profile picture if exists
       if (profilePicture) {
@@ -302,13 +279,32 @@ const DentistSignUp: React.FC = () => {
 
       await Promise.all(securityQuestionPromises);
       
-      alert('Registration completed successfully! You can now log in.');
-      // Redirect to login or dashboard
-      window.location.href = '/login';
+      // Mark registration as successful
+      setRegistrationSuccess(true);
+      
+      // Clear form
+      setFormData({
+        name: '',
+        email: '',
+        password: '',
+        confirmPassword: '',
+        phoneNumber: '',
+        language: '',
+        serviceTypes: 'general',
+        workDaysFrom: 'Monday',
+        workDaysTo: 'Friday',
+        workTimeFrom: '08:00',
+        workTimeTo: '17:00',
+        appointmentDuration: '30',
+        appointmentFee: '',
+        profilePicture: null,
+        securityQuestions: Array(3).fill({ questionId: '', answer: '' })
+      });
+      setProfileImagePreview(null);
+      
     } catch (err) {
       console.error('Registration failed:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Registration failed. Please try again.';
-      setError(errorMessage);
+      setError(err instanceof Error ? err.message : 'Registration failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -325,22 +321,46 @@ const DentistSignUp: React.FC = () => {
   const progressValue = (currentStep / 2) * 100;
   const passwordErrors = getPasswordErrors();
 
+  if (registrationSuccess) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="p-6 max-w-md w-full bg-white rounded-lg shadow-md text-center">
+          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100">
+            <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h2 className="mt-3 text-xl font-semibold text-gray-900">Registration Successful!</h2>
+          <p className="mt-2 text-gray-600">
+            Your dentist ID is: <span className="font-bold">{generatedId}</span>
+          </p>
+          <p className="mt-2 text-gray-600">
+            An email has been sent to {formData.email} with your login details.
+            Please check your inbox and keep your ID safe.
+          </p>
+          <div className="mt-6">
+            <Button 
+              onClick={() => window.location.href = '/'}
+              className="w-full bg-emerald-600 hover:bg-emerald-700"
+            >
+              Go to Login
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 to-green-100 p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="text-2xl font-bold text-center text-red-600">Error</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-center mb-6">{error}</p>
-            <div className="flex justify-center">
-              <Button onClick={() => setError(null)} variant="outline">
-                Go Back
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="p-6 max-w-md w-full bg-white rounded-lg shadow-md">
+          <h2 className="text-xl font-semibold text-red-600 mb-4">Error</h2>
+          <p className="text-gray-700 mb-4">{error}</p>
+          <Button onClick={() => setError('')} className="w-full">
+            Go Back
+          </Button>
+        </div>
       </div>
     );
   }
@@ -730,11 +750,11 @@ const DentistSignUp: React.FC = () => {
                     
                     <Button
                       onClick={handleSubmit}
-                      disabled={!validateStep2()}
+                      disabled={!validateStep2() || isLoading}
                       className="w-full sm:flex-1 bg-emerald-600 hover:bg-emerald-700"
                       size="lg"
                     >
-                      Complete Registration
+                      {isLoading ? 'Processing...' : 'Complete Registration'}
                     </Button>
                   </div>
                 </div>
