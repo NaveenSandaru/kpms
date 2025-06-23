@@ -3,20 +3,21 @@
 import React, { useState, useRef } from 'react';
 import { ArrowLeft, User, Mail, Phone, Upload, X, Camera } from 'lucide-react';
 import { Button } from '@/Components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Input } from '@/Components/ui/input';
 import { Label } from '@/Components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/Components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/Components/ui/progress';
 import { Alert, AlertDescription } from '@/Components/ui/alert';
+import axios from 'axios';
 
 // Types
 interface SecurityQuestion {
-  id: number;
+  security_question_id: number;
   question: string;
 }
 
 interface SecurityQuestionAnswer {
-  questionId: string;
+  questionId: number;
   answer: string;
 }
 
@@ -35,7 +36,30 @@ const RadiologistSignUp: React.FC = () => {
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadError, setUploadError] = useState<string>('');
-  
+  const [fetchedQuestions, setFetchedQuestions] = useState<SecurityQuestion[]>([]);
+  const [loadingQuestions, setLoadingQuestions] = useState(false);
+
+  const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
+
+  const fetchQuestions = async () => {
+    setLoadingQuestions(true);
+    try {
+      const response = await axios.get(
+        `${backendURL}/security-questions`
+      );
+      if (response.status == 500) {
+        throw new Error("Error fetching security questions");
+      }
+      setFetchedQuestions(response.data);
+    }
+    catch (err: any) {
+      window.alert(err.message);
+    }
+    finally {
+      setLoadingQuestions(false);
+    }
+  };
+
   const [formData, setFormData] = useState<RadiologistFormData>({
     name: '',
     email: '',
@@ -44,23 +68,11 @@ const RadiologistSignUp: React.FC = () => {
     phoneNumber: '',
     profilePicture: null,
     securityQuestions: [
-      { questionId: '', answer: '' },
-      { questionId: '', answer: '' },
-      { questionId: '', answer: '' }
+      { questionId: 0, answer: '' },
+      { questionId: 0, answer: '' },
+      { questionId: 0, answer: '' }
     ]
   });
-
-  // Security questions for account recovery
-  const securityQuestions: SecurityQuestion[] = [
-    { id: 1, question: "What was the name of your first pet?" },
-    { id: 2, question: "In what city were you born?" },
-    { id: 3, question: "What was your mother's maiden name?" },
-    { id: 4, question: "What was the name of your elementary school?" },
-    { id: 5, question: "What was your childhood nickname?" },
-    { id: 6, question: "What is your favorite book?" },
-    { id: 7, question: "What was the make of your first car?" },
-    { id: 8, question: "In what city did you meet your spouse/significant other?" }
-  ];
 
   const handleInputChange = (field: keyof RadiologistFormData, value: string) => {
     setFormData(prev => ({
@@ -69,19 +81,24 @@ const RadiologistSignUp: React.FC = () => {
     }));
   };
 
-  const handleSecurityQuestionChange = (index: number, field: keyof SecurityQuestionAnswer, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      securityQuestions: prev.securityQuestions.map((sq, i) => 
-        i === index ? { ...sq, [field]: value } : sq
-      )
-    }));
+  const handleSecurityQuestionChange = (index: number, field: keyof SecurityQuestionAnswer, value: string | number) => {
+    setFormData(prev => {
+      const newSecurityQuestions = [...prev.securityQuestions];
+      newSecurityQuestions[index] = {
+        ...newSecurityQuestions[index],
+        [field]: field === 'questionId' ? Number(value) : value
+      };
+      return {
+        ...prev,
+        securityQuestions: newSecurityQuestions
+      };
+    });
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     setUploadError('');
-    
+
     if (file) {
       // Validate file type
       const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
@@ -89,21 +106,21 @@ const RadiologistSignUp: React.FC = () => {
         setUploadError('Please upload a valid image file (JPEG, PNG, or GIF)');
         return;
       }
-      
+
       // Validate file size (max 5MB)
       const maxSize = 5 * 1024 * 1024; // 5MB in bytes
       if (file.size > maxSize) {
         setUploadError('File size must be less than 5MB');
         return;
       }
-      
+
       // Create preview URL
       const reader = new FileReader();
       reader.onload = (e) => {
         setProfileImagePreview(e.target?.result as string);
       };
       reader.readAsDataURL(file);
-      
+
       // Update form data
       setFormData(prev => ({
         ...prev,
@@ -130,9 +147,13 @@ const RadiologistSignUp: React.FC = () => {
 
   const validateStep1 = (): boolean => {
     const required: (keyof RadiologistFormData)[] = ['name', 'email', 'password', 'confirmPassword', 'phoneNumber'];
-    return required.every(field => formData[field].trim() !== '') && 
-           formData.password === formData.confirmPassword &&
-           formData.password.length >= 8;
+    return required.every(field => {
+      const value = formData[field];
+      return typeof value === 'string' ? value.trim() !== '' : value != null;
+    }) &&
+      formData.password === formData.confirmPassword &&
+      formData.password.length >= 8;
+
   };
 
   const validateStep2 = (): boolean => {
@@ -141,6 +162,7 @@ const RadiologistSignUp: React.FC = () => {
 
   const handleNext = () => {
     if (validateStep1()) {
+      fetchQuestions();
       setCurrentStep(2);
     }
   };
@@ -152,35 +174,41 @@ const RadiologistSignUp: React.FC = () => {
   const handleSubmit = async () => {
     if (validateStep2()) {
       try {
-        // Create FormData object to handle file upload
         const formDataToSend = new FormData();
-        
-        // Append all form fields according to radiologist table schema
         formDataToSend.append('name', formData.name);
         formDataToSend.append('email', formData.email);
         formDataToSend.append('password', formData.password);
         formDataToSend.append('phone_number', formData.phoneNumber);
-        
-        // Handle profile picture - convert to base64 string or file path as needed
+  
         if (formData.profilePicture) {
           formDataToSend.append('profile_picture', formData.profilePicture);
         }
-        
-        // Security questions for additional security (you may want to store these separately)
-        formDataToSend.append('security_questions', JSON.stringify(formData.securityQuestions));
-        
-        console.log('Radiologist registration data:', formData);
-        
-        // Example API call structure:
-        // const response = await fetch('/api/radiologists/register', {
-        //   method: 'POST',
-        //   body: formDataToSend
-        // });
-        
-        alert('Radiologist registration completed successfully!');
-      } catch (error) {
+  
+        // Add security questions and answers
+        formData.securityQuestions.forEach((sq, index) => {
+          formDataToSend.append(`security_questions[${index}][question_id]`, sq.questionId.toString());
+          formDataToSend.append(`security_questions[${index}][answer]`, sq.answer);
+        });
+  
+        const response = await axios.post(
+          `${backendURL}/radiologists`,
+          formDataToSend,
+          {
+            headers: {
+              'Content-Type': 'multipart/form-data'
+            }
+          }
+        );
+  
+        if (response.status === 201) {
+          alert('Registration successful!');
+          // Redirect or show success message
+        } else {
+          throw new Error(response.data.message || 'Registration failed');
+        }
+      } catch (error: any) {
         console.error('Registration failed:', error);
-        alert('Registration failed. Please try again.');
+        alert(error.response?.data?.message || 'Registration failed. Please try again.');
       }
     }
   };
@@ -188,9 +216,9 @@ const RadiologistSignUp: React.FC = () => {
   const getAvailableQuestions = (currentIndex: number): SecurityQuestion[] => {
     const selectedIds = formData.securityQuestions
       .map((sq, index) => index !== currentIndex ? sq.questionId : null)
-      .filter((id): id is string => id !== null && id !== '');
-    
-    return securityQuestions.filter(q => !selectedIds.includes(q.id.toString()));
+      .filter((id): id is number => id !== null && id !== 0);
+  
+    return fetchedQuestions.filter(q => !selectedIds.includes(q.security_question_id));
   };
 
   const progressValue = (currentStep / 2) * 100;
@@ -254,7 +282,7 @@ const RadiologistSignUp: React.FC = () => {
                           </div>
                         )}
                       </div>
-                      
+
                       {/* Upload Button */}
                       <div className="text-center">
                         <Button
@@ -270,7 +298,7 @@ const RadiologistSignUp: React.FC = () => {
                           JPG, PNG or GIF. Max size 5MB.
                         </p>
                       </div>
-                      
+
                       {/* Hidden File Input */}
                       <input
                         ref={fileInputRef}
@@ -279,7 +307,7 @@ const RadiologistSignUp: React.FC = () => {
                         onChange={handleFileUpload}
                         className="hidden"
                       />
-                      
+
                       {/* Upload Error */}
                       {uploadError && (
                         <Alert variant="destructive" className="max-w-md">
@@ -412,13 +440,15 @@ const RadiologistSignUp: React.FC = () => {
                         <div className="space-y-2">
                           <Label>Select a security question</Label>
                           <select
-                            value={securityQuestion.questionId}
+                            value={securityQuestion.questionId || ''}
                             onChange={(e) => handleSecurityQuestionChange(index, 'questionId', e.target.value)}
                             className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                           >
                             <option value="">Select a security question</option>
                             {getAvailableQuestions(index).map(q => (
-                              <option key={q.id} value={q.id.toString()}>{q.question}</option>
+                              <option key={q.security_question_id} value={q.security_question_id}>
+                                {q.question}
+                              </option>
                             ))}
                           </select>
                         </div>
@@ -447,7 +477,7 @@ const RadiologistSignUp: React.FC = () => {
                       <ArrowLeft className="w-4 h-4 mr-2" />
                       Back
                     </Button>
-                    
+
                     <Button
                       onClick={handleSubmit}
                       disabled={!validateStep2()}
