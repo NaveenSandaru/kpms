@@ -150,7 +150,7 @@ const RadiologistSidebar = () => {
         }`}
       >
         <div className="p-4 border-b border-gray-100 text-center">
-          <h1 className="text-lg font-bold text-gray-900">Logo</h1>
+          <span className="h-10 w-10 mx-auto"><Image src={Logo} alt="" className="h-10 w-10 mx-auto"/></span>
           <p className="text-xs text-gray-600 mt-1">Radiologist Dashboard</p>
           <p className="text-xs text-gray-500">ID: {radiologistId}</p>
         </div>
