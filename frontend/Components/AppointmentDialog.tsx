@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/Components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/Components/ui/dialog'
 import { Label } from '@/Components/ui/label'
-import { Input } from '@/components/ui/input'
+import { Input } from '@/Components/ui/input'
 import { Textarea } from '@/Components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/Components/ui/select'
 import axios from 'axios'
@@ -339,11 +339,11 @@ export function AppointmentDialog({ open, onOpenChange, onAppointmentCreated }: 
       const [startTime, endTime] = formData.timeSlot.split(' - ')
       
       await axios.post(`${backendURL}/appointments`, {
-        patientId: formData.patientId,
-        dentistId: formData.dentistId,
+        patient_id: formData.patientId,
+        dentist_id: formData.dentistId,
         date: dateString,
-        timeFrom: startTime,
-        timeTo: endTime,
+        time_from: startTime,
+        time_to: endTime,
         note: formData.note
       })
       

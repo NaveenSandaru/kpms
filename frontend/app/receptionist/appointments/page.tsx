@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card'
 import { Button } from '@/Components/ui/button'
-import { Input } from '@/components/ui/input'
+import { Input } from '@/Components/ui/input'
 import { Badge } from '@/Components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/Components/ui/tabs'
 import { Switch } from '@/Components/ui/switch'
