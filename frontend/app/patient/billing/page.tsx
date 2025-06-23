@@ -1,9 +1,14 @@
 "use client";
 import React, { useState, useEffect, useContext } from 'react';
-import { Search, Calendar, DollarSign, User, Clock } from 'lucide-react';
+import { Search, Calendar, DollarSign, User, Clock, Plus, CreditCard, X } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Badge } from '@/Components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/Components/ui/avatar';
+import { Button } from '@/Components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/Components/ui/dialog';
+import { RadioGroup, RadioGroupItem } from '@/Components/ui/radio-group';
+import { Label } from '@/Components/ui/label';
+import { Separator } from '@/Components/ui/separator';
 import axios from 'axios';
 import { AuthContext } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
@@ -36,6 +41,7 @@ interface Appointment {
   fee: number;
   status: string;
   payment_status: string;
+  note?: string;
   patient: Patient;
   dentist: Dentist;
 }
@@ -67,6 +73,13 @@ const PaymentsInterface: React.FC = () => {
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [filteredPayments, setFilteredPayments] = useState<PaymentRecord[]>([]);
   const [loadingPayments, setLoadingPayments] = useState(false);
+  
+  // New state for make payment dialog
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [unpaidAppointments, setUnpaidAppointments] = useState<Appointment[]>([]);
+  const [selectedAppointment, setSelectedAppointment] = useState<string>('');
+  const [loadingUnpaidAppointments, setLoadingUnpaidAppointments] = useState(false);
+  const [processingPayment, setProcessingPayment] = useState(false);
 
   const fetchPayments = async () => {
     setLoadingPayments(true);
@@ -107,6 +120,82 @@ const PaymentsInterface: React.FC = () => {
     }
   };
 
+  const fetchUnpaidAppointments = async () => {
+    setLoadingUnpaidAppointments(true);
+    try {
+      const response = await axios.get(`${backendURL}/appointments/forpatient/${user.id}`);
+      
+      if (response.status === 500) {
+        throw new Error("Internal Server Error");
+      }
+
+      // Filter appointments with payment_status of 'not-paid'
+      const unpaid = response.data.filter((appointment: any) => 
+        appointment.payment_status === 'not-paid'
+      );
+
+      const formatted: Appointment[] = unpaid.map((item: any) => ({
+        appointment_id: item.appointment_id,
+        patient_id: item.patient_id,
+        dentist_id: item.dentist_id,
+        date: item.date,
+        time_from: item.time_from,
+        time_to: item.time_to,
+        fee: parseFloat(item.fee ?? 0),
+        status: item.status,
+        payment_status: item.payment_status,
+        note: item.note,
+        patient: item.patient,
+        dentist: item.dentist
+      }));
+
+      setUnpaidAppointments(formatted);
+    } catch (err: any) {
+      toast.error("Error", {
+        description: "Failed to fetch unpaid appointments"
+      });
+    } finally {
+      setLoadingUnpaidAppointments(false);
+    }
+  };
+
+  const handleMakePayment = async () => {
+    if (!selectedAppointment) {
+      toast.error("Error", {
+        description: "Please select an appointment to pay for"
+      });
+      return;
+    }
+
+    setProcessingPayment(true);
+    try {
+      // Here you would integrate with your payment gateway
+      // For now, I'll show a placeholder implementation
+      
+      // Simulate payment processing
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // After successful payment, you would typically:
+      // 1. Update the appointment payment status
+      // 2. Create a payment record
+      // 3. Refresh the data
+      
+      toast.success("Payment Successful", {
+        description: "Your payment has been processed successfully"
+      });
+      
+      setIsPaymentDialogOpen(false);
+      setSelectedAppointment('');
+      fetchPayments(); // Refresh payment history
+      
+    } catch (err: any) {
+      toast.error("Payment Failed", {
+        description: "There was an error processing your payment"
+      });
+    } finally {
+      setProcessingPayment(false);
+    }
+  };
 
   useEffect(() => {
     const filtered = payments.filter(payment =>
@@ -156,13 +245,155 @@ const PaymentsInterface: React.FC = () => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
 
+  const selectedAppointmentData = unpaidAppointments.find(
+    app => app.appointment_id.toString() === selectedAppointment
+  );
+
   return (
     <div className="min-h-screen bg-gray-50 p-6 overflow-auto">
       <div className="mx-auto max-w-7xl">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mt-7 md:mt-0 text-gray-900 mb-2">Payments</h1>
-          <p className="text-gray-600">View Payments database entries</p>
+        <div className="mb-8 flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold mt-7 md:mt-0 text-gray-900 mb-2">Payments</h1>
+            <p className="text-gray-600">View Payments database entries</p>
+          </div>
+          
+          {/* Make Payment Button */}
+          <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+            <DialogTrigger asChild>
+              <Button 
+                className="mt-7 md:mt-0 bg-emerald-500 hover:bg-emerald-600 text-white"
+                onClick={fetchUnpaidAppointments}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Make Payment
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="text-xl font-semibold">Make Payment</DialogTitle>
+              </DialogHeader>
+              
+              <div className="space-y-6">
+                {/* Appointment Selection */}
+                <div>
+                  <h3 className="text-lg font-medium mb-4">Select Appointment to Pay</h3>
+                  
+                  {loadingUnpaidAppointments ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+                    </div>
+                  ) : unpaidAppointments.length === 0 ? (
+                    <Card>
+                      <CardContent className="text-center py-8">
+                        <DollarSign className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">No unpaid appointments</h3>
+                        <p className="text-gray-500">All your appointments are paid for.</p>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <RadioGroup value={selectedAppointment} onValueChange={setSelectedAppointment}>
+                      <div className="space-y-3">
+                        {unpaidAppointments.map((appointment) => (
+                          <div key={appointment.appointment_id} className="flex items-center space-x-3">
+                            <RadioGroupItem value={appointment.appointment_id.toString()} id={`appointment-${appointment.appointment_id}`} />
+                            <Label 
+                              htmlFor={`appointment-${appointment.appointment_id}`} 
+                              className="flex-1 cursor-pointer"
+                            >
+                              <Card className="p-4 hover:bg-gray-50 transition-colors">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center space-x-3">
+                                    <Avatar className="h-10 w-10">
+                                      <AvatarImage src={appointment.dentist.profile_picture} />
+                                      <AvatarFallback className="bg-green-100 text-green-600">
+                                        {getInitials(appointment.dentist.name)}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                      <div className="font-medium text-gray-900">{appointment.dentist.name}</div>
+                                      <div className="text-sm text-gray-500">
+                                        {formatDate(appointment.date)} • {formatTime(appointment.time_from)} - {formatTime(appointment.time_to)}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <div className="font-bold text-lg text-gray-900">Rs {appointment.fee}</div>
+                                    <Badge variant={appointment.status === 'confirmed' ? 'default' : 'secondary'}>
+                                      {appointment.status}
+                                    </Badge>
+                                  </div>
+                                </div>
+                              </Card>
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                    </RadioGroup>
+                  )}
+                </div>
+
+                {/* Payment Gateway Section */}
+                {selectedAppointment && selectedAppointmentData && (
+                  <>
+                    <Separator />
+                    <div>
+                      <h3 className="text-lg font-medium mb-4">Payment Details</h3>
+                      
+                      {/* Payment Summary */}
+                      <Card className="mb-4">
+                        <CardContent className="p-4">
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-gray-600">Appointment with {selectedAppointmentData.dentist.name}</span>
+                            <span className="font-medium">Rs {selectedAppointmentData.fee}</span>
+                          </div>
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-gray-600">Service Fee</span>
+                            <span className="font-medium">Rs 0.00</span>
+                          </div>
+                          <Separator className="my-2" />
+                          <div className="flex justify-between items-center font-bold text-lg">
+                            <span>Total Amount</span>
+                            <span>Rs {selectedAppointmentData.fee}</span>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* Payment Gateway Placeholder */}
+                      <Card className="border-2 border-dashed border-gray-300">
+                        <CardContent className="p-6 text-center">
+                          <CreditCard className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                          <h4 className="font-medium text-gray-900 mb-2">Payment Gateway Integration</h4>
+                          <p className="text-gray-500 text-sm mb-4">
+                            This is where you would integrate with your payment gateway
+                            (Stripe, PayPal, local payment providers, etc.)
+                          </p>
+                          <Button 
+                            onClick={handleMakePayment}
+                            disabled={processingPayment}
+                            className="bg-green-600 hover:bg-green-700 text-white"
+                          >
+                            {processingPayment ? (
+                              <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                Processing...
+                              </>
+                            ) : (
+                              <>
+                                <CreditCard className="h-4 w-4 mr-2" />
+                                Pay Rs {selectedAppointmentData.fee}
+                              </>
+                            )}
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
 
         {/* Search Bar */}
