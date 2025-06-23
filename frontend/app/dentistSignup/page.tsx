@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, ArrowLeft, User, Mail, Phone, Clock, DollarSign, Calendar, Globe, Upload, X, Camera } from 'lucide-react';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,7 +12,8 @@ import { Alert, AlertDescription } from '@/Components/ui/alert';
 
 // Types
 interface SecurityQuestion {
-  id: number;
+  security_question_id: number;
+  id: number; // For backward compatibility with existing code
   question: string;
 }
 
@@ -67,17 +68,32 @@ const DentistSignUp: React.FC = () => {
     ]
   });
 
-  // Mock security questions (would come from database)
-  const securityQuestions: SecurityQuestion[] = [
-    { id: 1, question: "What was the name of your first pet?" },
-    { id: 2, question: "In what city were you born?" },
-    { id: 3, question: "What was your mother's maiden name?" },
-    { id: 4, question: "What was the name of your elementary school?" },
-    { id: 5, question: "What was your childhood nickname?" },
-    { id: 6, question: "What is your favorite book?" },
-    { id: 7, question: "What was the make of your first car?" },
-    { id: 8, question: "In what city did you meet your spouse/significant other?" }
-  ];
+  const [securityQuestions, setSecurityQuestions] = useState<SecurityQuestion[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchSecurityQuestions = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/security-questions');
+        if (!response.ok) {
+          throw new Error('Failed to fetch security questions');
+        }
+        const data: SecurityQuestion[] = await response.json();
+        // Map the data to include both id and security_question_id for backward compatibility
+        const questions = data.map(q => ({
+          ...q,
+          id: q.security_question_id // Add id for backward compatibility
+        }));
+        setSecurityQuestions(questions);
+      } catch (err) {
+        console.error('Error fetching security questions:', err);
+        setError('Failed to load security questions. Please try again later.');
+      }
+    };
+
+    fetchSecurityQuestions();
+  }, []);
 
   const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -182,35 +198,119 @@ const DentistSignUp: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    if (validateStep2()) {
+    if (!validateStep2()) {
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // First, create the dentist
+      const { securityQuestions: securityAnswers, profilePicture, ...dentistData } = formData;
+      
+      // Prepare dentist data
+      const dentistPayload = {
+        ...dentistData,
+        name: dentistData.name.trim(),
+        email: dentistData.email.trim().toLowerCase(),
+        phone_number: dentistData.phoneNumber,
+        work_days_from: dentistData.workDaysFrom,
+        work_days_to: dentistData.workDaysTo,
+        work_time_from: dentistData.workTimeFrom,
+        work_time_to: dentistData.workTimeTo,
+        appointment_duration: dentistData.appointmentDuration ? parseInt(dentistData.appointmentDuration) : 30, // default 30 minutes
+        appointment_fee: dentistData.appointmentFee ? parseFloat(dentistData.appointmentFee) : 0, // default 0
+        is_active: true,
+        is_verified: false,
+      };
+
+      console.log('Sending dentist data:', JSON.stringify(dentistPayload, null, 2));
+
+      // Create dentist
+      let response;
       try {
-        // Create FormData object to handle file upload
-        const formDataToSend = new FormData();
-        
-        // Append all form fields
-        Object.entries(formData).forEach(([key, value]) => {
-          if (key === 'securityQuestions') {
-            formDataToSend.append(key, JSON.stringify(value));
-          } else if (key === 'profilePicture' && value) {
-            formDataToSend.append(key, value as File);
-          } else if (key !== 'profilePicture') {
-            formDataToSend.append(key, value as string);
-          }
+        response = await fetch('http://localhost:5000/dentists', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(dentistPayload),
         });
-        
-        console.log('Form submitted with file:', formData);
-        
-        // Example API call structure:
-        // const response = await fetch('/api/dentists/register', {
-        //   method: 'POST',
-        //   body: formDataToSend // Don't set Content-Type header, let browser set it
-        // });
-        
-        alert('Registration completed successfully!');
-      } catch (error) {
-        console.error('Registration failed:', error);
-        alert('Registration failed. Please try again.');
+      } catch (networkError) {
+        console.error('Network error:', networkError);
+        throw new Error('Failed to connect to the server. Please check your connection.');
       }
+
+      let responseData;
+      try {
+        responseData = await response.json();
+      } catch (parseError) {
+        console.error('Failed to parse response:', parseError);
+        throw new Error('Received invalid response from server');
+      }
+
+      if (!response.ok) {
+        console.error('Dentist creation failed with status:', response.status);
+        console.error('Response headers:', Object.fromEntries(response.headers.entries()));
+        console.error('Error details:', responseData);
+        
+        // Handle specific error cases
+        if (response.status === 400) {
+          throw new Error(responseData.error || 'Invalid data provided. Please check your input.');
+        } else if (response.status === 409) {
+          throw new Error('A dentist with this email already exists. Please use a different email.');
+        } else if (response.status === 500) {
+          console.error('Server error details:', responseData);
+          throw new Error('Server error occurred. Please try again later.');
+        } else {
+          throw new Error(responseData?.error || `Failed to register dentist (Status: ${response.status})`);
+        }
+      }
+
+      const dentist = responseData;
+      const dentistId = dentist.dentist_id;
+
+      // Upload profile picture if exists
+      if (profilePicture) {
+        const formData = new FormData();
+        formData.append('file', profilePicture);
+        formData.append('dentist_id', dentistId);
+        
+        await fetch('http://localhost:5000/photos', {
+          method: 'POST',
+          body: formData,
+        });
+      }
+
+      // Save security questions answers
+      const securityQuestionPromises = securityAnswers.map(async (sq) => {
+        if (!sq.questionId || !sq.answer.trim()) return null;
+        
+        return fetch('http://localhost:5000/dentist-security-questions-answers', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            dentist_id: dentistId,
+            security_question_id: parseInt(sq.questionId),
+            answer: sq.answer.trim(),
+          }),
+        });
+      });
+
+      await Promise.all(securityQuestionPromises);
+      
+      alert('Registration completed successfully! You can now log in.');
+      // Redirect to login or dashboard
+      window.location.href = '/login';
+    } catch (err) {
+      console.error('Registration failed:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Registration failed. Please try again.';
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -219,11 +319,31 @@ const DentistSignUp: React.FC = () => {
       .map((sq, index) => index !== currentIndex ? sq.questionId : null)
       .filter((id): id is string => id !== null && id !== '');
     
-    return securityQuestions.filter(q => !selectedIds.includes(q.id.toString()));
+    return securityQuestions.filter(q => !selectedIds.includes(q.security_question_id.toString()));
   };
 
   const progressValue = (currentStep / 2) * 100;
   const passwordErrors = getPasswordErrors();
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 to-green-100 p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="text-2xl font-bold text-center text-red-600">Error</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-center mb-6">{error}</p>
+            <div className="flex justify-center">
+              <Button onClick={() => setError(null)} variant="outline">
+                Go Back
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-100 py-8 px-4">
