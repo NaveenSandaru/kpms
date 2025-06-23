@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useContext } from 'react';
-import { Calendar, DollarSign, MessageSquare, Clock, Edit2, X, Check, User } from 'lucide-react';
+import { Calendar, DollarSign, MessageSquare, Clock, Edit2, X, Check, User, CreditCard } from 'lucide-react';
 import axios from 'axios';
 import { AuthContext } from '@/context/auth-context';
 
@@ -48,6 +48,12 @@ interface Message {
   is_read: boolean;
 }
 
+interface PaymentSummary {
+  total_due: string;
+  total_paid: string;
+  total: string;
+}
+
 const HealthcareDashboard: React.FC = () => {
   const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
   const { user, isLoggedIn, isLoadingAuth } = useContext(AuthContext);
@@ -57,11 +63,16 @@ const HealthcareDashboard: React.FC = () => {
   const [loadingUpcomingAppointments, setLoadingUpcomingAppointments] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [changingStatus, setChangingStatus] = useState(false);
+  const [loadingPaymentSummary, setLoadingPaymentSummary] = useState(false);
 
   const [todaysAppointments, setTodaysAppointments] = useState<Appointment[]>([]);
   const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [totalCosts, setTotalCosts] = useState(0);
+  const [paymentSummary, setPaymentSummary] = useState<PaymentSummary>({
+    total_due: '0.00',
+    total_paid: '0.00',
+    total: '0.00'
+  });
   const [lastVisitDate, setLastVisitDate] = useState<string>('');
 
   const [status, setStatus] = useState("");
@@ -105,29 +116,24 @@ const HealthcareDashboard: React.FC = () => {
     }
   };
 
-  // Fetch total costs (from completed/paid appointments or bills)
-  const fetchTotalCosts = async () => {
+  // Fetch payment summary
+  const fetchPaymentSummary = async () => {
+    setLoadingPaymentSummary(true);
     try {
       const response = await axios.get(
-        `${backendURL}/bills/total/forpatient/${user.id}`,
+        `${backendURL}/appointments/payment-summary/${user.id}`,
         { withCredentials: true }
       );
-      if (response.data && response.data.total) {
-        setTotalCosts(response.data.total);
+      if (response.status === 500) {
+        throw new Error("Internal Server Error");
+      }
+      if (response.data && response.data.success && response.data.data) {
+        setPaymentSummary(response.data.data);
       }
     } catch (err: any) {
-      console.error("Error fetching total costs:", err.message);
-      // Fallback: calculate from completed appointments if bills endpoint doesn't exist
-      try {
-        const completedResponse = await axios.get(
-          `${backendURL}/appointments/completed/forpatient/${user.id}`,
-          { withCredentials: true }
-        );
-        const total = completedResponse.data.reduce((sum: number, apt: Appointment) => sum + apt.fee, 0);
-        setTotalCosts(total);
-      } catch (fallbackErr: any) {
-        console.error("Error fetching completed appointments for total costs:", fallbackErr.message);
-      }
+      console.error("Error fetching payment summary:", err.message);
+    } finally {
+      setLoadingPaymentSummary(false);
     }
   };
 
@@ -151,6 +157,7 @@ const HealthcareDashboard: React.FC = () => {
       // Refresh appointments after status change
       fetchTodaysAppointments();
       fetchUpcomingAppointments();
+      fetchPaymentSummary(); // Refresh payment summary as well
     } catch (err: any) {
       window.alert(err.message);
     } finally {
@@ -196,16 +203,32 @@ const HealthcareDashboard: React.FC = () => {
       icon: Calendar,
       bgColor: 'bg-blue-50',
       iconColor: 'text-blue-600'
-    },
+    }
+  ];
+
+  // Payment summary cards
+  const paymentCards = [
     {
-      title: 'Total Costs',
-      value: `RS:${totalCosts}`,
-      icon: DollarSign,
+      title: 'Total Due',
+      value: `Rs. ${parseFloat(paymentSummary.total_due).toFixed(2)}`,
+      icon: CreditCard,
       bgColor: 'bg-red-50',
       iconColor: 'text-red-600'
     },
-
-
+    {
+      title: 'Total Paid',
+      value: `Rs. ${parseFloat(paymentSummary.total_paid).toFixed(2)}`,
+      icon: DollarSign,
+      bgColor: 'bg-green-50',
+      iconColor: 'text-green-600'
+    },
+    {
+      title: 'Total Amount',
+      value: `Rs. ${parseFloat(paymentSummary.total).toFixed(2)}`,
+      icon: DollarSign,
+      bgColor: 'bg-gray-50',
+      iconColor: 'text-gray-600'
+    }
   ];
 
   // Auth check effect
@@ -229,8 +252,7 @@ const HealthcareDashboard: React.FC = () => {
     if (!user) return;
     fetchTodaysAppointments();
     fetchUpcomingAppointments();
-
-    fetchTotalCosts();
+    fetchPaymentSummary();
   }, [user]);
 
   // Status update effect
@@ -268,13 +290,35 @@ const HealthcareDashboard: React.FC = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-2 gap-4 md:gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
+          {/* Upcoming Appointments Card */}
           {statsCards.map((card, index) => (
             <div key={index} className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600 mb-1">{card.title}</p>
                   <p className="text-2xl font-bold text-gray-900">{card.value}</p>
+                </div>
+                <div className={`p-3 rounded-lg ${card.bgColor}`}>
+                  <card.icon className={`w-6 h-6 ${card.iconColor}`} />
+                </div>
+              </div>
+            </div>
+          ))}
+          
+          {/* Payment Summary Cards */}
+          {paymentCards.map((card, index) => (
+            <div key={`payment-${index}`} className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">{card.title}</p>
+                  <p className="text-xl font-bold text-gray-900">
+                    {loadingPaymentSummary ? (
+                      <span className="inline-block w-6 h-6 border-2 border-gray-300 border-t-transparent rounded-full animate-spin"></span>
+                    ) : (
+                      card.value
+                    )}
+                  </p>
                 </div>
                 <div className={`p-3 rounded-lg ${card.bgColor}`}>
                   <card.icon className={`w-6 h-6 ${card.iconColor}`} />
