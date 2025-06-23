@@ -783,28 +783,33 @@ export default function ClientRegistration() {
           />
         </div>
         <div className="space-y-1">
-          <Label htmlFor="date_of_birth" className="flex items-center">
-            Date of Birth <span className="text-red-500 ml-1">*</span>
-          </Label>
-          <Input
-            id="date_of_birth"
-            type="text"
-            min="1"
-            max="120"
-            value={formData.date_of_birth}
-            onChange={(e) => handleFieldChange("date_of_birth", e.target.value)}
-            onBlur={() => handleFieldBlur("date_of_birth")}
-            placeholder="Enter your Date of Birth"
-            className={errors.date_of_birth && touched.date_of_birth ? "border-red-500" : ""}
-            required
-          />
-          <ErrorMessage message={touched.date_of_birth ? errors.date_of_birth : undefined} />
-        </div>
+  <Label htmlFor="date_of_birth" className="flex items-center">
+    Date of Birth <span className="text-red-500 ml-1">*</span>
+  </Label>
+  <Input
+    id="date_of_birth"
+    type="date"
+    value={formData.date_of_birth}
+    onChange={(e) => {
+      // Convert the date to a string format (YYYY-MM-DD)
+      const dateString = e.target.value;
+      handleFieldChange("date_of_birth", dateString);
+    }}
+    onBlur={() => handleFieldBlur("date_of_birth")}
+    className={errors.date_of_birth && touched.date_of_birth ? "border-red-500" : ""}
+    required
+    // Optional: Set max date to today to prevent future dates
+    max={new Date().toISOString().split('T')[0]}
+    // Optional: Set reasonable min date (e.g., 120 years ago)
+    min={new Date(new Date().getFullYear() - 120, 0, 1).toISOString().split('T')[0]}
+  />
+  <ErrorMessage message={touched.date_of_birth ? errors.date_of_birth : undefined} />
+</div>
       </div>
 
       <div className="flex justify-between">
         <div className="flex flex-col">
-          <Label>Gender</Label>
+          <Label className="mb-4">Gender</Label>
           <RadioGroup value={formData.gender} onValueChange={(value) => setFormData({ ...formData, gender: value })}>
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="Male" id="male" />
@@ -821,7 +826,7 @@ export default function ClientRegistration() {
           </RadioGroup>
         </div>
         <div>
-          <Label>NIC</Label>
+          <Label className="mb-4">NIC</Label>
           <Input
             id="nic"
             type="text"
@@ -836,7 +841,7 @@ export default function ClientRegistration() {
           <ErrorMessage message={touched.date_of_birth ? errors.date_of_birth : undefined} />
         </div>
         <div>
-          <Label>Blood Group</Label>
+          <Label  className="mb-4">Blood Group</Label>
           <Input
             id="blood_group"
             type="text"
