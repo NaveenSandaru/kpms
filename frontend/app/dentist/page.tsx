@@ -3,6 +3,9 @@ import React, { useState, useEffect, useContext } from 'react';
 import { Calendar, Clock, Users, CheckCircle, XCircle, AlertCircle, Plus, ChevronLeft, ChevronRight, Eye, Check, X } from 'lucide-react';
 import axios from 'axios';
 import { AuthContext } from '@/context/auth-context';
+import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
+
 
 type Dentist = {
   dentist_id: string,
@@ -46,6 +49,8 @@ const DentalDashboard = () => {
   const [status, setStatus] = useState("");
   const [appointment_id, setAppointment_id] = useState("");
 
+  const router = useRouter();
+
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
@@ -68,7 +73,7 @@ const DentalDashboard = () => {
       setTodaysAppointments(response.data);
     }
     catch(err: any){
-      window.alert(err.message);
+      toast.error(err.message);
     }
     finally{
       setLoadingTodaysAppointments(false);
@@ -87,7 +92,7 @@ const DentalDashboard = () => {
       setUpcomingAppointments(response.data);
     }
     catch(err: any){
-      window.alert(err.message);
+      toast.error(err.message);
     }
     finally{
       setLoadingUpcomingAppointments(false);
@@ -113,7 +118,7 @@ const DentalDashboard = () => {
       }
     }
     catch(err: any){
-      window.alert(err.message);
+      toast.error(err.message);
     }
     finally{
       setChangingStatus(false);
@@ -210,13 +215,13 @@ const DentalDashboard = () => {
     if (isLoadingAuth) return;
     if (!isLoggedIn) {
       alert("Please log in");
-      window.location.href = "/";
+      router.push("/");
       return;
     }
   
     if (user?.role !== "dentist") {
       alert("Access Denied");
-      window.location.href = "/";
+      router.push("/");
       return;
     }
   }, [isLoadingAuth]);

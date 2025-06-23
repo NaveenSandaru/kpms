@@ -14,6 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/Components/ui/tabs';
 import { AuthContext } from '@/context/auth-context';
 import axios from 'axios';
+import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 
 interface Appointment {
   appointment_id: number;
@@ -247,6 +249,8 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
   const [deletingBlock, setDeletingBlock] = useState(false);
   const [cancellingAppointment, setCancellingAppointment] = useState(false);
   const [dentistWorkInfo, setDentistWorkInfo] = useState<DentistWorkInfo>();
+  
+  const router = useRouter();
 
   // States for creating new appointment
   const [patient_id, setPatient_id] = useState("");
@@ -259,8 +263,10 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
   const [blockDate, setBlockDate] = useState("");
   const [blockTimeFrom, setBlockTimeFrom] = useState("");
   const [blockTimeTo, setBlockTimeTo] = useState("");
+  
 
   const [timeSlots, setTimeSlots] = useState([""]);
+
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -279,6 +285,7 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
     return `${hh}:${mm}`;
   };
 
+
   const fetchAppointments = async () => {
     setLoadingAppointments(true);
     try {
@@ -292,7 +299,7 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
     }
     catch (err: any) {
       console.error("Error fetching appointments:", err);
-      window.alert(err.message);
+      toast.error(err.message);
     }
     finally {
       setLoadingAppointments(false);
@@ -312,7 +319,7 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
     }
     catch (err: any) {
       console.error("Error fetching blocked slots:", err);
-      window.alert(err.message);
+      toast.error(err.message);
     }
     finally {
       setLoadingBlockedSlots(false);
@@ -333,7 +340,7 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
       fetchBlockedSlots();
     }
     catch (err: any) {
-      window.alert(err.message);
+      toast.error(err.message);
     }
     finally {
       setDeletingBlock(false);
@@ -351,7 +358,8 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
       setDentistWorkInfo(response.data);
     }
     catch (err: any) {
-      window.alert(err.message);
+      
+      toast.error(err.message);
     }
   };
 
@@ -399,7 +407,7 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
       if (response.status !== 201) {
         throw new Error("Error Creating Appointment");
       } else {
-        window.alert("Appointment Created Successfully");
+        toast.success("Appointment Created Successfully");
         setIsNewAppointmentOpen(false);
         fetchAppointments();
         // Reset form
@@ -409,7 +417,7 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
         setNote("");
       }
     } catch (err: any) {
-      window.alert(err.message);
+      toast.error(err.message);
     } finally {
       setCreatingAppointment(false);
     }
@@ -430,7 +438,7 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
       if (response.status != 201) {
         throw new Error("Internal Server Error");
       }
-      window.alert("Block Slot Created Successfully");
+     toast.success("Block Slot Created Successfully");
       setIsBlockTimeOpen(false);
       fetchBlockedSlots();
       // Reset form
@@ -439,7 +447,7 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
       setBlockTimeTo("");
     }
     catch (err: any) {
-      window.alert(err.message);
+      toast.error(err.message);
     }
     finally {
       setCreatingBlockSlot(false);
@@ -458,10 +466,11 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
       if(response.status != 202){
         throw new Error("Error cancelling appointment");
       }
-      window.alert("Appointment Cancelled");
+      toast.success("Appointment Cancelled Successfully");
+      
     }
     catch(err: any){
-      window.alert(err.message);
+      toast.error(err.message);
     }
     finally{
       setCancellingAppointment(false);
@@ -530,8 +539,8 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
   useEffect(() => {
     if (isLoadingAuth) return;
     if (!isLoggedIn) {
-      window.alert("Please login");
-      window.location.href = "/";
+      toast.error("You are not logged in.");
+      router.push("/login");
       return;
     }
     if (user?.id) {

@@ -13,6 +13,7 @@ import { Label } from '@/Components/ui/label'
 import axios from 'axios'
 import { AuthContext } from '@/context/auth-context'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner';
 
 interface Patient {
   patient_id: string
@@ -156,7 +157,7 @@ export default function DentistDashboard({ params }: DashboardProps) {
       setFetchedPatients(response.data);
     }
     catch (err: any) {
-      window.alert(err.message);
+     toast.error(err.message);
     }
     finally {
       setLoadingPatients(false);
@@ -175,7 +176,7 @@ export default function DentistDashboard({ params }: DashboardProps) {
       setMedicalHistory(response.data);
     }
     catch (err: any) {
-      window.alert(err.message);
+      toast.error(err.message);
     }
     finally {
       setLoadingMedicalHistory(false);
@@ -194,7 +195,7 @@ export default function DentistDashboard({ params }: DashboardProps) {
       setMedicalReport(response.data);
     }
     catch (err: any) {
-      window.alert(err.message);
+      toast.error(err.message);
     }
     finally {
       setLoadingMedicalReports(false);
@@ -213,7 +214,7 @@ export default function DentistDashboard({ params }: DashboardProps) {
       setSoapNote(response.data);
     }
     catch (err: any) {
-      window.alert(err.message);
+      toast.error(err.message);
     }
     finally {
       setLoadingSOAPNotes(false);
@@ -223,7 +224,7 @@ export default function DentistDashboard({ params }: DashboardProps) {
   // Add SOAP Note function
   const handleAddNote = async () => {
     if (!selectedPatient || !newNoteText.trim()) {
-      window.alert('Please enter a note');
+      toast.error('Please select a patient and enter a note');
       return;
     }
 
@@ -240,10 +241,10 @@ export default function DentistDashboard({ params }: DashboardProps) {
         fetchPatientSOAPNotes(selectedPatient.patient_id);
         setNewNoteText('');
         setIsAddNoteDialogOpen(false);
-        window.alert('Note added successfully');
+        toast.success('Note added successfully');
       }
     } catch (err: any) {
-      window.alert(err.message || 'Failed to add note');
+      toast.error(err.message);
     } finally {
       setIsSubmittingNote(false);
     }
@@ -262,7 +263,7 @@ export default function DentistDashboard({ params }: DashboardProps) {
   // Upload Report function
   const handleUploadReport = async () => {
     if (!selectedPatient || !selectedFile || !reportName.trim()) {
-      window.alert('Please select a file and enter a report name');
+     toast.error('Please select a patient and enter a report name');
       return;
     }
 
@@ -294,11 +295,13 @@ export default function DentistDashboard({ params }: DashboardProps) {
       if (response.status != 201) {
         throw new Error("Error Creating Record");
       }
-      window.alert("Uploaded Successfully");
+
+      toast.success('Report uploaded successfully');
+      
 
 
     } catch (err: any) {
-      window.alert(err.message || 'Failed to upload report');
+      toast.error(err.message);
     } finally {
       setIsUploadingReport(false);
       setIsUploadReportDialogOpen(false);
