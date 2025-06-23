@@ -533,7 +533,7 @@ export function AppointmentDialog({ open, onOpenChange, onAppointmentCreated }: 
             {selectedDentist && dateString && (
               <div className="grid grid-cols-4 items-center gap-4">
                 <div className="col-span-4 text-xs text-green-600 bg-green-50 p-2 rounded">
-                  🕐 Total time slots: {timeSlots.length} (all slots shown, including booked ones)
+                  🕐 Total time slots: {timeSlots.length} (all slots shown)
                 </div>
               </div>
             )}
