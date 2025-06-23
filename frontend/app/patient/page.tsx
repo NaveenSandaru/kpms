@@ -3,6 +3,9 @@ import React, { useState, useEffect, useContext } from 'react';
 import { Calendar, DollarSign, MessageSquare, Clock, Edit2, X, Check, User, CreditCard } from 'lucide-react';
 import axios from 'axios';
 import { AuthContext } from '@/context/auth-context';
+import { toast } from 'sonner';
+import { useRouter } from "next/navigation";
+
 
 interface Patient {
   patient_id: string;
@@ -77,6 +80,8 @@ const HealthcareDashboard: React.FC = () => {
 
   const [status, setStatus] = useState("");
   const [appointment_id, setAppointment_id] = useState("");
+
+  const router = useRouter();
 
   // Fetch today's appointments
   const fetchTodaysAppointments = async () => {
@@ -159,7 +164,7 @@ const HealthcareDashboard: React.FC = () => {
       fetchUpcomingAppointments();
       fetchPaymentSummary(); // Refresh payment summary as well
     } catch (err: any) {
-      window.alert(err.message);
+      toast.error(err.message);
     } finally {
       setChangingStatus(false);
       setAppointment_id('');
@@ -241,13 +246,13 @@ const HealthcareDashboard: React.FC = () => {
     if (isLoadingAuth) return;
     if (!isLoggedIn) {
       alert("Please log in");
-      window.location.href = "/";
+     router.push("/");
       return;
     }
 
     if (user?.role !== "patient") {
       alert("Access Denied");
-      window.location.href = "/";
+      router.push("/");
       return;
     }
   }, [isLoadingAuth, isLoggedIn, user]);
