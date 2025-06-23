@@ -72,14 +72,14 @@ const DoctorHeader = () => {
   // Handle profile navigation
   const handleProfileClick = () => {
     if (user.id) {
-      router.push(`/doctor/profile`);
+      router.push(`#`);
     }
   };
 
   // Handle notification click
   const handleNotificationClick = () => {
     if (user.id) {
-      router.push(`/doctor/notifications`);
+      router.push(`#`);
     }
   };
 
