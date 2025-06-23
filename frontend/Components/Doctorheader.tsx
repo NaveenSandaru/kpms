@@ -6,6 +6,7 @@ import { Button } from "@/Components/ui/button";
 import { useState, useEffect, useContext } from "react";
 import { AuthContext } from "@/context/auth-context";
 import axios from "axios";
+import { toast } from "sonner";
 
 interface DoctorInfo {
   dentist_id: string;
@@ -54,7 +55,7 @@ const DoctorHeader = () => {
       setDoctorInfo({dentist_id:response.data.dentist_id, name: response.data.name, service_types: response.data.service_types, profile_picture: response.data.profile_picture});
     }
     catch(err: any){
-      window.alert(err.message);
+      toast.error(err.message);
     }
     finally{
       setLoadingDentist(false);

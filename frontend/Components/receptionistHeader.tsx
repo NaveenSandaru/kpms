@@ -7,6 +7,7 @@ import { useState, useEffect, useContext } from "react";
 
 import { AuthContext } from "@/context/auth-context";
 import axios from "axios";
+import { toast } from "sonner";
 
 interface ReceptionistInfo {
   receptionist_id: string;
@@ -54,7 +55,7 @@ const ReceptionistHeader = () => {
       setReceptionistInfo({receptionist_id: response.data.receptionist_id, name: response.data.name, profile_picture: response.data.profile_picture});
     }
     catch(err: any){
-      window.alert(err. message);
+      toast.error(err.message);
     }
     finally{
       setLoadingReceptionist(false);
