@@ -9,6 +9,8 @@ import { Textarea } from '@/Components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import axios from 'axios';
 import { profile } from 'console';
+import { toast } from 'react-hot-toast';
+import { useRouter } from 'next/navigation';
 
 type Patient = {
   patient_id: string;
@@ -147,10 +149,10 @@ const PatientManagement = () => {
         if(response.status != 202){
           throw new Error("Error updating patient");
         }
-        window.alert("Patient updated succesfully");
+       toast.success("Patient Updated Successfully");
       }
       catch(err: any){
-        window.alert(err.message);
+        toast.error(err.message);
       }
       finally{
 
@@ -193,12 +195,12 @@ const PatientManagement = () => {
           throw new Error("Error Creating Patient");
         }
         else{
-          window.alert("Patient Created Succesfully");
+          toast.success("Patient Created Successfully");
           setPatients(prev => [...prev, { ...formData, patient_id: newPatientId }]);
         }
       }
       catch (err: any) {
-        window.alert(err.message);
+        toast.error(err.message);
       }
       finally {
 
@@ -219,7 +221,7 @@ const PatientManagement = () => {
       setPatients(prev => prev.filter(patient => patient.patient_id !== patientId));
     }
     catch (err: any) {
-      window.alert(err.message);
+      toast.error(err.message);
     }
     finally {
 
@@ -249,7 +251,7 @@ const PatientManagement = () => {
       setPatients(response.data);
     }
     catch (err: any) {
-      window.alert(err.message);
+      toast.error(err.message);
     }
     finally {
       setLoadingPatient(false);
@@ -340,7 +342,8 @@ const PatientManagement = () => {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => { window.alert(patient.patient_id); handleDeletePatient(patient.patient_id) }}
+                      onClick={() => {toast.success("Patient deleted successfully");
+                         handleDeletePatient(patient.patient_id) }}
                       className="p-1 h-8 w-8 hover:text-red-600"
                     >
                       <Trash2 size={16} />

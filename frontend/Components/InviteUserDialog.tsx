@@ -17,6 +17,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/Components/ui/select"
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 interface Props {
   open: boolean;
@@ -91,7 +93,7 @@ export default function InviteUserDialog({ open, onClose }: Props) {
       // Handle actual errors
       const errorMessage = err.response?.data?.message || err.message || "Error sending invite";
       console.error("Showing error:", errorMessage);
-      window.alert(errorMessage);
+      toast.error(errorMessage);
       setSendingEmail(false);
     }
   };
@@ -104,7 +106,7 @@ export default function InviteUserDialog({ open, onClose }: Props) {
     setRole("Dentist");
     
     // Show success message
-    window.alert("Invitation sent successfully!");
+    toast.success("Invite sent successfully!");
     
     // Close the dialog
     onClose();

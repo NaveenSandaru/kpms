@@ -129,7 +129,9 @@ export default function DentistBookingPage() {
       setBlockedDates(response.data);
     }
     catch (err: any) {
-      window.alert(err.message);
+      toast.error("Error", {
+        description: err.message || "Failed to fetch blocked dates"
+      });
     }
   }
 

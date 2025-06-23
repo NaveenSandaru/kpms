@@ -8,6 +8,8 @@ import { Card, CardContent } from '@/Components/ui/card'
 import { Search, Phone, Mail, Calendar, Clock, User } from 'lucide-react'
 import { AuthContext } from '@/context/auth-context'
 import axios from 'axios';
+import { toast } from 'sonner';
+
 
 interface Patient {
   patient_id: string
@@ -87,12 +89,12 @@ export default function AppointmentsPage() {
   useEffect(() => {
     if(isLoadingAuth) return;
     if(!isLoggedIn){
-      window.alert("Login please");
+      tost.error("You are not logged in");
       router.push("/");
       return;
     }
     else if(user.role != "receptionist"){
-      window.alert("Access Denied");
+      toast.error("Access Denied");
       router.push("/");
       return;
     }

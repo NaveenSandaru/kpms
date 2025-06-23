@@ -44,9 +44,11 @@ export default function ServiceProviderPage() {
 
   useEffect(() => {
     if(isLoadingAuth) return;
-    if(!isLoggedIn){
-      window.alert("Please log in");
-      window.location.href = "/";
+    if(!isLoggedIn) {
+      toast.error("Authentication Required", {
+        description: "Please log in to book an appointment"
+      })
+      router.push("/");
       return;
     }
     if(user){

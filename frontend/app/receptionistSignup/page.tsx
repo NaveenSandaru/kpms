@@ -8,6 +8,7 @@ import { Label } from '@/Components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Progress } from '@/Components/ui/progress';
 import { Alert, AlertDescription } from '@/Components/ui/alert';
+import { useRouter } from 'next/navigation';
 
 // Types
 interface SecurityQuestion {
@@ -50,15 +51,17 @@ const ReceptionistSignUp: React.FC = () => {
     ]
   });
 
+  const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
   const [securityQuestions, setSecurityQuestions] = useState<SecurityQuestion[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const router = useRouter();
 
   // Fetch security questions on component mount
   useEffect(() => {
     const fetchSecurityQuestions = async () => {
       try {
-        const response = await fetch('http://localhost:5000/security-questions');
+        const response = await fetch(`${backendURL}/security-questions`);
         if (!response.ok) throw new Error('Failed to fetch security questions');
         const data = await response.json();
         setSecurityQuestions(data);
@@ -180,7 +183,7 @@ const ReceptionistSignUp: React.FC = () => {
       };
 
       // Create receptionist
-      const receptionistResponse = await fetch('http://localhost:5000/receptionists', {
+      const receptionistResponse = await fetch(`${backendURL}/receptionists`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -202,7 +205,7 @@ const ReceptionistSignUp: React.FC = () => {
       const securityPromises = formData.securityQuestions.map(async (sq) => {
         if (!sq.questionId || !sq.answer) return null;
         
-        return fetch('http://localhost:5000/receptionist-security-questions-answers', {
+        return fetch(`${backendURL}/receptionist-security-questions-answers`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -269,7 +272,7 @@ const ReceptionistSignUp: React.FC = () => {
           </p>
           <div className="mt-6">
             <Button 
-              onClick={() => window.location.href = '/'}
+              onClick={() => router.push('/login')}
               className="w-full bg-emerald-600 hover:bg-emerald-700"
             >
               Go to Login

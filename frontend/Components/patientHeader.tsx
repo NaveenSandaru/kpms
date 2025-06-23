@@ -6,6 +6,7 @@ import { Button } from "@/Components/ui/button";
 import { AuthContext } from "@/context/auth-context";
 import { useContext, useEffect, useState } from "react";
 import axios from "axios";
+import { toast } from "sonner";
 
 interface Patient{
   patient_id: string,
@@ -32,7 +33,7 @@ const PatientHeader = () => {
       response.data = null;
     }
     catch(err: any){
-      window.alert(err.message);
+      toast.error(err.message);
     }
     finally{
       setLoadingPatient(false);
