@@ -9,6 +9,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Progress } from '@/Components/ui/progress';
 import { Alert, AlertDescription } from '@/Components/ui/alert';
 import axios from 'axios';
+import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
+
 
 // Types
 interface SecurityQuestion {
@@ -53,7 +56,7 @@ const RadiologistSignUp: React.FC = () => {
       setFetchedQuestions(response.data);
     }
     catch (err: any) {
-      window.alert(err.message);
+      toast.error(err.message);
     }
     finally {
       setLoadingQuestions(false);
