@@ -272,7 +272,7 @@ const ReceptionistSignUp: React.FC = () => {
           </p>
           <div className="mt-6">
             <Button 
-              onClick={() => router.push('/login')}
+              onClick={() => router.push('/')}
               className="w-full bg-emerald-600 hover:bg-emerald-700"
             >
               Go to Login

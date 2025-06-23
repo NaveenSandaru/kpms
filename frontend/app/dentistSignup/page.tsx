@@ -256,13 +256,26 @@ const DentistSignUp: React.FC = () => {
       // Upload profile picture if exists
       if (profilePicture) {
         const formData = new FormData();
-        formData.append('file', profilePicture);
-        formData.append('dentist_id', dentistId);
+        formData.append('image', profilePicture);
         
-        await fetch(`${backendURL}/photos`, {
+        const uploadResponse = await fetch(`${backendURL}/photos`, {
           method: 'POST',
           body: formData,
         });
+        
+        if (uploadResponse.ok) {
+          const { url } = await uploadResponse.json();
+          // Update dentist with profile picture URL
+          await fetch(`${backendURL}/dentists/${dentistId}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              profile_picture: url,
+            }),
+          });
+        }
       }
 
       // Save security questions answers
@@ -345,7 +358,7 @@ const DentistSignUp: React.FC = () => {
           </p>
           <div className="mt-6">
             <Button 
-              onClick={() => router.push('/login')}
+              onClick={() => router.push('/')}
               className="w-full bg-emerald-600 hover:bg-emerald-700"
             >
               Go to Login
