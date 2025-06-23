@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { BarChart3, LogOut, Settings, User2, Menu, X } from "lucide-react";
 import { AuthContext } from "@/context/auth-context";
 import { toast } from "sonner";
+import Logo from "@/app/logo.png";
+import Image from "next/image";
 
 import {
   Sidebar,
@@ -128,7 +130,7 @@ const PatientSidebar = () => {
       <Sidebar className="hidden md:flex w-56 lg:w-64 bg-white shadow-sm min-h-screen border-r border-gray-200">
         <SidebarHeader className="p-4 md:p-6 border-b border-gray-100">
           <div className="flex items-center justify-center">
-            <h1 className="text-xl font-bold text-gray-900">Logo</h1>
+            <span className="h-15 w-15 mx-auto"><Image src={Logo} alt=""/></span>
             {/*<Image
               src={"/logo.jpg"}
               alt="Logo"
@@ -200,7 +202,7 @@ const PatientSidebar = () => {
         {/* Mobile Header */}
         <div className="p-4 border-b border-gray-100">
           <div className="flex items-center justify-center">
-            <h1 className="text-lg font-bold text-gray-900">Logo</h1>
+            <span className="h-10 w-10 mx-auto"><Image src={Logo} alt="" className="h-10 w-10 mx-auto"/></span>
             {/*<Image
               src={"/logo.jpg"}
               alt="Logo"

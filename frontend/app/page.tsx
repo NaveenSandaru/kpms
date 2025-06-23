@@ -13,6 +13,7 @@ import { AuthContext } from '@/context/auth-context';
 import axios from 'axios';
 import { Eye, EyeOff } from "lucide-react"
 import { toast } from "sonner"
+import Logo from "@/app/logo.png";
 
 export default function LoginPage() {
 
@@ -101,8 +102,8 @@ export default function LoginPage() {
         <CardHeader className="text-center pb-6">
         <div className="w-full flex justify-center mb-2">
             <Image
-              src={""}
-              alt="Simply Booked Logo"
+              src={Logo}
+              alt="DentX Logo"
               width={110}
               height={110}
               className="object-contain"
