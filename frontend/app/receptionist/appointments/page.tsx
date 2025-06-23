@@ -8,7 +8,9 @@ import { Badge } from '@/Components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/Components/ui/tabs'
 import { Switch } from '@/Components/ui/switch'
 import { Search, Plus, Phone, Mail, Calendar, Clock, User, DollarSign, FileText, CheckCircle, CreditCard } from 'lucide-react'
-import axios from 'axios';
+import axios from 'axios'
+import { AppointmentDialog } from '@/Components/AppointmentDialog'
+
 
 interface Patient {
   patient_id: string
@@ -45,11 +47,12 @@ export default function AppointmentsPage() {
   const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([])
   const [allAppointments, setAllAppointments] = useState<Appointment[]>([])
   const [checkedInAppointments, setCheckedInAppointments] = useState<Appointment[]>([])
-
-
   const [filteredAppointments, setFilteredAppointments] = useState<Appointment[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [activeTab, setActiveTab] = useState('today')
+  
+  // Dialog state
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
 
   const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
@@ -90,6 +93,43 @@ export default function AppointmentsPage() {
 
     fetchAppointments();
   }, []);
+
+  // Function to refresh appointments after adding new one
+  const refreshAppointments = async () => {
+    try {
+      const [todayRes, allRes, checkedInRes] = await Promise.all([
+        axios.get(`${backendURL}/appointments/today`),
+        axios.get(`${backendURL}/appointments`),
+        axios.get(`${backendURL}/appointments/checkedin`)
+      ]);
+
+      const todayData = todayRes.data;
+      const allData = allRes.data;
+      const checkedInData = checkedInRes.data;
+
+      setTodayAppointments(todayData);
+      setCheckedInAppointments(checkedInData);
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const upcoming = allData.filter((appointment: Appointment) => {
+        const appointmentDate = new Date(appointment.date);
+        appointmentDate.setHours(0, 0, 0, 0);
+        return appointmentDate > today;
+      });
+
+      setAllAppointments(upcoming);
+    } catch (error) {
+      console.error("Failed to refresh appointments:", error);
+    }
+  };
+
+  // Handle appointment creation success
+  const handleAppointmentCreated = () => {
+    setIsDialogOpen(false);
+    refreshAppointments(); // Refresh the appointments list
+  };
 
   // Handle payment status toggle
   const handlePaymentToggle = async (appointmentId: number, currentStatus: string) => {
@@ -260,7 +300,10 @@ export default function AppointmentsPage() {
             />
           </div>
 
-          <Button className="bg-emerald-500 hover:bg-emerald-600 text-white" >
+          <Button 
+            className="bg-emerald-500 hover:bg-emerald-600 text-white"
+            onClick={() => setIsDialogOpen(true)}
+          >
             <Plus className="w-4 h-4 mr-2" />
             Add Appointment
           </Button>
@@ -478,6 +521,7 @@ export default function AppointmentsPage() {
                           <Button
                             size="sm"
                             className="w-full bg-yellow-100 hover:bg-yellow-200 text-yellow-800 border-1 border-yellow-200"
+                            onClick={() => handleCheckIn(appointment.appointment_id)}
                           >
                             Check In
                           </Button>
@@ -501,12 +545,18 @@ export default function AppointmentsPage() {
                       : `No appointments for ${activeTab === 'today' ? 'today' : activeTab}`
                     }
                   </p>
-
                 </CardContent>
               </Card>
             )}
           </TabsContent>
         </Tabs>
+
+        {/* Appointment Dialog */}
+        <AppointmentDialog
+          open={isDialogOpen}
+          onOpenChange={setIsDialogOpen}
+          onAppointmentCreated={handleAppointmentCreated}
+        />
       </div>
     </div>
   )
