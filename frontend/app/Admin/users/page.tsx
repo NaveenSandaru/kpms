@@ -16,7 +16,6 @@ interface User {
   name: string;
   email: string;
   phone_number?: string;
-  phone?: string;
   role: Role;
   [key: string]: any; // Allow additional properties
 }
@@ -118,12 +117,15 @@ export default function UserTable() {
   
 
   // Filter users based on search term
-  const filteredUsers = users?.filter(user =>
-    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.phone.includes(searchTerm) ||
-    user.role.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredUsers = users?.filter(user => {
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      user.name.toLowerCase().includes(searchLower) ||
+      user.email.toLowerCase().includes(searchLower) ||
+      (user.phone_number && user.phone_number.includes(searchTerm)) ||
+      user.role.toLowerCase().includes(searchLower)
+    );
+  });
 
   const getRoleColor = (role: Role) => {
     switch (role) {
@@ -230,7 +232,7 @@ export default function UserTable() {
                         </div>
                         <div className="flex items-center gap-2 text-sm">
                           <Phone size={14} className="text-gray-400" />
-                          <span className="text-gray-900">{inuser.phone_number || inuser.phone || 'N/A'}</span>
+                          <span className="text-gray-900">{inuser.phone_number || 'N/A'}</span>
                         </div>
                       </div>
                     </td>
@@ -289,7 +291,7 @@ export default function UserTable() {
                     </div>
                     <div className="flex items-center gap-2">
                       <Phone size={16} className="text-gray-400" />
-                      <span className="text-gray-900">{user.phone_number || user.phone || 'N/A'}</span>
+                      <span className="text-gray-900">{user.phone_number || 'N/A'}</span>
                     </div>
                   </div>
 
