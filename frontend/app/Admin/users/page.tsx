@@ -15,8 +15,9 @@ interface User {
   id: string;
   name: string;
   email: string;
-  phone: string;
+  phone_number?: string;
   role: Role;
+  [key: string]: any; // Allow additional properties
 }
 
 
@@ -47,28 +48,31 @@ export default function UserTable() {
         throw new Error("Internal Server Error");
       }
 
-      const dentistUsers: User[] = dentistsRes.data.map((dentist: any) => ({
+      const dentistUsers: any[] = dentistsRes.data.map((dentist: any) => ({
         id: dentist.dentist_id,
         name: dentist.name,
         email: dentist.email,
-        phone: dentist.phone_number || '',
-        role: "Dentist"
+        phone_number: dentist.phone_number || '',
+        role: "Dentist",
+        ...dentist // Spread the rest of the dentist properties
       }));
 
-      const receptionistUsers: User[] = receptionistsRes.data.map((receptionist: any) => ({
+      const receptionistUsers: any[] = receptionistsRes.data.map((receptionist: any) => ({
         id: receptionist.receptionist_id,
         name: receptionist.name,
         email: receptionist.email,
-        phone: receptionist.phone_number || '',
-        role: "Receptionist"
+        phone_number: receptionist.phone_number || '',
+        role: "Receptionist",
+        ...receptionist // Spread the rest of the receptionist properties
       }));
 
-      const radiolodistUsers: User[] = radiologistRes.data.map((radiolodist: any) => ({
+      const radiolodistUsers: any[] = radiologistRes.data.map((radiolodist: any) => ({
         id: radiolodist.radiologist_id,
         name: radiolodist.name,
         email: radiolodist.email,
-        phone: radiolodist.phone_number || '',
-        role: "Radiologist"
+        phone_number: radiolodist.phone_number || '',
+        role: "Radiologist",
+        ...radiolodist // Spread the rest of the radiologist properties
       }));
 
       const allUsers: User[] = [...dentistUsers, ...receptionistUsers, ...radiolodistUsers];
@@ -113,12 +117,15 @@ export default function UserTable() {
   
 
   // Filter users based on search term
-  const filteredUsers = users?.filter(user =>
-    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.phone.includes(searchTerm) ||
-    user.role.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredUsers = users?.filter(user => {
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      user.name.toLowerCase().includes(searchLower) ||
+      user.email.toLowerCase().includes(searchLower) ||
+      (user.phone_number && user.phone_number.includes(searchTerm)) ||
+      user.role.toLowerCase().includes(searchLower)
+    );
+  });
 
   const getRoleColor = (role: Role) => {
     switch (role) {
@@ -225,7 +232,7 @@ export default function UserTable() {
                         </div>
                         <div className="flex items-center gap-2 text-sm">
                           <Phone size={14} className="text-gray-400" />
-                          <span className="text-gray-900">{inuser.phone}</span>
+                          <span className="text-gray-900">{inuser.phone_number || 'N/A'}</span>
                         </div>
                       </div>
                     </td>
@@ -284,7 +291,7 @@ export default function UserTable() {
                     </div>
                     <div className="flex items-center gap-2">
                       <Phone size={16} className="text-gray-400" />
-                      <span className="text-gray-900">{user.phone}</span>
+                      <span className="text-gray-900">{user.phone_number || 'N/A'}</span>
                     </div>
                   </div>
 

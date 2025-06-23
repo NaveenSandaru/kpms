@@ -206,10 +206,10 @@ export default function ViewUserDialog({ user, onClose }: Props) {
                   {user.specialization && renderInfoItem(<Briefcase className="w-4 h-4" />, "Specialization", user.specialization)}
                   {user.experience && renderInfoItem(<Clock className="w-4 h-4" />, "Experience", user.experience)}
                   {user.language && renderInfoItem(<Globe className="w-4 h-4" />, "Language", user.language)}
-                  {isDentist && user.appointment_fee && renderInfoItem(
+                  {isDentist && user.appointment_fee !== undefined && user.appointment_fee !== null && renderInfoItem(
                     <DollarSign className="w-4 h-4" />, 
                     "Consultation Fee", 
-                    `$${user.appointment_fee.toFixed(2)}`
+                    `$${Number(user.appointment_fee).toFixed(2)}`
                   )}
                 </div>
               </CardContent>
