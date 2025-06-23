@@ -765,9 +765,6 @@ const MedicalStudyInterface: React.FC = () => {
             <h1 className="text-3xl mt-6 md:mt-0 font-bold tracking-tight text-gray-900">
               DICOM studies
             </h1>
-            <p className="text-gray-600 mt-2">
-              Welcome back! Here's what's happening with DICOM studies.
-            </p>
           </div>
         </div>
 
