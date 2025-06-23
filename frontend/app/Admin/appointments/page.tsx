@@ -6,6 +6,7 @@ import { AuthContext } from '@/context/auth-context';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { AppointmentDialog } from '@/Components/AppointmentDialog'
 
 // Updated types based on the new data structure
 interface Patient {
@@ -43,10 +44,10 @@ interface ApiError {
 }
 
 const AppointmentsDashboard = () => {
-  const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL ;
+  const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
   const router = useRouter();
 
-  const {isLoadingAuth, isLoggedIn, user} = useContext(AuthContext);
+  const { isLoadingAuth, isLoggedIn, user } = useContext(AuthContext);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
@@ -55,27 +56,28 @@ const AppointmentsDashboard = () => {
   const [error, setError] = useState<string | null>(null);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+
   // Fetch appointments from backend
   const fetchAppointments = async () => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
       const response = await axios.get(`${backendURL}/appointments`, {
-        timeout: 10000, // 10 second timeout
         headers: {
           'Content-Type': 'application/json',
         }
       });
-      
+
       if (response.data) {
         setAppointments(response.data);
       }
     } catch (err: any) {
       console.error('Error fetching appointments:', err);
-      
+
       let errorMessage = 'Failed to fetch appointments';
-      
+
       if (err.code === 'ECONNABORTED') {
         errorMessage = 'Request timeout - please check your connection';
       } else if (err.response) {
@@ -94,10 +96,9 @@ const AppointmentsDashboard = () => {
             errorMessage = `Server error: ${err.response.status}`;
         }
       } else if (err.request) {
-        // Request was made but no response received
         errorMessage = 'Cannot connect to server - please check if the backend is running';
       }
-      
+
       setError(errorMessage);
     } finally {
       setIsLoading(false);
@@ -105,27 +106,32 @@ const AppointmentsDashboard = () => {
     }
   };
 
+  const handleAppointmentCreated = () => {
+    setIsDialogOpen(false);
+    fetchAppointments();
+  };
+
   // Load appointments on component mount
   useEffect(() => {
     fetchAppointments();
   }, []);
 
-  useEffect(()=>{
-    if(!isLoadingAuth){
-      if(!isLoggedIn){
+  useEffect(() => {
+    if (!isLoadingAuth) {
+      if (!isLoggedIn) {
         toast.error("Session Error", {
           description: "Your session is expired, please login again"
         });
         router.push("/");
       }
-      else if(user.role != "admin"){
+      else if (user.role != "admin") {
         toast.error("Access Error", {
           description: "You do not have access, redirecting..."
         });
         router.push("/");
       }
     }
-  },[isLoadingAuth]);
+  }, [isLoadingAuth]);
 
   // Helper function to format date
   const formatDate = (dateString: string) => {
@@ -145,7 +151,7 @@ const AppointmentsDashboard = () => {
       const note = appointment.note?.toLowerCase() || '';
       const searchLower = searchTerm.toLowerCase();
 
-      const matchesSearch = 
+      const matchesSearch =
         patientName.includes(searchLower) ||
         dentistName.includes(searchLower) ||
         note.includes(searchLower) ||
@@ -194,22 +200,23 @@ const AppointmentsDashboard = () => {
             <div>
               <h1 className="text-3xl font-bold mt-7 md:mt-0 text-gray-900">Appointments</h1>
               <p className="text-gray-600 mt-1">
-                View Appointments database entries 
+                View Appointments database entries
                 {appointments.length > 0 && (
                   <span className="ml-2 text-sm font-medium">({appointments.length} total)</span>
                 )}
               </p>
             </div>
-            
-              
-              <Button 
-                className="bg-emerald-500 hover:bg-emerald-600 text-white w-auto rounded-lg flex items-center gap-2 transition-colors"
-                disabled={isLoading}
-              >
-                <Plus size={20} />
-                Add Appointment
-              </Button>
-            
+
+
+            <Button
+              className="bg-emerald-500 hover:bg-emerald-600 text-white w-auto rounded-lg flex items-center gap-2 transition-colors"
+              disabled={isLoading}
+              onClick={() => setIsDialogOpen(true)}
+            >
+              <Plus size={20} />
+              Add Appointment
+            </Button>
+
           </div>
         </div>
 
@@ -294,8 +301,8 @@ const AppointmentsDashboard = () => {
                     <tr key={appointment.appointment_id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <img 
-                            src={appointment.patient?.profile_picture || ''} 
+                          <img
+                            src={appointment.patient?.profile_picture || ''}
                             alt={appointment.patient?.name || 'Patient'}
                             className="w-8 h-8 rounded-full object-cover"
                             onError={handleImageError}
@@ -311,8 +318,8 @@ const AppointmentsDashboard = () => {
                       </td>
                       <td className="px-2 py-4">
                         <div className="flex items-center gap-3">
-                          <img 
-                            src={appointment.dentist?.profile_picture || ''} 
+                          <img
+                            src={appointment.dentist?.profile_picture || ''}
                             alt={appointment.dentist?.name || 'Dentist'}
                             className="w-8 h-8 rounded-full object-cover"
                             onError={handleImageError}
@@ -376,8 +383,8 @@ const AppointmentsDashboard = () => {
                   <div className="flex-1 space-y-3">
                     {/* Patient Info */}
                     <div className="flex items-center gap-3">
-                      <img 
-                        src={appointment.patient?.profile_picture || ''} 
+                      <img
+                        src={appointment.patient?.profile_picture || ''}
                         alt={appointment.patient?.name || 'Patient'}
                         className="w-10 h-10 rounded-full object-cover"
                         onError={handleImageError}
@@ -393,8 +400,8 @@ const AppointmentsDashboard = () => {
 
                     {/* Dentist Info */}
                     <div className="flex items-center gap-3">
-                      <img 
-                        src={appointment.dentist?.profile_picture || ''} 
+                      <img
+                        src={appointment.dentist?.profile_picture || ''}
                         alt={appointment.dentist?.name || 'Dentist'}
                         className="w-10 h-10 rounded-full object-cover"
                         onError={handleImageError}
@@ -470,7 +477,7 @@ const AppointmentsDashboard = () => {
             <p className="text-gray-500 mb-6">
               Try adjusting your search or filter criteria.
             </p>
-            <Button 
+            <Button
               variant="outline"
               onClick={() => {
                 setSearchTerm('');
@@ -482,6 +489,12 @@ const AppointmentsDashboard = () => {
             </Button>
           </div>
         )}
+
+        <AppointmentDialog
+          open={isDialogOpen}
+          onOpenChange={setIsDialogOpen}
+          onAppointmentCreated={handleAppointmentCreated}
+        />
       </div>
     </div>
   );
