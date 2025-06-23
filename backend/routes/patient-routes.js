@@ -40,7 +40,6 @@ router.get('/:patient_id', /* authenticateToken, */ async (req, res) => {
 router.post('/', /* authenticateToken, */ async (req, res) => {
   try {
     const {
-      patient_id,
       password,
       name,
       profile_picture,
@@ -55,9 +54,8 @@ router.post('/', /* authenticateToken, */ async (req, res) => {
 
     console.log(req.body);
 
-    // Check if patient_id or email or nic already exists
-    const existingById = await prisma.patients.findUnique({ where: { patient_id } });
-    if (existingById) return res.status(409).json({ error: 'Patient ID already exists' });
+    const count = await prisma.patients.count();
+    const newPatient_id = `P${String(count).padStart(3, '0')}`;
 
     const existingByEmail = await prisma.patients.findUnique({ where: { email } });
     if (existingByEmail) return res.status(409).json({ error: 'Email already exists' });
@@ -71,7 +69,7 @@ router.post('/', /* authenticateToken, */ async (req, res) => {
 
     const created = await prisma.patients.create({
       data: {
-        patient_id,
+        patient_id: newPatient_id,
         password: hashedPassword,
         name,
         profile_picture,
