@@ -9,6 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Progress } from '@/Components/ui/progress';
 import { Alert, AlertDescription } from '@/Components/ui/alert';
+import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
+
 
 // Types
 interface SecurityQuestion {
@@ -45,6 +48,7 @@ const DentistSignUp: React.FC = () => {
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadError, setUploadError] = useState<string>('');
+  const router = useRouter();
   
   const [formData, setFormData] = useState<DentistFormData>({
     name: '',
@@ -68,6 +72,7 @@ const DentistSignUp: React.FC = () => {
     ]
   });
 
+  const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
   const [securityQuestions, setSecurityQuestions] = useState<SecurityQuestion[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -77,7 +82,7 @@ const DentistSignUp: React.FC = () => {
   useEffect(() => {
     const fetchSecurityQuestions = async () => {
       try {
-        const response = await fetch('http://localhost:5000/security-questions');
+        const response = await fetch(`${backendURL}/security-questions`);
         if (!response.ok) {
           throw new Error('Failed to fetch security questions');
         }
@@ -229,7 +234,7 @@ const DentistSignUp: React.FC = () => {
       };
 
       // Create dentist
-      const receptionistResponse = await fetch('http://localhost:5000/dentists', {
+      const receptionistResponse = await fetch(`${backendURL}/dentists`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -254,7 +259,7 @@ const DentistSignUp: React.FC = () => {
         formData.append('file', profilePicture);
         formData.append('dentist_id', dentistId);
         
-        await fetch('http://localhost:5000/photos', {
+        await fetch(`${backendURL}/photos`, {
           method: 'POST',
           body: formData,
         });
@@ -264,7 +269,7 @@ const DentistSignUp: React.FC = () => {
       const securityQuestionPromises = securityAnswers.map(async (sq) => {
         if (!sq.questionId || !sq.answer.trim()) return null;
         
-        return fetch('http://localhost:5000/dentist-security-questions-answers', {
+        return fetch(`${backendURL}/dentist-security-questions-answers`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -340,7 +345,7 @@ const DentistSignUp: React.FC = () => {
           </p>
           <div className="mt-6">
             <Button 
-              onClick={() => window.location.href = '/'}
+              onClick={() => router.push('/login')}
               className="w-full bg-emerald-600 hover:bg-emerald-700"
             >
               Go to Login
