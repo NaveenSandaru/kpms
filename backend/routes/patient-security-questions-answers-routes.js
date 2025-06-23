@@ -36,7 +36,11 @@ router.get('/:patient_id/:security_question_id', /* authenticateToken, */ async 
 
 router.post('/', /* authenticateToken, */ async (req, res) => {
   try {
-    const { patient_id, security_question_id, answer } = req.body;
+    let { patient_id, security_question_id, answer } = req.body;
+
+    if (typeof security_question_id === "string") {
+      security_question_id = Number(security_question_id);
+    }
 
     // Check if record exists to prevent duplicate composite key
     const exists = await prisma.patient_security_question_answers.findUnique({
@@ -57,7 +61,8 @@ router.post('/', /* authenticateToken, */ async (req, res) => {
       },
     });
     res.status(201).json(created);
-  } catch {
+  } catch (err) {
+    console.log(err);
     res.status(500).json({ error: 'Failed to create patient security answer' });
   }
 });

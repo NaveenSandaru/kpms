@@ -3,6 +3,9 @@ import React, { useState, useEffect, useContext } from 'react';
 import { Calendar, Clock, Users, CheckCircle, XCircle, AlertCircle, Plus, ChevronLeft, ChevronRight, Eye, Check, X } from 'lucide-react';
 import axios from 'axios';
 import { AuthContext } from '@/context/auth-context';
+import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
+
 
 type Dentist = {
   dentist_id: string,
@@ -46,6 +49,8 @@ const DentalDashboard = () => {
   const [status, setStatus] = useState("");
   const [appointment_id, setAppointment_id] = useState("");
 
+  const router = useRouter();
+
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
@@ -68,7 +73,7 @@ const DentalDashboard = () => {
       setTodaysAppointments(response.data);
     }
     catch(err: any){
-      window.alert(err.message);
+      toast.error(err.message);
     }
     finally{
       setLoadingTodaysAppointments(false);
@@ -87,7 +92,7 @@ const DentalDashboard = () => {
       setUpcomingAppointments(response.data);
     }
     catch(err: any){
-      window.alert(err.message);
+      toast.error(err.message);
     }
     finally{
       setLoadingUpcomingAppointments(false);
@@ -113,7 +118,7 @@ const DentalDashboard = () => {
       }
     }
     catch(err: any){
-      window.alert(err.message);
+      toast.error(err.message);
     }
     finally{
       setChangingStatus(false);
@@ -210,13 +215,13 @@ const DentalDashboard = () => {
     if (isLoadingAuth) return;
     if (!isLoggedIn) {
       alert("Please log in");
-      window.location.href = "/";
+      router.push("/");
       return;
     }
   
     if (user?.role !== "dentist") {
       alert("Access Denied");
-      window.location.href = "/";
+      router.push("/");
       return;
     }
   }, [isLoadingAuth]);
@@ -381,12 +386,15 @@ const DentalDashboard = () => {
                   <div key={index} className="aspect-square">
                     {day && (
                       <button
-                        className={`w-full h-full flex items-center justify-center text-sm rounded hover:bg-gray-100 ${day === 13 ? 'bg-emerald-500 text-emerald-800 hover:bg-emerald-600' :
-                            day === new Date().getDate() &&
-                              currentDate.getMonth() === new Date().getMonth() &&
-                              currentDate.getFullYear() === new Date().getFullYear()
-                              ? 'bg-emerald-50 text-emerald-800' : 'text-emrald-700'
-                          }`}
+                        className={`w-full h-full flex items-center justify-center text-sm rounded hover:bg-gray-100 '
+                            ${
+                              day === new Date().getDate() &&
+                                currentDate.getMonth() === new Date().getMonth() &&
+                                currentDate.getFullYear() === new Date().getFullYear()
+                                ? 'bg-emerald-100 text-emerald-800' : 'text-emrald-700'
+                          
+                        }
+                          `}
                       >
                         {day}
                       </button>
@@ -395,10 +403,7 @@ const DentalDashboard = () => {
                 ))}
               </div>
 
-              <button className="w-full mt-4 bg-emerald-500 hover:bg-emerald-600 text-white py-2 px-4 rounded-lg font-medium transition-colors flex items-center justify-center">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Appointment
-              </button>
+              
             </div>
           </div>
 

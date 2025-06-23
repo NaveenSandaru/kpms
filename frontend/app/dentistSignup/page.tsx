@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, ArrowLeft, User, Mail, Phone, Clock, DollarSign, Calendar, Globe, Upload, X, Camera } from 'lucide-react';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,7 +12,8 @@ import { Alert, AlertDescription } from '@/Components/ui/alert';
 
 // Types
 interface SecurityQuestion {
-  id: number;
+  security_question_id: number;
+  id: number; // For backward compatibility with existing code
   question: string;
 }
 
@@ -67,17 +68,34 @@ const DentistSignUp: React.FC = () => {
     ]
   });
 
-  // Mock security questions (would come from database)
-  const securityQuestions: SecurityQuestion[] = [
-    { id: 1, question: "What was the name of your first pet?" },
-    { id: 2, question: "In what city were you born?" },
-    { id: 3, question: "What was your mother's maiden name?" },
-    { id: 4, question: "What was the name of your elementary school?" },
-    { id: 5, question: "What was your childhood nickname?" },
-    { id: 6, question: "What is your favorite book?" },
-    { id: 7, question: "What was the make of your first car?" },
-    { id: 8, question: "In what city did you meet your spouse/significant other?" }
-  ];
+  const [securityQuestions, setSecurityQuestions] = useState<SecurityQuestion[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
+  const [generatedId, setGeneratedId] = useState('');
+
+  useEffect(() => {
+    const fetchSecurityQuestions = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/security-questions');
+        if (!response.ok) {
+          throw new Error('Failed to fetch security questions');
+        }
+        const data: SecurityQuestion[] = await response.json();
+        // Map the data to include both id and security_question_id for backward compatibility
+        const questions = data.map(q => ({
+          ...q,
+          id: q.security_question_id // Add id for backward compatibility
+        }));
+        setSecurityQuestions(questions);
+      } catch (err) {
+        console.error('Error fetching security questions:', err);
+        setError('Failed to load security questions. Please try again later.');
+      }
+    };
+
+    fetchSecurityQuestions();
+  }, []);
 
   const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -182,35 +200,113 @@ const DentistSignUp: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    if (validateStep2()) {
-      try {
-        // Create FormData object to handle file upload
-        const formDataToSend = new FormData();
-        
-        // Append all form fields
-        Object.entries(formData).forEach(([key, value]) => {
-          if (key === 'securityQuestions') {
-            formDataToSend.append(key, JSON.stringify(value));
-          } else if (key === 'profilePicture' && value) {
-            formDataToSend.append(key, value as File);
-          } else if (key !== 'profilePicture') {
-            formDataToSend.append(key, value as string);
-          }
-        });
-        
-        console.log('Form submitted with file:', formData);
-        
-        // Example API call structure:
-        // const response = await fetch('/api/dentists/register', {
-        //   method: 'POST',
-        //   body: formDataToSend // Don't set Content-Type header, let browser set it
-        // });
-        
-        alert('Registration completed successfully!');
-      } catch (error) {
-        console.error('Registration failed:', error);
-        alert('Registration failed. Please try again.');
+    if (!validateStep2()) {
+      setError('Please fill in all required fields');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      // First, create the dentist
+      const { securityQuestions: securityAnswers, profilePicture, ...dentistData } = formData;
+      
+      // Prepare dentist data in the exact format expected by the backend
+      const dentistPayload = {
+        email: dentistData.email.trim().toLowerCase(),
+        password: dentistData.password,
+        name: dentistData.name.trim(),
+        phone_number: dentistData.phoneNumber,
+        language: dentistData.language || '',
+        service_types: dentistData.serviceTypes || 'general',
+        work_days_from: dentistData.workDaysFrom || 'Monday',
+        work_days_to: dentistData.workDaysTo || 'Friday',
+        work_time_from: dentistData.workTimeFrom || '08:00',
+        work_time_to: dentistData.workTimeTo || '17:00',
+        appointment_duration: dentistData.appointmentDuration || '30',
+        appointment_fee: dentistData.appointmentFee ? parseFloat(dentistData.appointmentFee) : 0,
+      };
+
+      // Create dentist
+      const receptionistResponse = await fetch('http://localhost:5000/dentists', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(dentistPayload),
+      });
+
+      if (!receptionistResponse.ok) {
+        const errorData = await receptionistResponse.json();
+        throw new Error(errorData.error || 'Failed to create dentist account');
       }
+
+      const dentist = await receptionistResponse.json();
+      const dentistId = dentist.dentist_id;
+      
+      // Store the generated ID for display
+      setGeneratedId(dentistId);
+
+      // Upload profile picture if exists
+      if (profilePicture) {
+        const formData = new FormData();
+        formData.append('file', profilePicture);
+        formData.append('dentist_id', dentistId);
+        
+        await fetch('http://localhost:5000/photos', {
+          method: 'POST',
+          body: formData,
+        });
+      }
+
+      // Save security questions answers
+      const securityQuestionPromises = securityAnswers.map(async (sq) => {
+        if (!sq.questionId || !sq.answer.trim()) return null;
+        
+        return fetch('http://localhost:5000/dentist-security-questions-answers', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            dentist_id: dentistId,
+            security_question_id: parseInt(sq.questionId),
+            answer: sq.answer.trim(),
+          }),
+        });
+      });
+
+      await Promise.all(securityQuestionPromises);
+      
+      // Mark registration as successful
+      setRegistrationSuccess(true);
+      
+      // Clear form
+      setFormData({
+        name: '',
+        email: '',
+        password: '',
+        confirmPassword: '',
+        phoneNumber: '',
+        language: '',
+        serviceTypes: 'general',
+        workDaysFrom: 'Monday',
+        workDaysTo: 'Friday',
+        workTimeFrom: '08:00',
+        workTimeTo: '17:00',
+        appointmentDuration: '30',
+        appointmentFee: '',
+        profilePicture: null,
+        securityQuestions: Array(3).fill({ questionId: '', answer: '' })
+      });
+      setProfileImagePreview(null);
+      
+    } catch (err) {
+      console.error('Registration failed:', err);
+      setError(err instanceof Error ? err.message : 'Registration failed. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -219,11 +315,55 @@ const DentistSignUp: React.FC = () => {
       .map((sq, index) => index !== currentIndex ? sq.questionId : null)
       .filter((id): id is string => id !== null && id !== '');
     
-    return securityQuestions.filter(q => !selectedIds.includes(q.id.toString()));
+    return securityQuestions.filter(q => !selectedIds.includes(q.security_question_id.toString()));
   };
 
   const progressValue = (currentStep / 2) * 100;
   const passwordErrors = getPasswordErrors();
+
+  if (registrationSuccess) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="p-6 max-w-md w-full bg-white rounded-lg shadow-md text-center">
+          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100">
+            <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h2 className="mt-3 text-xl font-semibold text-gray-900">Registration Successful!</h2>
+          <p className="mt-2 text-gray-600">
+            Your dentist ID is: <span className="font-bold">{generatedId}</span>
+          </p>
+          <p className="mt-2 text-gray-600">
+            An email has been sent to {formData.email} with your login details.
+            Please check your inbox and keep your ID safe.
+          </p>
+          <div className="mt-6">
+            <Button 
+              onClick={() => window.location.href = '/'}
+              className="w-full bg-emerald-600 hover:bg-emerald-700"
+            >
+              Go to Login
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="p-6 max-w-md w-full bg-white rounded-lg shadow-md">
+          <h2 className="text-xl font-semibold text-red-600 mb-4">Error</h2>
+          <p className="text-gray-700 mb-4">{error}</p>
+          <Button onClick={() => setError('')} className="w-full">
+            Go Back
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-100 py-8 px-4">
@@ -610,11 +750,11 @@ const DentistSignUp: React.FC = () => {
                     
                     <Button
                       onClick={handleSubmit}
-                      disabled={!validateStep2()}
+                      disabled={!validateStep2() || isLoading}
                       className="w-full sm:flex-1 bg-emerald-600 hover:bg-emerald-700"
                       size="lg"
                     >
-                      Complete Registration
+                      {isLoading ? 'Processing...' : 'Complete Registration'}
                     </Button>
                   </div>
                 </div>

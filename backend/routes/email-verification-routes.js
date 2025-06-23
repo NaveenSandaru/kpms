@@ -1,11 +1,10 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
+import { sendVerificationCode } from '../utils/mailer.js';
 // import { authenticateToken } from '../middleware/authentication.js';
 
 const prisma = new PrismaClient();
 const router = express.Router();
-
-// email is primary key
 
 router.get('/', /* authenticateToken, */ async (req, res) => {
   try {
@@ -29,15 +28,48 @@ router.get('/:email', /* authenticateToken, */ async (req, res) => {
   }
 });
 
-router.post('/', /* authenticateToken, */ async (req, res) => {
+router.post('/verify', /* authenticateToken, */ async (req, res) => {
   try {
     const { email, code } = req.body;
-    const existing = await prisma.email_verifications.findUnique({ where: { email } });
+
+    const existing = await prisma.email_verifications.findUnique({
+      where: { email }
+    });
+    if (!existing) {
+      return res.status(409).json({ error: 'No record found' });
+    }
+
+    if(existing.code == code){
+      await prisma.email_verifications.delete({ where: { email: email } });
+      return res.status(200).json(true);
+    }
+    else{
+      return res.status(500).json(false);
+    }
+  } catch {
+    res.status(500).json({ error: 'Failed to create email verification' });
+  }
+});
+
+router.post('/', /* authenticateToken, */ async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const existing = await prisma.email_verifications.findUnique({
+      where: { email }
+    });
     if (existing) {
       return res.status(409).json({ error: 'Verification for this email already exists' });
     }
-    const created = await prisma.email_verifications.create({ data: { email, code } });
-    res.status(201).json(created);
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+    const created = await prisma.email_verifications.create({
+      data: { email, code }
+    });
+
+    sendVerificationCode(email, code);
+    res.status(201).json("Created Succesfully");
   } catch {
     res.status(500).json({ error: 'Failed to create email verification' });
   }

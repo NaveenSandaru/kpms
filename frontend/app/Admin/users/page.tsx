@@ -64,7 +64,7 @@ export default function UserTable() {
       const allUsers: User[] = [...dentistUsers, ...receptionistUsers];
       setUsers(allUsers);
     } catch (err: any) {
-      window.alert(err.message);
+      toast.error(err.message);
     } finally {
       setLoadingUsers(false);
     }
@@ -130,7 +130,7 @@ export default function UserTable() {
               className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors w-auto"
             >
               <Plus size={20} />
-              Add User
+              Invite User
             </Button>
           </div>
         </div>
