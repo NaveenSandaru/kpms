@@ -178,19 +178,43 @@ const RadiologistSignUp: React.FC = () => {
   const handleSubmit = async () => {
     if (validateStep2()) {
       try {
-        // Prepare radiologist data
+        // Show loading state
+        toast.loading('Creating your account...');
+        
+        let profilePictureUrl = null;
+        
+        // 1. Upload profile picture if exists
+        if (formData.profilePicture) {
+          const formDataToSend = new FormData();
+          formDataToSend.append('image', formData.profilePicture);
+          
+          try {
+            const uploadResponse = await axios.post(
+              `${backendURL}/photos`,
+              formDataToSend,
+              {
+                headers: {
+                  'Content-Type': 'multipart/form-data'
+                }
+              }
+            );
+            profilePictureUrl = uploadResponse.data.url;
+          } catch (uploadError) {
+            console.error('Profile picture upload failed:', uploadError);
+            // Continue with registration even if upload fails
+            toast.warning('Profile picture upload failed. Continuing without it.');
+          }
+        }
+
+        // 2. Create the radiologist
         const radiologistData = {
           name: formData.name,
           email: formData.email,
           password: formData.password,
           phone_number: formData.phoneNumber,
-          profile_picture: formData.profilePicture ? formData.profilePicture.name : null
+          profile_picture: profilePictureUrl
         };
 
-        // Show loading state
-        toast.loading('Creating your account...');
-
-        // 1. Create the radiologist
         const radiologistResponse = await axios.post(
           `${backendURL}/radiologists`,
           radiologistData,

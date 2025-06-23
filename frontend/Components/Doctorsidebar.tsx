@@ -63,12 +63,12 @@ const DoctorSidebar = () => {
         title: "Treatment Plans",
         url: `/doctor/${doctorId}/treatment-plans`,
         icon: UserCheck,
-      },
+      },*/
       {
         title: "Reports",
-        url: `/doctor/${doctorId}/reports`,
+        url: `/dentist/studies`,
         icon: BarChart3,
-      },*/
+      },
     ];
   }, []);
 
