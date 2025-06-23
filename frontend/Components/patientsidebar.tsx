@@ -57,6 +57,11 @@ const PatientSidebar = () => {
     url: "/patient/billing",
     icon: UserCheck,
   },
+  {
+    title: "My Records",
+    url: "/patient/records",
+    icon: ClipboardList,
+  },
 
     ];
   }, []);

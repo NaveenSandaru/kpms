@@ -172,6 +172,11 @@ const HealthcareDashboard: React.FC = () => {
   };
 
   const getStatusColor = (status: string): string => {
+    // Handle null, undefined, or empty status
+    if (!status) {
+      return 'bg-gray-100 text-gray-700';
+    }
+    
     switch (status.toLowerCase()) {
       case 'confirmed':
         return 'bg-green-100 text-green-700';
@@ -415,12 +420,12 @@ const HealthcareDashboard: React.FC = () => {
                     {/* Status and Actions */}
                     <div className="flex items-center space-x-2 ml-4">
                       <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(appointment.status)}`}>
-                        {appointment.status}
+                        {appointment.status || 'Unknown'}
                       </span>
 
                       {/* Action buttons for patient */}
                       <div className="flex items-center space-x-1">
-                        {appointment.status.toLowerCase() === 'pending' && (
+                        {appointment.status && appointment.status.toLowerCase() === 'pending' && (
                           <button
                             className="p-2 text-red-600 hover:text-red-800 transition-colors"
                             onClick={() => handleStatusChange(appointment.appointment_id, 'cancelled')}
