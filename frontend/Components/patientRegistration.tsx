@@ -48,6 +48,8 @@ interface FormErrors {
   password?: string
   confirmPassword?: string
   date_of_birth?: string
+  nic?: string
+  blood_group?: string
   securityAnswer1?: string
   securityAnswer2?: string
   securityAnswer3?: string
@@ -64,8 +66,8 @@ export default function ClientRegistration() {
     email: "",
     contactNumber: "",
     date_of_birth: "",
-    nic:"",
-    blood_group:"",
+    nic: "",
+    blood_group: "",
     gender: "",
     address: "",
     password: "",
@@ -227,7 +229,7 @@ export default function ClientRegistration() {
 
     // Check email existence only on blur and if it's a valid email
     if (name === 'email' && formData.email && isValidEmail(formData.email)) {
-      
+
     }
   }
 
@@ -322,6 +324,8 @@ export default function ClientRegistration() {
     formData.password,
     formData.confirmPassword,
     formData.date_of_birth,
+    formData.blood_group,
+    formData.nic,
     formData.securityQuestion1,
     formData.securityAnswer1,
     formData.securityQuestion2,
@@ -372,7 +376,7 @@ export default function ClientRegistration() {
       description: "You can now proceed to email verification.",
     })
   }
-  
+
   const sendOtpToEmail = async () => {
     if (!formData.email) {
       toast.error("Email Required", {
@@ -508,51 +512,57 @@ export default function ClientRegistration() {
         imageFormData.append("image", formData.image)
       }
 
-      // Register the client first
-      const registrationResponse = await axios.post("http://localhost:5000/clients", {
-        datatosendtoclient: {
+      const regiRes = await axios.post(
+        `${backendURL}/patients/`,
+        {
           email: formData.email,
           name: `${formData.firstName} ${formData.lastName}`,
           phone_number: formData.contactNumber || "",
           date_of_birth: formData.date_of_birth,
-          gender: formData.gender.charAt(0).toUpperCase(),
+          nic: formData.nic || "",
+          blood_group: formData.blood_group || "",
+          gender: formData.gender,
           address: formData.address || "",
           password: formData.password,
           profile_picture: null
         }
-      })
+      )
 
-      if (registrationResponse.status === 201) {
-        // If registration successful, submit security questions
-        const securityQuestionsResponse = await axios.post("http://localhost:5000/client-user-questions", {
-          email: formData.email,
-          answers: answeredQuestions.map(q => ({
-            question_id: q.question,
-            answer: q.answer.trim()
-          }))
-        })
+      if (regiRes.status === 201) {
+        for (const q of answeredQuestions) {
+          await axios.post(
+            `${backendURL}/patient-security-questions-answers/`,
+            {
+              patient_id: regiRes.data.patient_id,
+              security_question_id: q.question,
+              answer: q.answer,
+            }
+          );
+        }
 
-        // Upload image if exists
         if (formData.image) {
-          const uploadResponse = await axios.post(`http://localhost:5000/photos`, imageFormData, {
-            headers: {
-              "Content-Type": "multipart/form-data",
-            },
-          })
+          const uploadres = await axios.post(
+            `${backendURL}/photos`,
+            imageFormData,
+            {
+              headers: {
+                "Content-Type": "multipart/form-data",
+              }
+            }
+          );
 
           // Update client with profile picture URL
-          if (uploadResponse.data.url) {
-            await axios.put("http://localhost:5000/clients", {
-              email: formData.email,
-              profile_picture: uploadResponse.data.url
-            })
+          if (uploadres.data.url) {
+            await axios.put(`${backendURL}/patients/${regiRes.data.patient_id}`, {
+              profile_picture: uploadres.data.url
+            });
           }
         }
 
-        toast.success("Registration successful! redirecting to login page...")
-        router.push("/")
+        toast.success("Registration successful! redirecting to login page...");
+        router.push("/");
       }
-    } catch (error:any) {
+    } catch (error: any) {
       console.error("Registration error:", error)
       if (error.response?.data?.error?.includes("duplicate key")) {
         toast.error("This email is already registered")
@@ -569,11 +579,10 @@ export default function ClientRegistration() {
       {steps.map((step, index) => (
         <div key={step.number} className="flex items-center">
           <div
-            className={`flex items-center justify-center w-10 h-10 rounded-full border-2 ${
-              currentStep >= step.number
-                ? "bg-emerald-600 border-emerald-600 text-white"
-                : "border-gray-300 text-gray-400"
-            }`}
+            className={`flex items-center justify-center w-10 h-10 rounded-full border-2 ${currentStep >= step.number
+              ? "bg-emerald-600 border-emerald-600 text-white"
+              : "border-gray-300 text-gray-400"
+              }`}
           >
             {currentStep > step.number ? <CheckCircle className="w-5 h-5" /> : <step.icon className="w-5 h-5" />}
           </div>
@@ -793,22 +802,55 @@ export default function ClientRegistration() {
         </div>
       </div>
 
-      <div className="space-y-1">
-        <Label>Gender</Label>
-        <RadioGroup value={formData.gender} onValueChange={(value) => setFormData({ ...formData, gender: value })}>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="male" id="male" />
-            <Label htmlFor="male">Male</Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="female" id="female" />
-            <Label htmlFor="female">Female</Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="other" id="other" />
-            <Label htmlFor="other">Other</Label>
-          </div>
-        </RadioGroup>
+      <div className="flex justify-between">
+        <div className="flex flex-col">
+          <Label>Gender</Label>
+          <RadioGroup value={formData.gender} onValueChange={(value) => setFormData({ ...formData, gender: value })}>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="Male" id="male" />
+              <Label htmlFor="male">Male</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="Female" id="female" />
+              <Label htmlFor="female">Female</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="Other" id="other" />
+              <Label htmlFor="other">Other</Label>
+            </div>
+          </RadioGroup>
+        </div>
+        <div>
+          <Label>NIC</Label>
+          <Input
+            id="nic"
+            type="text"
+            min="1"
+            max="120"
+            value={formData.nic}
+            onChange={(e) => handleFieldChange("nic", e.target.value)}
+            onBlur={() => handleFieldBlur("nic")}
+            placeholder="Enter your NIC"
+            className={errors.nic && touched.nic ? "border-red-500" : ""}
+          />
+          <ErrorMessage message={touched.date_of_birth ? errors.date_of_birth : undefined} />
+        </div>
+        <div>
+          <Label>Blood Group</Label>
+          <Input
+            id="blood_group"
+            type="text"
+            min="1"
+            max="120"
+            value={formData.blood_group}
+            onChange={(e) => handleFieldChange("blood_group", e.target.value)}
+            onBlur={() => handleFieldBlur("blood_group")}
+            placeholder="Enter your Blood Group"
+            className={errors.blood_group && touched.blood_group ? "border-red-500" : ""}
+          />
+          <ErrorMessage message={touched.blood_group ? errors.blood_group : undefined} />
+        </div>
+
       </div>
 
       <div className="space-y-1">
@@ -931,9 +973,9 @@ export default function ClientRegistration() {
 
           {!otpSent ? (
             <>
-              <LoadingButton 
-                onClick={sendOtpToEmail} 
-                disabled={!isRecaptchaVerified || !formData.email} 
+              <LoadingButton
+                onClick={sendOtpToEmail}
+                disabled={!isRecaptchaVerified || !formData.email}
                 className="w-full"
                 isLoading={isSendingOtp}
                 loadingText="Sending verification code..."
@@ -984,9 +1026,9 @@ export default function ClientRegistration() {
                 </div>
 
                 {!isEmailVerified ? (
-                  <LoadingButton 
-                    onClick={verifyOtp} 
-                    disabled={otp.some((digit) => !digit)} 
+                  <LoadingButton
+                    onClick={verifyOtp}
+                    disabled={otp.some((digit) => !digit)}
                     className="w-full"
                     isLoading={isVerifyingOtp}
                     loadingText="Verifying..."
@@ -1043,7 +1085,7 @@ export default function ClientRegistration() {
             >
               <option value="">Select a security question</option>
               {securityQuestions.map((question) => (
-                <option key={question.question_id} value={question.question_id}>
+                <option key={question.security_question_id} value={question.security_question_id}>
                   {question.question}
                 </option>
               ))}
@@ -1071,9 +1113,9 @@ export default function ClientRegistration() {
             >
               <option value="">Select a security question</option>
               {securityQuestions
-                .filter((q) => q.question_id !== formData.securityQuestion1)
+                .filter((q) => q.security_question_id !== formData.securityQuestion1)
                 .map((question) => (
-                  <option key={question.question_id} value={question.question_id}>
+                  <option key={question.security_question_id} value={question.security_question_id}>
                     {question.question}
                   </option>
                 ))}
@@ -1101,9 +1143,9 @@ export default function ClientRegistration() {
             >
               <option value="">Select a security question</option>
               {securityQuestions
-                .filter((q) => q.question_id !== formData.securityQuestion1 && q.question_id !== formData.securityQuestion2)
+                .filter((q) => q.security_question_id !== formData.securityQuestion1 && q.security_question_id !== formData.securityQuestion2)
                 .map((question) => (
-                  <option key={question.question_id} value={question.question_id}>
+                  <option key={question.security_question_id} value={question.security_question_id}>
                     {question.question}
                   </option>
                 ))}
@@ -1165,7 +1207,7 @@ export default function ClientRegistration() {
   // Update the canProceed function to check for emailExists
   const canProceed = () => {
     if (emailExists) return false;
-    
+
     switch (currentStep) {
       case 1:
         return (

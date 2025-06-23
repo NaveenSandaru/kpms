@@ -1,6 +1,7 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
+import { sendAccountCreationNotice } from '../utils/mailer.js';
 // import { authenticateToken } from '../middleware/authentication.js';
 
 const prisma = new PrismaClient();
@@ -83,6 +84,7 @@ router.post('/', /* authenticateToken, */ async (req, res) => {
       },
     });
 
+    sendAccountCreationNotice(email, newPatient_id);
     res.status(201).json(created);
   } catch(err) {
     console.log(err);
@@ -146,6 +148,7 @@ router.put('/:patient_id', /* authenticateToken, */ async (req, res) => {
     res.status(500).json({ error: 'Failed to update patient' });
   }
 });
+
 
 router.delete('/:patient_id', /* authenticateToken, */ async (req, res) => {
   try {
