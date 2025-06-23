@@ -48,6 +48,7 @@ export function AppointmentDialog({ open, onOpenChange, onAppointmentCreated }: 
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([])
   const [loading, setLoading] = useState(false)
   const [dateString, setDateString] = useState<string>('')
+  const [debugInfo, setDebugInfo] = useState<string>('') // Added for debugging
   
   const [formData, setFormData] = useState({
     patientId: '',
@@ -62,29 +63,48 @@ export function AppointmentDialog({ open, onOpenChange, onAppointmentCreated }: 
   const generateTimeSlots = (workTimeFrom: string, workTimeTo: string, duration: string): TimeSlot[] => {
     const slots: TimeSlot[] = []
     
-    console.log('Generating slots with:', { workTimeFrom, workTimeTo, duration }) // Debug log
+    console.log('🔍 Generating slots with:', { workTimeFrom, workTimeTo, duration })
     
-    // Parse duration (assuming format like "30 minutes" or "45 minutes" or just "30")
+    // More robust duration parsing
     const durationMatch = duration.match(/(\d+)/)
     const durationMinutes = durationMatch ? parseInt(durationMatch[1]) : 30
     
-    console.log('Parsed duration minutes:', durationMinutes) // Debug log
+    if (durationMinutes <= 0) {
+      console.warn('⚠️ Invalid duration:', duration)
+      return slots
+    }
     
-    // Parse work times (assuming format like "09:00" or "9:00 AM")
-    const parseTime = (timeStr: string): { hours: number, minutes: number } => {
-      // Remove any non-digit and non-colon characters, handle AM/PM
+    console.log('⏱️ Parsed duration minutes:', durationMinutes)
+    
+    // Enhanced time parsing function
+    const parseTime = (timeStr: string): { hours: number, minutes: number } | null => {
+      if (!timeStr || typeof timeStr !== 'string') {
+        console.warn('⚠️ Invalid time string:', timeStr)
+        return null
+      }
+      
       let cleanTime = timeStr.trim()
       
       // Handle AM/PM format
       const isPM = /PM/i.test(cleanTime)
       const isAM = /AM/i.test(cleanTime)
       
-      // Extract just the time part
+      // Extract just the time part (digits and colon)
       cleanTime = cleanTime.replace(/[^\d:]/g, '')
       
+      if (!cleanTime.includes(':')) {
+        // Handle cases like "9" -> "9:00"
+        cleanTime = cleanTime + ':00'
+      }
+      
       const [hoursStr, minutesStr = '0'] = cleanTime.split(':')
-      let hours = parseInt(hoursStr) || 0
+      let hours = parseInt(hoursStr)
       const minutes = parseInt(minutesStr) || 0
+      
+      if (isNaN(hours) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+        console.warn('⚠️ Invalid time components:', { hours, minutes, original: timeStr })
+        return null
+      }
       
       // Convert 12-hour to 24-hour format
       if (isPM && hours !== 12) {
@@ -93,24 +113,36 @@ export function AppointmentDialog({ open, onOpenChange, onAppointmentCreated }: 
         hours = 0
       }
       
+      // Ensure hours are within valid range after AM/PM conversion
+      if (hours > 23) hours = 23
+      if (hours < 0) hours = 0
+      
       return { hours, minutes }
     }
     
     const startTime = parseTime(workTimeFrom)
     const endTime = parseTime(workTimeTo)
     
-    console.log('Parsed times:', { startTime, endTime }) // Debug log
+    if (!startTime || !endTime) {
+      console.error('❌ Failed to parse work times:', { workTimeFrom, workTimeTo })
+      return slots
+    }
+    
+    console.log('🕐 Parsed times:', { startTime, endTime })
     
     // Convert to minutes for easier calculation
     let currentMinutes = startTime.hours * 60 + startTime.minutes
     const endMinutes = endTime.hours * 60 + endTime.minutes
     
-    console.log('Time in minutes:', { currentMinutes, endMinutes }) // Debug log
+    console.log('📊 Time in minutes:', { currentMinutes, endMinutes })
     
     // Handle case where end time is next day (e.g., night shift)
     const actualEndMinutes = endMinutes <= currentMinutes ? endMinutes + 24 * 60 : endMinutes
     
-    while (currentMinutes + durationMinutes <= actualEndMinutes) {
+    let slotCount = 0
+    const maxSlots = 50 // Safety limit to prevent infinite loops
+    
+    while (currentMinutes + durationMinutes <= actualEndMinutes && slotCount < maxSlots) {
       const startHours = Math.floor(currentMinutes / 60) % 24
       const startMins = currentMinutes % 60
       
@@ -128,14 +160,24 @@ export function AppointmentDialog({ open, onOpenChange, onAppointmentCreated }: 
       })
       
       currentMinutes += durationMinutes
+      slotCount++
     }
     
-    console.log('Generated slots:', slots) // Debug log
+    if (slotCount >= maxSlots) {
+      console.warn('⚠️ Hit maximum slot limit, possible infinite loop prevented')
+    }
+    
+    console.log('✅ Generated slots:', slots)
     return slots
   }
 
   // Check if selected date is within dentist's working days
   const isWorkingDay = (date: Date, dentist: Dentist): boolean => {
+    if (!dentist || !dentist.work_days_from || !dentist.work_days_to) {
+      console.warn('⚠️ Invalid dentist working days data:', dentist)
+      return false
+    }
+    
     const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
     const selectedDay = dayNames[date.getDay()]
     
@@ -144,26 +186,49 @@ export function AppointmentDialog({ open, onOpenChange, onAppointmentCreated }: 
     const toIndex = workDays.indexOf(dentist.work_days_to)
     const selectedIndex = workDays.indexOf(selectedDay)
     
+    if (fromIndex === -1 || toIndex === -1 || selectedIndex === -1) {
+      console.warn('⚠️ Invalid day names:', { 
+        from: dentist.work_days_from, 
+        to: dentist.work_days_to, 
+        selected: selectedDay 
+      })
+      return true // Default to true if we can't parse the days
+    }
+    
+    let isWorking: boolean
     if (fromIndex <= toIndex) {
-      return selectedIndex >= fromIndex && selectedIndex <= toIndex
+      isWorking = selectedIndex >= fromIndex && selectedIndex <= toIndex
     } else {
       // Handle case where work days span across week (e.g., Saturday to Monday)
-      return selectedIndex >= fromIndex || selectedIndex <= toIndex
+      isWorking = selectedIndex >= fromIndex || selectedIndex <= toIndex
     }
+    
+    console.log('📅 Working day check:', { 
+      selectedDay, 
+      workFrom: dentist.work_days_from, 
+      workTo: dentist.work_days_to, 
+      isWorking 
+    })
+    
+    return isWorking
   }
 
   // Fetch patients and dentists on component mount
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setDebugInfo('Fetching patients and dentists...')
         const [patientsRes, dentistsRes] = await Promise.all([
           axios.get(`${backendURL}/patients`),
           axios.get(`${backendURL}/dentists`)
         ])
         setPatients(patientsRes.data)
         setDentists(dentistsRes.data)
+        setDebugInfo(`Loaded ${patientsRes.data.length} patients and ${dentistsRes.data.length} dentists`)
+        console.log('✅ Loaded data:', { patients: patientsRes.data.length, dentists: dentistsRes.data.length })
       } catch (error) {
-        console.error('Error fetching data:', error)
+        console.error('❌ Error fetching data:', error)
+        setDebugInfo('Error loading data: ' + (error as Error).message)
       }
     }
 
@@ -177,15 +242,21 @@ export function AppointmentDialog({ open, onOpenChange, onAppointmentCreated }: 
     const fetchDentistDetails = async () => {
       if (!formData.dentistId) {
         setSelectedDentist(null)
+        setDebugInfo('')
         return
       }
       
       try {
+        setDebugInfo('Loading dentist details...')
+        console.log('🔍 Fetching dentist details for ID:', formData.dentistId)
         const response = await axios.get(`${backendURL}/dentists/${formData.dentistId}`)
+        console.log('✅ Dentist details loaded:', response.data)
         setSelectedDentist(response.data)
+        setDebugInfo(`Loaded dentist: Dr. ${response.data.name}`)
       } catch (error) {
-        console.error('Error fetching dentist details:', error)
+        console.error('❌ Error fetching dentist details:', error)
         setSelectedDentist(null)
+        setDebugInfo('Error loading dentist details: ' + (error as Error).message)
       }
     }
     
@@ -194,84 +265,65 @@ export function AppointmentDialog({ open, onOpenChange, onAppointmentCreated }: 
 
   // Generate time slots when dentist details are loaded or date changes
   useEffect(() => {
-    const generateAvailableSlots = async () => {
+    const generateAllSlots = async () => {
+      console.log('🔄 generateAllSlots triggered:', { 
+        hasDentist: !!selectedDentist, 
+        hasDate: !!dateString,
+        dentistId: selectedDentist?.dentist_id,
+        date: dateString
+      })
+      
       if (!selectedDentist || !dateString) {
         setTimeSlots([])
+        setDebugInfo(!selectedDentist ? 'No dentist selected' : 'No date selected')
         return
       }
       
       const selectedDate = new Date(dateString)
       
-      // Check if selected date is a working day
-      if (!isWorkingDay(selectedDate, selectedDentist)) {
+      // Validate dentist schedule data
+      if (!selectedDentist.work_time_from || !selectedDentist.work_time_to || !selectedDentist.appointment_duration) {
+        console.error('❌ Missing dentist schedule data:', {
+          work_time_from: selectedDentist.work_time_from,
+          work_time_to: selectedDentist.work_time_to,
+          appointment_duration: selectedDentist.appointment_duration
+        })
         setTimeSlots([])
+        setDebugInfo('Error: Dentist schedule data is incomplete')
         return
       }
       
-      try {
-        // Generate all possible time slots based on dentist's schedule
-        const allSlots = generateTimeSlots(
-          selectedDentist.work_time_from,
-          selectedDentist.work_time_to,
-          selectedDentist.appointment_duration
-        )
-        
-        console.log('All generated slots:', allSlots) // Debug log
-        
-        // Fetch existing appointments for this dentist on this date
-        const existingAppointmentsRes = await axios.get(
-          `${backendURL}/appointments?dentistId=${selectedDentist.dentist_id}&date=${dateString}`
-        )
-        
-        const existingAppointments = existingAppointmentsRes.data || []
-        console.log('Existing appointments:', existingAppointments) // Debug log
-        
-        // Helper function to convert time string to minutes for easier comparison
-        const timeToMinutes = (timeStr: string): number => {
-          const [hours, minutes] = timeStr.split(':').map(Number)
-          return hours * 60 + minutes
-        }
-        
-        // Filter out time slots that conflict with existing appointments
-        const availableSlots = allSlots.filter(slot => {
-          const slotStartMinutes = timeToMinutes(slot.start)
-          const slotEndMinutes = timeToMinutes(slot.end)
-          
-          // Check if this slot conflicts with any existing appointment
-          const hasConflict = existingAppointments.some((appointment: any) => {
-            const appointmentStartMinutes = timeToMinutes(appointment.time_from)
-            const appointmentEndMinutes = timeToMinutes(appointment.time_to)
-            
-            // More precise overlap detection
-            // Two time ranges overlap if:
-            // 1. Slot starts before appointment ends AND slot ends after appointment starts
-            const overlaps = slotStartMinutes < appointmentEndMinutes && slotEndMinutes > appointmentStartMinutes
-            
-            console.log(`Checking slot ${slot.start}-${slot.end} vs appointment ${appointment.time_from}-${appointment.time_to}: ${overlaps ? 'CONFLICT' : 'OK'}`)
-            
-            return overlaps
-          })
-          
-          return !hasConflict
-        })
-        
-        console.log('Available slots after filtering:', availableSlots) // Debug log
-        setTimeSlots(availableSlots)
-        
-      } catch (error) {
-        console.error('Error generating time slots:', error)
-        // If we can't fetch existing appointments, still show all possible slots
-        const allSlots = generateTimeSlots(
-          selectedDentist.work_time_from,
-          selectedDentist.work_time_to,
-          selectedDentist.appointment_duration
-        )
-        console.log('Fallback: showing all slots due to error:', allSlots)
-        setTimeSlots(allSlots)
+      // Check if selected date is a working day
+      if (!isWorkingDay(selectedDate, selectedDentist)) {
+        setTimeSlots([])
+        setDebugInfo(`${selectedDate.toLocaleDateString()} is not a working day`)
+        return
       }
+      
+      setDebugInfo('Generating all time slots...')
+      
+      // Generate all possible time slots based on dentist's schedule
+      const allSlots = generateTimeSlots(
+        selectedDentist.work_time_from,
+        selectedDentist.work_time_to,
+        selectedDentist.appointment_duration
+      )
+      
+      console.log('📋 All generated slots:', allSlots)
+      
+      if (allSlots.length === 0) {
+        setTimeSlots([])
+        setDebugInfo('No time slots could be generated from dentist schedule')
+        return
+      }
+      
+      // Show ALL time slots without filtering for existing appointments
+      setTimeSlots(allSlots)
+      setDebugInfo(`Showing all ${allSlots.length} time slots (including booked ones)`)
+      console.log('✅ Showing all slots:', allSlots)
     }
     
-    generateAvailableSlots()
+    generateAllSlots()
   }, [selectedDentist, dateString, backendURL])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -306,6 +358,7 @@ export function AppointmentDialog({ open, onOpenChange, onAppointmentCreated }: 
       })
       setDateString('')
       setSelectedDentist(null)
+      setDebugInfo('')
     } catch (error) {
       console.error('Error creating appointment:', error)
       alert('Failed to create appointment. Please try again.')
@@ -320,7 +373,7 @@ export function AppointmentDialog({ open, onOpenChange, onAppointmentCreated }: 
       [field]: value
     }))
     
-    // Reset time slot when dentist or date changes
+    // Reset time slot when dentist changes
     if (field === 'dentistId') {
       setFormData(prev => ({
         ...prev,
@@ -354,6 +407,15 @@ export function AppointmentDialog({ open, onOpenChange, onAppointmentCreated }: 
           </DialogHeader>
           
           <div className="grid gap-4 py-4">
+            {/* Debug Information - Remove this in production */}
+            {debugInfo && (
+              <div className="grid grid-cols-4 items-center gap-4">
+                <div className="col-span-4 text-xs text-blue-600 bg-blue-50 p-2 rounded">
+                  🔍 Debug: {debugInfo}
+                </div>
+              </div>
+            )}
+
             {/* Patient Selection */}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="patient" className="text-right">
@@ -398,7 +460,18 @@ export function AppointmentDialog({ open, onOpenChange, onAppointmentCreated }: 
               </Select>
             </div>
 
-            {/* Date Picker - Normal HTML Input */}
+            {/* Show selected dentist's schedule info */}
+            {selectedDentist && (
+              <div className="grid grid-cols-4 items-center gap-4">
+                <div className="col-span-4 text-xs text-gray-600 bg-gray-50 p-2 rounded">
+                  📋 Schedule: {selectedDentist.work_days_from} to {selectedDentist.work_days_to}, 
+                  {selectedDentist.work_time_from} - {selectedDentist.work_time_to}, 
+                  {selectedDentist.appointment_duration} slots
+                </div>
+              </div>
+            )}
+
+            {/* Date Picker */}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="date" className="text-right">
                 Date <span className="text-red-500">*</span>
@@ -455,6 +528,15 @@ export function AppointmentDialog({ open, onOpenChange, onAppointmentCreated }: 
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Show time slots count for debugging */}
+            {selectedDentist && dateString && (
+              <div className="grid grid-cols-4 items-center gap-4">
+                <div className="col-span-4 text-xs text-green-600 bg-green-50 p-2 rounded">
+                  🕐 Total time slots: {timeSlots.length} (all slots shown, including booked ones)
+                </div>
+              </div>
+            )}
 
             {/* Note */}
             <div className="grid grid-cols-4 items-start gap-4">
