@@ -187,6 +187,7 @@ model security_questions {
   patient_answers         patient_security_question_answers[]
   dentist_answers         dentist_security_question_answers[]
   receptionist_answers    receptionist_security_question_answers[]
+  radiologist_answers     radiologist_security_question_answers[]
 }
 
 model patient_security_question_answers {
@@ -220,6 +221,17 @@ model receptionist_security_question_answers {
   question                security_questions @relation(fields: [security_question_id], references: [security_question_id])
 
   @@id([receptionist_id, security_question_id])
+}
+
+model radiologist_security_question_answers {
+  radiologist_id          String
+  security_question_id    Int
+  answer                  String
+
+  radiologist             radiologists       @relation(fields: [radiologist_id], references: [radiologist_id])
+  question                security_questions @relation(fields: [security_question_id], references: [security_question_id])
+
+  @@id([radiologist_id, security_question_id])
 }
 
 model insurance_details {
@@ -278,6 +290,7 @@ model radiologists {
 
   // Relations
   studies         study[]
+  security_answers        radiologist_security_question_answers[]
   
   @@map("radiologists")
 }
