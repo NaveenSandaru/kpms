@@ -35,6 +35,7 @@ interface RadiologistFormData {
 }
 
 const RadiologistSignUp: React.FC = () => {
+  const router = useRouter();
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -177,41 +178,74 @@ const RadiologistSignUp: React.FC = () => {
   const handleSubmit = async () => {
     if (validateStep2()) {
       try {
-        const formDataToSend = new FormData();
-        formDataToSend.append('name', formData.name);
-        formDataToSend.append('email', formData.email);
-        formDataToSend.append('password', formData.password);
-        formDataToSend.append('phone_number', formData.phoneNumber);
-  
-        if (formData.profilePicture) {
-          formDataToSend.append('profile_picture', formData.profilePicture);
-        }
-  
-        // Add security questions and answers
-        formData.securityQuestions.forEach((sq, index) => {
-          formDataToSend.append(`security_questions[${index}][question_id]`, sq.questionId.toString());
-          formDataToSend.append(`security_questions[${index}][answer]`, sq.answer);
-        });
-  
-        const response = await axios.post(
+        // Prepare radiologist data
+        const radiologistData = {
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+          phone_number: formData.phoneNumber,
+          profile_picture: formData.profilePicture ? formData.profilePicture.name : null
+        };
+
+        // Show loading state
+        toast.loading('Creating your account...');
+
+        // 1. Create the radiologist
+        const radiologistResponse = await axios.post(
           `${backendURL}/radiologists`,
-          formDataToSend,
+          radiologistData,
           {
             headers: {
-              'Content-Type': 'multipart/form-data'
+              'Content-Type': 'application/json'
             }
           }
         );
-  
-        if (response.status === 201) {
-          alert('Registration successful!');
-          // Redirect or show success message
+
+        if (radiologistResponse.status === 201) {
+          const radiologistId = radiologistResponse.data.radiologist_id;
+          
+          // 2. Save security questions
+          toast.loading('Saving your security questions...');
+          
+          const securityPromises = formData.securityQuestions.map(sq => {
+            return axios.post(
+              `${backendURL}/radiologist-security-question-answers`,
+              {
+                radiologist_id: radiologistId,
+                security_question_id: sq.questionId,
+                answer: sq.answer
+              }
+            );
+          });
+
+          try {
+            // Wait for all security questions to be saved
+            await Promise.all(securityPromises);
+            
+            // Dismiss loading and show success
+            toast.dismiss();
+            toast.success('Registration successful! Redirecting to login...');
+            
+            // Redirect to login after a short delay
+            setTimeout(() => {
+              router.push('/');
+            }, 2000);
+            
+          } catch (securityError) {
+            console.error('Failed to save security questions:', securityError);
+            toast.error('Account created but failed to save security questions. Please update them in your profile.');
+            // Still redirect since account was created
+            setTimeout(() => {
+              router.push('/');
+            }, 3000);
+          }
         } else {
-          throw new Error(response.data.message || 'Registration failed');
+          throw new Error('Failed to create radiologist');
         }
       } catch (error: any) {
         console.error('Registration failed:', error);
-        alert(error.response?.data?.message || 'Registration failed. Please try again.');
+        toast.dismiss(); // Dismiss any loading toasts
+        toast.error(error.response?.data?.message || 'Registration failed. Please try again.');
       }
     }
   };
