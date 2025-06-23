@@ -8,6 +8,8 @@ import { AuthContext } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { set } from 'date-fns';
+import { toast } from 'sonner';
+
 
 interface Patient {
   patient_id: string;
@@ -88,7 +90,7 @@ export default function ReceptionistDashboard() {
       setTodaysNotCheckedIn(todaysNotCheckedInCount.data);
     }
     catch (err: any) {
-      window.alert(err.message);
+      toast.error(err.message);
     }
     finally {
       setLoading(false);
@@ -121,7 +123,7 @@ export default function ReceptionistDashboard() {
         throw new Error("Error getting today's appointments");
       }
     } catch (err: any) {
-      window.alert(err.message);
+      toast.error(err.message);
     }
   };
 
@@ -137,10 +139,11 @@ export default function ReceptionistDashboard() {
       if(response.status != 202){
         throw new Error("Error Changing Status");
       }
-      window.alert("Patient Checked In");
+      toast.success("Patient Checked In");
+    
     }
     catch(err: any){
-      window.alert(err.message);
+      toast.error(err.message);
     }
     finally{
       setCheckingIn(false)
@@ -150,10 +153,10 @@ export default function ReceptionistDashboard() {
   useEffect(() => {
     if (isLoadingAuth) return;
     if (!isLoggedIn) {
-      window.alert("Please Log in");
+      toast.error("You are not logged in");
       router.push("/");
     } else if (user.role !== "receptionist") {
-      window.alert("Access Denied");
+     toast.error("Access Denied");
       router.push("/");
     } else {
       fetchAllCounts();

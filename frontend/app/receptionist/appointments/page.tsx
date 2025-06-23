@@ -10,6 +10,8 @@ import { Switch } from '@/Components/ui/switch'
 import { Search, Plus, Phone, Mail, Calendar, Clock, User, DollarSign, FileText, CheckCircle, CreditCard } from 'lucide-react'
 import axios from 'axios'
 import { AppointmentDialog } from '@/Components/AppointmentDialog'
+import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 
 
 interface Patient {
@@ -200,7 +202,7 @@ export default function AppointmentsPage() {
 
     }
     catch (err: any) {
-      window.alert(err.message);
+     toast.error(err.message);
     }
   }
 

@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/Com
 import { Badge } from '@/Components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/Components/ui/avatar';
 import axios from 'axios';
+import { toast } from 'sonner';
 
 // Types based on the database schema
 interface Patient {
@@ -96,7 +97,7 @@ const PaymentsInterface: React.FC = () => {
       setPayments(formatted);
       setFilteredPayments(formatted);
     } catch (err: any) {
-      window.alert(err.message);
+      toast.error(err.message);
     } finally {
       setLoadingPayments(false);
     }
