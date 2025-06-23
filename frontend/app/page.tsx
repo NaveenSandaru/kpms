@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import React, { useContext, useEffect, useState } from 'react';
 import { LoadingButton } from "@/Components/ui/loading-button"
-import { Input } from "@/components/ui/input"
+import { Input } from "@/Components/ui/input"
 import { Label } from "@/Components/ui/label"
 import { Checkbox } from "@/Components/ui/checkbox"
 import { Card, CardContent, CardHeader } from "@/Components/ui/card"
@@ -191,7 +191,7 @@ export default function LoginPage() {
 
           <p className="text-center text-sm text-gray-600">
             {"Don't have an account? "}
-            <Link href="/auth/account-selection" className="text-[#12D598] hover:text-green-700">
+            <Link href="/patientSignup" className="text-[#12D598] hover:text-green-700">
               Sign up
             </Link>
           </p>
