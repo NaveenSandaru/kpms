@@ -64,6 +64,8 @@ const MedicalStudyInterface: React.FC = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [studyToEdit, setStudyToEdit] = useState<Study | null>(null);
 
+  const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
+
   const [newStudy, setNewStudy] = useState<NewStudyForm>({
     patient_id: '',
     patient_name: '',
@@ -141,7 +143,7 @@ const MedicalStudyInterface: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch('http://localhost:5000/studies');
+        const response = await fetch(`${backendURL}/studies`);
         if (!response.ok) {
           throw new Error(`Error: ${response.status}`);
         }
@@ -166,7 +168,7 @@ const MedicalStudyInterface: React.FC = () => {
     const fetchStaff = async () => {
       try {
         // Radiologists
-        const radRes = await fetch('http://localhost:5000/radiologists');
+        const radRes = await fetch(`${backendURL}/radiologists`);
         if (radRes.ok) {
           const data = await radRes.json();
           const mapped = data.map((r: any) => ({
@@ -178,7 +180,7 @@ const MedicalStudyInterface: React.FC = () => {
         }
 
         // Doctors (dentists)
-        const docRes = await fetch('http://localhost:5000/dentists');
+        const docRes = await fetch(`${backendURL}/dentists`);
         if (docRes.ok) {
           const data = await docRes.json();
           const mapped = data.map((d: any) => ({
@@ -252,7 +254,7 @@ const MedicalStudyInterface: React.FC = () => {
         doctor_ids: assignmentForm.doctor_ids
       };
 
-      const res = await fetch(`http://localhost:5000/studies/${selectedStudyId}`, {
+      const res = await fetch(`${backendURL}/studies/${selectedStudyId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
@@ -326,7 +328,7 @@ const MedicalStudyInterface: React.FC = () => {
       // If there's an existing report, get its file URL
       if (studyToEdit.report_id) {
         try {
-          const reportResponse = await fetch(`http://localhost:5000/reports/${studyToEdit.report_id}`);
+          const reportResponse = await fetch(`${backendURL}/reports/${studyToEdit.report_id}`);
           if (reportResponse.ok) {
             const reportData = await reportResponse.json();
             reportFileUrl = reportData.report_file_url || '';
@@ -343,7 +345,7 @@ const MedicalStudyInterface: React.FC = () => {
             try {
               const fileName = reportFileUrl.split('/').pop();
               if (fileName) {
-                const deleteResponse = await fetch(`http://localhost:5000/files/${fileName}`, {
+                const deleteResponse = await fetch(`${backendURL}/files/${fileName}`, {
                   method: 'DELETE'
                 });
 
@@ -360,7 +362,7 @@ const MedicalStudyInterface: React.FC = () => {
           const reportFormData = new FormData();
           reportFormData.append('file', newStudy.report_files[0]);
 
-          const reportResponse = await fetch('http://localhost:5000/files', {
+          const reportResponse = await fetch(`${backendURL}/files`, {
             method: 'POST',
             body: reportFormData
           });
@@ -387,8 +389,8 @@ const MedicalStudyInterface: React.FC = () => {
 
           const reportMethod = studyToEdit.report_id ? 'PUT' : 'POST';
           const reportEndpoint = studyToEdit.report_id
-            ? `http://localhost:5000/reports/${studyToEdit.report_id}`
-            : 'http://localhost:5000/reports';
+            ? `${backendURL}/reports/${studyToEdit.report_id}`
+            : `${backendURL}/reports`;
 
           const reportUpdateResponse = await fetch(reportEndpoint, {
             method: reportMethod,
@@ -405,7 +407,7 @@ const MedicalStudyInterface: React.FC = () => {
             console.log(`Report ${reportMethod === 'POST' ? 'created' : 'updated'} successfully:`, reportUpdateData);
 
             // Refetch the study to update the UI
-            const studyResponse = await fetch(`http://localhost:5000/studies/${studyToEdit.study_id}`);
+            const studyResponse = await fetch(`${backendURL}/studies/${studyToEdit.study_id}`);
             if (studyResponse.ok) {
               const studyData = await studyResponse.json();
               const normalizedStudy = normalizeStudy(studyData);
