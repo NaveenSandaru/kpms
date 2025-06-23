@@ -463,7 +463,7 @@ const PatientManagement = () => {
                     />
                   </div>
 
-                  <div className="space-y-2">
+                 {/* <div className="space-y-2">
                     <Label htmlFor="patient_id" className="text-sm font-medium">Patient ID</Label>
                     <Input
                       id="patient_id"
@@ -473,7 +473,7 @@ const PatientManagement = () => {
                       disabled={editingPatient ? true : false}
                       className="w-full"
                     />
-                  </div>
+                  </div>*/}
                 </div>
 
                 <div className="space-y-2">
