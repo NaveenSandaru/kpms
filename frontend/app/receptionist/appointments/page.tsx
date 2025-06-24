@@ -58,47 +58,10 @@ export default function AppointmentsPage() {
 
   const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
-  // Load appointments
-  useEffect(() => {
-    const fetchAppointments = async () => {
-      try {
-        const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
-
-        const [todayRes, allRes, checkedInRes] = await Promise.all([
-          axios.get(`${backendURL}/appointments/today`),
-          axios.get(`${backendURL}/appointments`),
-          axios.get(`${backendURL}/appointments/checkedin`)
-        ]);
-
-        const todayData = todayRes.data;
-        const allData = allRes.data;
-        const checkedInData = checkedInRes.data;
-
-        setTodayAppointments(todayData);
-        setCheckedInAppointments(checkedInData);
-
-        const today = new Date();
-        today.setHours(0, 0, 0, 0); // Normalize to midnight for accurate comparison
-
-        // Get only appointments where date > today
-        const upcoming = allData.filter((appointment: Appointment) => {
-          const appointmentDate = new Date(appointment.date);
-          appointmentDate.setHours(0, 0, 0, 0);
-          return appointmentDate > today;
-        });
-
-        setAllAppointments(upcoming);
-      } catch (error) {
-        console.error("Failed to fetch appointments:", error);
-      }
-    };
-
-    fetchAppointments();
-  }, []);
-
-  // Function to refresh appointments after adding new one
-  const refreshAppointments = async () => {
+  const fetchAppointments = async () => {
     try {
+      const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
+
       const [todayRes, allRes, checkedInRes] = await Promise.all([
         axios.get(`${backendURL}/appointments/today`),
         axios.get(`${backendURL}/appointments`),
@@ -109,13 +72,22 @@ export default function AppointmentsPage() {
       const allData = allRes.data;
       const checkedInData = checkedInRes.data;
 
-      setTodayAppointments(todayData);
-      setCheckedInAppointments(checkedInData);
-
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
+      const validTodayAppointments = todayData.filter(
+        (appointment: Appointment) => appointment.patient && appointment.dentist
+      );
+      setTodayAppointments(validTodayAppointments);
+
+      const validCheckedInAppointments = checkedInData.filter(
+        (appointment: Appointment) => appointment.patient && appointment.dentist
+      );
+      setCheckedInAppointments(validCheckedInAppointments);
+
       const upcoming = allData.filter((appointment: Appointment) => {
+        if (!appointment.patient || !appointment.dentist) return false;
+
         const appointmentDate = new Date(appointment.date);
         appointmentDate.setHours(0, 0, 0, 0);
         return appointmentDate > today;
@@ -123,14 +95,19 @@ export default function AppointmentsPage() {
 
       setAllAppointments(upcoming);
     } catch (error) {
-      console.error("Failed to refresh appointments:", error);
+      console.error("Failed to fetch appointments:", error);
     }
   };
 
+  // Load appointments
+  useEffect(() => {
+    fetchAppointments();
+  }, []);
+  
   // Handle appointment creation success
   const handleAppointmentCreated = () => {
     setIsDialogOpen(false);
-    refreshAppointments(); // Refresh the appointments list
+    fetchAppointments();
   };
 
   // Handle payment status toggle
@@ -350,21 +327,21 @@ export default function AppointmentsPage() {
                             <tr key={appointment.appointment_id} className="border-b hover:bg-gray-50">
                               <td className="py-4 px-4">
                                 <div>
-                                  <div className="font-medium text-gray-900">{appointment.patient.name}</div>
+                                  <div className="font-medium text-gray-900">{appointment.patient?.name}</div>
                                   <div className="text-sm text-gray-500 flex items-center gap-2">
                                     <Mail className="w-3 h-3" />
-                                    {appointment.patient.email}
+                                    {appointment.patient?.email}
                                   </div>
                                   <div className="text-sm text-gray-500 flex items-center gap-2">
                                     <Phone className="w-3 h-3" />
-                                    {appointment.patient.phone_number}
+                                    {appointment.patient?.phone_number}
                                   </div>
                                 </div>
                               </td>
                               <td className="py-4 px-4">
                                 <div>
-                                  <div className="font-medium text-gray-900">{appointment.dentist.name}</div>
-                                  <div className="text-sm text-gray-500">{appointment.dentist.email}</div>
+                                  <div className="font-medium text-gray-900">{appointment.dentist?.name}</div>
+                                  <div className="text-sm text-gray-500">{appointment.dentist?.email}</div>
                                 </div>
                               </td>
                               <td className="py-4 px-4">
@@ -443,15 +420,15 @@ export default function AppointmentsPage() {
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
                             <User className="w-4 h-4 text-gray-500" />
-                            <span className="font-medium text-gray-900">{appointment.patient.name}</span>
+                            <span className="font-medium text-gray-900">{appointment.patient?.name}</span>
                           </div>
                           <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
                             <Mail className="w-3 h-3" />
-                            {appointment.patient.email}
+                            {appointment.patient?.email}
                           </div>
                           <div className="flex items-center gap-2 text-sm text-gray-500">
                             <Phone className="w-3 h-3" />
-                            {appointment.patient.phone_number}
+                            {appointment.patient?.phone_number}
                           </div>
                         </div>
                         <Badge className={getStatusColor(appointment.status)}>
@@ -462,9 +439,9 @@ export default function AppointmentsPage() {
                       {/* Dentist Info */}
                       <div className="border-t pt-3">
                         <div className="text-sm text-gray-600 mb-1">
-                          <strong>Dentist:</strong> {appointment.dentist.name}
+                          <strong>Dentist:</strong> {appointment.dentist?.name}
                         </div>
-                        <div className="text-sm text-gray-500">{appointment.dentist.email}</div>
+                        <div className="text-sm text-gray-500">{appointment.dentist?.email}</div>
                       </div>
 
                       {/* Appointment Details */}

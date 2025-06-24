@@ -97,12 +97,17 @@ router.get('/forpatient/:patient_id', /* authenticateToken, */ async (req, res) 
 
 router.get('/today/fordentist/:dentist_id', async (req, res) => {
   try {
-    const colomboToday = DateTime.now().setZone('Asia/Colombo').toFormat('yyyy-MM-dd');
+    const colomboNow = DateTime.now().setZone('Asia/Colombo');
+    const startOfDay = colomboNow.startOf('day').toJSDate();
+    const endOfDay = colomboNow.endOf('day').toJSDate();
 
     const appointments = await prisma.appointments.findMany({
       where: {
         dentist_id: req.params.dentist_id,
-        date: new Date(colomboToday)
+        date: {
+          gte: startOfDay,
+          lte: endOfDay,
+        }
       },
       include: {
         patient: {
@@ -171,13 +176,20 @@ router.get('/fordentist/patients/:dentist_id', /* authenticateToken, */ async (r
   }
 });
 
+
 router.get('/today/forpatient/:patient_id', /* authenticateToken, */ async (req, res) => {
   try {
     const colomboNow = DateTime.now().setZone('Asia/Colombo');
+    const startOfDay = colomboNow.startOf('day').toJSDate();
+    const endOfDay = colomboNow.endOf('day').toJSDate();
+
     const appointments = await prisma.appointments.findMany({
       where: {
         patient_id: req.params.patient_id,
-        date: colomboNow
+        date: {
+          gte: startOfDay,
+          lte: endOfDay,
+        }
       },
       include: {
         patient: {
@@ -206,12 +218,19 @@ router.get('/today/forpatient/:patient_id', /* authenticateToken, */ async (req,
   }
 });
 
+
 router.get('/today', /* authenticateToken, */ async (req, res) => {
   try {
     const colomboNow = DateTime.now().setZone('Asia/Colombo');
+    const startOfDay = colomboNow.startOf('day').toJSDate();
+    const endOfDay = colomboNow.endOf('day').toJSDate();
+
     const appointments = await prisma.appointments.findMany({
       where: {
-        date: new Date(colomboNow)
+        date: {
+          gte: startOfDay,
+          lte: endOfDay,
+        }
       },
       include: {
         patient: {
@@ -245,13 +264,21 @@ router.get('/today', /* authenticateToken, */ async (req, res) => {
 router.get('/count/today', /* authenticateToken, */ async (req, res) => {
   try {
     const colomboNow = DateTime.now().setZone('Asia/Colombo');
+    const startOfDay = colomboNow.startOf('day').toJSDate();
+    const endOfDay = colomboNow.endOf('day').toJSDate();
+
     const count = await prisma.appointments.count({
       where: {
-        date: new Date(colomboNow)
+        date: {
+          gte: startOfDay,
+          lte: endOfDay,
+        },
+        patient_id: { not: null },
+        dentist_id: { not: null }
       }
     });
 
-    res.json(count);
+    res.json( count );
   } catch (error) {
     console.error("Error fetching today's appointments count", error);
     res.status(500).json({ error: "Failed to fetch today's appointments" });
@@ -261,14 +288,22 @@ router.get('/count/today', /* authenticateToken, */ async (req, res) => {
 router.get('/count/today-checked-in', /* authenticateToken, */ async (req, res) => {
   try {
     const colomboNow = DateTime.now().setZone('Asia/Colombo');
+    const startOfDay = colomboNow.startOf('day').toJSDate();
+    const endOfDay = colomboNow.endOf('day').toJSDate();
+
     const count = await prisma.appointments.count({
       where: {
-        date: new Date(colomboNow),
-        status: "checkedin"
+        date: {
+          gte: startOfDay,
+          lte: endOfDay
+        },
+        status: "checkedin",
+        patient_id: { not: null },
+        dentist_id: { not: null }
       }
     });
 
-    res.json(count);
+    res.json( count );
   } catch (error) {
     console.error("Error fetching today's appointments count", error);
     res.status(500).json({ error: "Failed to fetch today's appointments" });
@@ -278,14 +313,22 @@ router.get('/count/today-checked-in', /* authenticateToken, */ async (req, res) 
 router.get('/count/today-not-checked-in', /* authenticateToken, */ async (req, res) => {
   try {
     const colomboNow = DateTime.now().setZone('Asia/Colombo');
+    const startOfDay = colomboNow.startOf('day').toJSDate();
+    const endOfDay = colomboNow.endOf('day').toJSDate();
+
     const count = await prisma.appointments.count({
       where: {
-        date: new Date(colomboNow),
-        status: "confirmed"
+        date: {
+          gte: startOfDay,
+          lte: endOfDay
+        },
+        status: { in: ["confirmed", "pending"] },
+        patient_id: { not: null },
+        dentist_id: { not: null }
       }
     });
 
-    res.json(count);
+    res.json( count );
   } catch (error) {
     console.error("Error fetching today's appointments count", error);
     res.status(500).json({ error: "Failed to fetch today's appointments" });
@@ -301,7 +344,7 @@ router.get('/fordentist/upcoming/:dentist_id', /* authenticateToken, */ async (r
       where: {
         dentist_id: req.params.dentist_id,
         date: {
-          gt: new Date(colomboToday) // Appointments after today
+          gt: new Date(colomboToday)
         }
       },
       orderBy: {
@@ -343,7 +386,7 @@ router.get('/forpatient/upcoming/:patient_id', /* authenticateToken, */ async (r
       where: {
         patient_id: req.params.patient_id,
         date: {
-          gt: new Date(colomboToday) // Appointments after today
+          gt: new Date(colomboToday)
         }
       },
       orderBy: {
@@ -457,7 +500,7 @@ router.get('/count', /* authenticateToken, */ async (req, res) => {
 
 router.get('/pending-count', /* authenticateToken, */ async (req, res) => {
   try {
-    const count = await prisma.appointments.count({ where: { status: "pending" } });
+    const count = await prisma.appointments.count({ where: { status: "pending", patient_id:{not:null}, dentist_id:{not: null} } });
     res.json(count);
   } catch {
     res.status(500).json({ error: 'Failed to fetch appointments' });
