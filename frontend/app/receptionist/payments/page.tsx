@@ -154,7 +154,7 @@ const PaymentsInterface: React.FC = () => {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" size={20} />
             <input
               type="text"
-              placeholder="Search appointments..."
+              placeholder="Search payment records..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-1 border border-gray-300 rounded-lg focus:-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"

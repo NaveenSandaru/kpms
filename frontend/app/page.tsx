@@ -45,7 +45,7 @@ export default function LoginPage() {
           }
         }
       );
-      if(response.data.successful){
+      if (response.data.successful) {
         setUser(response.data.user);
         setAccessToken(response.data.accessToken);
       }
@@ -55,10 +55,15 @@ export default function LoginPage() {
       }
     }
     catch (error: any) {
-      console.log(error);
-      toast.error("Login Failed", {
-        description: error.message || "Invalid credentials"
-      });
+      if (error.response?.status === 404) {
+        toast.error("Login Failed", {
+          description: "User not found"
+        });
+      } else {
+        toast.error("Login Failed", {
+          description: error.response?.data?.message || error.message || "Invalid credentials"
+        });
+      }
     }
     finally {
       setIsLoading(false);
@@ -73,34 +78,34 @@ export default function LoginPage() {
   };
 
   const handleForgotPassword = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    
+
   };
 
   const handleAutoLogin = async () => {
-    if(isLoggedIn){
+    if (isLoggedIn) {
       console.log(user);
       router.push(`/${user.role}`);
     }
   }
 
-  useEffect(()=>{
-    if(!isLoadingAuth){
+  useEffect(() => {
+    if (!isLoadingAuth) {
       handleAutoLogin();
     }
-  },[isLoadingAuth]);
+  }, [isLoadingAuth]);
 
-  useEffect(()=>{
-    if(user){
+  useEffect(() => {
+    if (user) {
       handleRedirection(user.role);
     }
-  },[user]);
+  }, [user]);
 
 
   return (
     <div className="min-h-screen bg-[#003e34] flex items-center justify-center p-4">
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="text-center pb-6">
-        <div className="w-full flex justify-center mb-2">
+          <div className="w-full flex justify-center mb-2">
             <Image
               src={Logo}
               alt="DentX Logo"

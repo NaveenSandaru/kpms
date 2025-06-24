@@ -209,7 +209,6 @@ export default function AppointmentsPage() {
       );
     }
     
-
     setFilteredAppointments(source)
   }, [activeTab, searchTerm, todayAppointments, allAppointments, checkedInAppointments])
 

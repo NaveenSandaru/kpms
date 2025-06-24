@@ -284,7 +284,7 @@ const PatientManagement = () => {
         <div className="relative w-full md:w-4/5">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
           <Input
-            placeholder="Search appointments..."
+            placeholder="Search patients..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10 rounded-lg "
