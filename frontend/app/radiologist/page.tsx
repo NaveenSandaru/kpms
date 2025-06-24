@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useContext } from 'react';
-import { Calendar, Clock, Plus, Search, MoreHorizontal, CheckCircle, X, Upload, FileText, Edit, Trash2, UserPlus, User, Users, Check, FileUp, ChevronDown, ChevronRight, Eye, File } from 'lucide-react';
-import { useParams } from 'next/navigation';
+import { Calendar, Clock, Search, CheckCircle, X, Upload, FileText, Edit, UserPlus, User, Users, FileUp, ChevronDown, ChevronRight, Eye, File } from 'lucide-react';
+
 import { AuthContext } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';

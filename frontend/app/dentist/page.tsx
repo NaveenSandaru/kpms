@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useContext } from 'react';
-import { Calendar, Clock, Users, CheckCircle, XCircle, AlertCircle, Plus, ChevronLeft, ChevronRight, Eye, Check, X } from 'lucide-react';
+import { Calendar, CheckCircle, ChevronLeft, ChevronRight, Check, X } from 'lucide-react';
 import axios from 'axios';
 import { AuthContext } from '@/context/auth-context';
 import { toast } from 'sonner';

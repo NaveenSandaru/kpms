@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown, ArrowLeft, User, Mail, Phone, Clock, DollarSign, Calendar, Globe, Upload, X, Camera } from 'lucide-react';
+import { ArrowLeft, User, Mail, Phone, Clock, DollarSign, Calendar, Globe, Upload, X, Camera } from 'lucide-react';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/Components/ui/label';
@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Progress } from '@/Components/ui/progress';
 import { Alert, AlertDescription } from '@/Components/ui/alert';
-import { toast } from 'sonner';
+
 import { useRouter } from 'next/navigation';
 
 
