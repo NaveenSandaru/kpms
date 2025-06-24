@@ -286,7 +286,7 @@ const DentalDashboard = () => {
             {todaysAppointments.map((appointment) => (
               <div key={appointment.appointment_id} className="flex items-center p-3 md:p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                 <img
-                  src={appointment.patient.profile_picture}
+                  src={appointment.patient.profile_picture || '/default-avatar.png'} onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/default-avatar.png'; }}
                   alt={appointment.patient.name}
                   className="w-10 h-10 md:w-12 md:h-12 rounded-full mr-3 md:mr-4"
                 />
