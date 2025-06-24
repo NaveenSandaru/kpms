@@ -577,29 +577,32 @@ export default function ClientRegistration() {
   }
 
   const renderStepIndicator = () => (
-    <div className="flex items-center justify-center mb-8 overflow-x-auto">
-      {steps.map((step, index) => (
-        <div key={step.number} className="flex items-center">
-          <div
-            className={`flex items-center justify-center w-10 h-10 rounded-full border-2 ${currentStep >= step.number
+  <div className="flex items-center justify-center mb-8 overflow-x-auto">
+    {steps.map((step, index) => (
+      <div key={step.number} className="flex items-center">
+        <div
+          className={`flex items-center justify-center w-10 h-10 rounded-full border-2 ${
+            currentStep >= step.number
               ? "bg-emerald-600 border-emerald-600 text-white"
               : "border-gray-300 text-gray-400"
-              }`}
-          >
-            {currentStep > step.number ? <CheckCircle className="w-5 h-5" /> : <step.icon className="w-5 h-5" />}
-          </div>
-          <span
-            className={`ml-2 text-sm ${currentStep >= step.number ? "text-emerald-600 font-medium" : "text-gray-400"}`}
-          >
-            {step.title}
-          </span>
-          {index < steps.length - 1 && (
-            <div className={`w-16 h-0.5 mx-4 ${currentStep > step.number ? "bg-emerald-600" : "bg-gray-300"}`} />
-          )}
+          }`}
+        >
+          {currentStep > step.number ? <CheckCircle className="w-5 h-5" /> : <step.icon className="w-5 h-5" />}
         </div>
-      ))}
-    </div>
-  )
+        <span
+          className={`ml-2 text-sm hidden md:inline ${
+            currentStep >= step.number ? "text-emerald-600 font-medium" : "text-gray-400"
+          }`}
+        >
+          {step.title}
+        </span>
+        {index < steps.length - 1 && (
+          <div className={`w-8 md:w-16 h-0.5 mx-2 md:mx-4 ${currentStep > step.number ? "bg-emerald-600" : "bg-gray-300"}`} />
+        )}
+      </div>
+    ))}
+  </div>
+)
 
   const ErrorMessage = ({ message }: { message?: string }) => {
     if (!message) return null
@@ -827,7 +830,11 @@ export default function ClientRegistration() {
             </div>
           </RadioGroup>
         </div>
-        <div>
+       
+     
+
+      </div>
+       <div className="space-y-1">
           <Label className="mb-4">NIC</Label>
           <Input
             id="nic"
@@ -842,23 +849,29 @@ export default function ClientRegistration() {
           />
           <ErrorMessage message={touched.date_of_birth ? errors.date_of_birth : undefined} />
         </div>
-        <div>
-          <Label  className="mb-4">Blood Group</Label>
-          <Input
-            id="blood_group"
-            type="text"
-            min="1"
-            max="120"
-            value={formData.blood_group}
-            onChange={(e) => handleFieldChange("blood_group", e.target.value)}
-            onBlur={() => handleFieldBlur("blood_group")}
-            placeholder="Enter your Blood Group"
-            className={errors.blood_group && touched.blood_group ? "border-red-500" : ""}
-          />
-          <ErrorMessage message={touched.blood_group ? errors.blood_group : undefined} />
-        </div>
-
-      </div>
+        <div className="space-y-1">
+  <Label className="mb-4">Blood Group</Label>
+  <select
+    id="blood_group"
+    value={formData.blood_group}
+    onChange={(e) => handleFieldChange("blood_group", e.target.value)}
+    onBlur={() => handleFieldBlur("blood_group")}
+    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+      errors.blood_group && touched.blood_group ? "border-red-500" : "border-gray-300"
+    }`}
+  >
+    <option value="">Select your Blood Group</option>
+    <option value="A+">A+</option>
+    <option value="A-">A-</option>
+    <option value="B+">B+</option>
+    <option value="B-">B-</option>
+    <option value="AB+">AB+</option>
+    <option value="AB-">AB-</option>
+    <option value="O+">O+</option>
+    <option value="O-">O-</option>
+  </select>
+  <ErrorMessage message={touched.blood_group ? errors.blood_group : undefined} />
+</div>
 
       <div className="space-y-1">
         <Label htmlFor="address">Address</Label>
@@ -1249,7 +1262,7 @@ export default function ClientRegistration() {
       <Card className="w-full max-w-4xl shadow-lg">
         <CardHeader className="text-center pb-6">
           <div className="flex items-center justify-center mb-4">
-            <Link href="/auth/account-selection" className="flex items-center text-emerald-600 hover:text-emerald-700">
+            <Link href="/" className="flex items-center text-emerald-600 hover:text-emerald-700">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Account Selection
             </Link>
