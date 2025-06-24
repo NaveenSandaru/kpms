@@ -418,9 +418,7 @@ const DentalDashboard = () => {
             <div className="p-4 md:p-6 flex-shrink-0">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-gray-900">Upcoming Schedule</h2>
-                <button className="text-emerald-600 text-sm font-medium hover:text-emerald-700">
-                  View All
-                </button>
+                
               </div>
             </div>
 
