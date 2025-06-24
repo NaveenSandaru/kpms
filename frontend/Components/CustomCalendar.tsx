@@ -9,7 +9,11 @@ type CalendarProps = {
   selectedDate: Date | undefined;
   onSelect: (date: Date) => void;
   modifiers?: {
-    booked?: Date[];
+    booked?: {
+      date: Date;
+      bookedSlots: number;
+      totalSlots: number;
+    }[];
   };
 };
 
@@ -100,8 +104,10 @@ export default function CustomCalendar({ selectedDate, onSelect, modifiers = {} 
       for (let i = 0; i < 7; i++) {
         formattedDate = format(day, 'd');
         const cloneDay = new Date(day);
-        const isBooked = modifiers.booked?.some(date => isSameDay(date, day));
-        
+        const bookingInfo = modifiers.booked?.find(entry => isSameDay(entry.date, day));
+        const isFullyBooked = bookingInfo && bookingInfo.bookedSlots >= bookingInfo.totalSlots;
+
+
         days.push(
           <div
             className={`
@@ -109,13 +115,13 @@ export default function CustomCalendar({ selectedDate, onSelect, modifiers = {} 
               ${!isSameMonth(day, monthStart) ? 'text-gray-400' : ''}
               ${isToday(day) ? 'bg-blue-900 font-semibold' : ''}
               ${selectedDateState && isSameDay(day, selectedDateState) ? 'bg-blue-900' : ''}
-              ${isBooked ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-gray-100'}
+              ${isFullyBooked ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-gray-100'}
             `}
             key={day.toString()}
-            onClick={() => !isBooked && onDateClick(cloneDay)}
+            onClick={() => !isFullyBooked && onDateClick(cloneDay)}
           >
             <span className="text-sm">{formattedDate}</span>
-            {isBooked && (
+            {isFullyBooked && (
               <span className="absolute bottom-1 w-1.5 h-1.5 rounded-full bg-red-500"></span>
             )}
           </div>
