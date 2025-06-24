@@ -1282,7 +1282,7 @@ export default function ClientRegistration() {
             )}
             <div className="ml-auto">
               {currentStep < 3 ? (
-                <Button onClick={handleNext} disabled={!canProceed()} className="bg-emerald-600 hover:bg-emerald-700">
+                <Button onClick={handleNext} disabled={!canProceed()} className="bg-emerald-600 hover:bg-emerald-700 cursor-pointer">
                   Continue
                 </Button>
               ) : (

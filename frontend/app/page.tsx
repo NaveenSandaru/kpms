@@ -163,12 +163,13 @@ export default function LoginPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <Checkbox
+                className='cursor-pointer'
                 id="remember"
                 checked={remember}
                 onCheckedChange={(checked) => setRemember(checked === true)}
                 disabled={isLoading}
               />
-              <Label htmlFor="remember" className="text-sm text-[#0eb882] ">
+              <Label htmlFor="remember" className="text-sm text-[#0eb882] cursor-pointer">
                 Remember me
               </Label>
             </div>
