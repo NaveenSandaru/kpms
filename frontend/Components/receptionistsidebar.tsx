@@ -202,7 +202,7 @@ const ReceptionistSidebar = () => {
         <SidebarFooter className="p-4 border-t border-gray-100">
           <Button
             type="submit"
-            className="w-full bg-emerald-600 text-white hover:bg-emerald-500 transition-colors duration-200 flex items-center justify-center gap-2 py-2.5"
+            className="cursor-pointer w-full bg-emerald-600 text-white hover:bg-emerald-500 transition-colors duration-200 flex items-center justify-center gap-2 py-2.5"
             onClick={handleLogout}
             disabled={isLoading}
           >
@@ -269,7 +269,7 @@ const ReceptionistSidebar = () => {
         <div className="p-3 border-t border-gray-100">
           <Button
             type="submit"
-            className="w-full bg-emerald-600 text-white hover:bg-emerald-500 transition-colors duration-200 flex items-center justify-center gap-2 py-2 text-sm"
+            className="cursor-pointer w-full bg-emerald-600 text-white hover:bg-emerald-500 transition-colors duration-200 flex items-center justify-center gap-2 py-2 text-sm"
             onClick={handleLogout}
             disabled={isLoading}
           >
