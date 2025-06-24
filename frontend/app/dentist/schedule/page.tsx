@@ -685,7 +685,7 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
     if (isLoadingAuth) return;
     if (!isLoggedIn) {
       toast.error("You are not logged in.");
-      router.push("/login");
+      router.push("/");
       return;
     }
     if (user?.id) {
