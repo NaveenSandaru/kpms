@@ -7,6 +7,7 @@ import { Label } from '@/Components/ui/label'
 import { Input } from '@/Components/ui/input'
 import { Textarea } from '@/Components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/Components/ui/select'
+import { toast } from "sonner"
 import axios from 'axios'
 
 interface Patient {
@@ -360,9 +361,24 @@ export function AppointmentDialog({ open, onOpenChange, onAppointmentCreated }: 
       setDateString('')
       setSelectedDentist(null)
       setDebugInfo('')
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating appointment:', error)
-      alert('Failed to create appointment. Please try again.')
+      if (error.response) {
+        // Handle specific error cases
+        if (error.response.status === 400 || error.response.status === 409) {
+          // 400 Bad Request or 409 Conflict - likely a scheduling conflict
+          toast.error('Failed to add appointment. Check the date and time', {
+            description: 'The selected time slot might be already taken or invalid.',
+            duration: 5000,
+          });
+        } else {
+          // Other server errors
+          toast.error('Failed to add appointment. Please try again later.');
+        }
+      } else {
+        // Network errors or other issues
+        toast.error('Failed to connect to the server. Please check your connection.');
+      }
     } finally {
       setLoading(false)
     }
