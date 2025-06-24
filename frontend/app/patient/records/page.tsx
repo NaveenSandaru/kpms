@@ -1,5 +1,6 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
+import { AuthContext } from '@/context/auth-context';
 import { Calendar, Clock, Plus, Search, MoreHorizontal, X, Upload, FileText, Edit, Trash2, UserPlus, User, Users, ChevronDown, ChevronRight, Eye, File } from 'lucide-react';
 
 // Types based on the database structure
@@ -160,13 +161,32 @@ const MedicalStudyInterface: React.FC = () => {
     fetchTodayCount();
   }, []);
 
-  // Fetch studies from the backend
+  // Get the authenticated user and loading state from context
+  const { user, isLoadingAuth } = useContext(AuthContext);
+
+  // Fetch studies for the specific patient
   useEffect(() => {
     const fetchStudies = async () => {
+      if (isLoadingAuth) {
+        console.log('Auth still loading...');
+        return;
+      }
+
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch('http://localhost:5000/studies');
+        // Get patient ID from the authenticated user
+        console.log('User object:', user);
+        const patientId = user?.id;
+        console.log('Patient ID:', patientId);
+        
+        if (!patientId) {
+          console.log('No patient ID found, user might not be logged in or not a patient');
+          setError('Please log in to view patient records');
+          setLoading(false);
+          return;
+        }
+        const response = await fetch(`http://localhost:5000/studies/patient/${patientId}`);
         if (!response.ok) {
           throw new Error(`Error: ${response.status}`);
         }
@@ -175,15 +195,15 @@ const MedicalStudyInterface: React.FC = () => {
         setStudies(normalized);
         console.log(normalized);
       } catch (err) {
-        console.error('Failed to fetch studies:', err);
-        setError('Failed to load studies. Please try again later.');
+        console.error('Failed to fetch patient studies:', err);
+        setError('Failed to load patient studies. Please try again later.');
       } finally {
         setLoading(false);
       }
     };
 
     fetchStudies();
-  }, []);
+  }, [user, isLoadingAuth]); 
 
   useEffect(() => {
     const fetchStaff = async () => {
