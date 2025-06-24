@@ -3,6 +3,8 @@ import React, { useState, useEffect, useContext } from 'react';
 import { Calendar, Clock, Plus, Search, MoreHorizontal, CheckCircle, X, Upload, FileText, Edit, Trash2, UserPlus, User, Users, Check, FileUp, ChevronDown, ChevronRight, Eye, File } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import { AuthContext } from '@/context/auth-context';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 // Types based on the database structure
 interface Doctor {
@@ -65,6 +67,7 @@ const MedicalStudyInterface: React.FC = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [studyToEdit, setStudyToEdit] = useState<Study | null>(null);
   const [expandedStudyId, setExpandedStudyId] = useState<number | null>(null);
+  
   
 
   const {user, isLoadingAuth, isLoggedIn} = useContext(AuthContext);
@@ -134,6 +137,7 @@ const MedicalStudyInterface: React.FC = () => {
   const [reportedTodayCount, setReportedTodayCount] = useState<number>(0);
   const [radiologists, setRadiologists] = useState<Radiologist[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const router = useRouter();
 
   // Helper to convert API study payload into UI-friendly shape
   const normalizeStudy = (raw: any): Study => {
@@ -190,12 +194,12 @@ const MedicalStudyInterface: React.FC = () => {
   useEffect(()=>{
     if(isLoadingAuth) return;
     if(!isLoggedIn){
-      window.alert("Please Log in");
-      window.location.href = "/";
+      toast.error("You are not logged in");
+      router.push("/")
     }
     else if(user.role != "radiologist"){
-      window.alert("Access Denied");
-      window.location.href = "/"
+      toast.error("Access Denied");
+      router.push("/")
     }
     setRadiologistID(user.id)
   },[isLoadingAuth]);
@@ -345,7 +349,7 @@ const MedicalStudyInterface: React.FC = () => {
       });
     } catch (error) {
       console.error('Error assigning staff:', error);
-      alert('Failed to assign staff. Please try again.');
+      toast.error('Error assigning staff');
     }
   };
 
@@ -488,7 +492,7 @@ const MedicalStudyInterface: React.FC = () => {
       }
 
       // Show success message
-      alert('Report updated successfully!');
+      toast.success('Study updated successfully');
 
       // Reset state and close modal
       setIsAddStudyOpen(false);
