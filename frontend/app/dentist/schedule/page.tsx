@@ -88,7 +88,7 @@ const NewAppointmentForm = ({
   handleAppointmentCreation: () => void;
   creatingAppointment: boolean;
 }) => (
-  <DialogContent className="max-w-md max-h-screen overflow-y-auto">
+  <DialogContent className=" max-h-screen overflow-y-auto">
     <DialogHeader>
       <DialogTitle>New Appointment</DialogTitle>
     </DialogHeader>
