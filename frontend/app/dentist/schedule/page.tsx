@@ -947,7 +947,7 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
           {/* Sidebar */}
           <div className="space-y-4 ">
             {/* Schedule Summary Card */}
-            <Card className="h-96"> {/* Fixed height container */}
+            <Card className="h-200"> {/* Fixed height container */}
               <CardHeader className="pb-3 flex-shrink-0"> {/* Prevent header from shrinking */}
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base font-medium">
