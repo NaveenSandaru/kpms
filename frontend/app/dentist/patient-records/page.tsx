@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef, useContext } from 'react'
-import { Search, User, FileText, Calendar, Phone, Mail, Download, Upload, AlertCircle, Activity, X, ArrowLeft, Plus } from 'lucide-react'
+import { Search, User, FileText, Phone, Mail, Download, Upload, AlertCircle, Activity, X, ArrowLeft, Plus } from 'lucide-react'
 import { Input } from '@/Components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card'
 import { Badge } from '@/Components/ui/badge'
@@ -12,7 +12,7 @@ import { Textarea } from '@/Components/ui/textarea'
 import { Label } from '@/Components/ui/label'
 import axios from 'axios'
 import { AuthContext } from '@/context/auth-context'
-import { useRouter } from 'next/navigation'
+
 import { toast } from 'sonner';
 
 interface Patient {
