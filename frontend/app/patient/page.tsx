@@ -380,8 +380,8 @@ const HealthcareDashboard: React.FC = () => {
             ) : (
               displayedAppointments.map((appointment) => (
                 <div key={appointment.appointment_id} className="p-4 md:p-6 hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
+                  <div className="flex flex-col sm:flex-row justify-between gap-4">
+                    <div className="flex flex-1 min-w-0 gap-4">
                       {/* Dentist Avatar */}
                       <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
                         {appointment.dentist?.profile_picture ? (
@@ -399,40 +399,50 @@ const HealthcareDashboard: React.FC = () => {
 
                       {/* Appointment Details */}
                       <div className="min-w-0 flex-1">
-                        <h3 className="text-lg font-semibold text-gray-900 truncate">
-                          Dr. {appointment.dentist?.name || 'Dentist Name Not Available'}
-                        </h3>
-                        <p className="text-sm text-gray-600">
-                          {appointment.dentist?.service_types || 'General Dentistry'}
-                        </p>
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 mt-1">
-                          <p className="text-sm text-gray-500">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                          <div>
+                            <h3 className="text-lg font-semibold text-gray-900 truncate">
+                              Dr. {appointment.dentist?.name || 'Dentist Name Not Available'}
+                            </h3>
+                            <p className="text-sm text-gray-600">
+                              {appointment.dentist?.service_types || 'General Dentistry'}
+                            </p>
+                          </div>
+                          {/* Status for mobile */}
+                          <div className="sm:hidden">
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(appointment.status)}`}>
+                              {appointment.status || 'Unknown'}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:flex-wrap gap-x-4 mt-1">
+                          <p className="text-sm text-gray-500 whitespace-nowrap">
                             📅 {appointment.date ? new Date(appointment.date).toLocaleDateString() : 'Date TBD'}
                           </p>
-                          <p className="text-sm text-gray-500">
+                          <p className="text-sm text-gray-500 whitespace-nowrap">
                             ⏰ {appointment.time_from || 'TBD'} {appointment.time_to ? `- ${appointment.time_to}` : ''}
                           </p>
                           {appointment.fee && (
-                            <p className="text-sm text-gray-500">💰 Rs. {appointment.fee}</p>
+                            <p className="text-sm text-gray-500 whitespace-nowrap">💰 Rs. {appointment.fee}</p>
                           )}
                         </div>
                         {appointment.note && (
-                          <p className="text-sm text-gray-600 mt-1">📝 {appointment.note}</p>
+                          <p className="text-sm text-gray-600 mt-1 break-words">📝 {appointment.note}</p>
                         )}
                       </div>
                     </div>
 
-                    {/* Status and Actions */}
-                    <div className="flex items-center space-x-2 ml-4">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(appointment.status)}`}>
-                        {appointment.status || 'Unknown'}
-                      </span>
-
-                      {/* Action buttons for patient */}
-                      <div className="flex items-center space-x-1">
+                    {/* Status and Actions - Desktop */}
+                    <div className="hidden sm:flex items-start gap-2 mt-1">
+                      <div className="flex flex-col items-end gap-2">
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(appointment.status)} whitespace-nowrap`}>
+                          {appointment.status || 'Unknown'}
+                        </span>
+                        {/* Action buttons for patient */}
                         {appointment.status && appointment.status.toLowerCase() === 'pending' && (
                           <button
-                            className="p-2 text-red-600 hover:text-red-800 transition-colors"
+                            className="p-1.5 text-red-600 hover:text-red-800 transition-colors rounded-full hover:bg-red-50"
                             onClick={() => handleStatusChange(appointment.appointment_id, 'cancelled')}
                             disabled={changingStatus}
                             title="Cancel appointment"
@@ -442,6 +452,20 @@ const HealthcareDashboard: React.FC = () => {
                         )}
                       </div>
                     </div>
+                    
+                    {/* Action button for mobile */}
+                    {appointment.status && appointment.status.toLowerCase() === 'pending' && (
+                      <div className="sm:hidden flex justify-end">
+                        <button
+                          className="p-1.5 text-red-600 hover:text-red-800 transition-colors rounded-full hover:bg-red-50"
+                          onClick={() => handleStatusChange(appointment.appointment_id, 'cancelled')}
+                          disabled={changingStatus}
+                          title="Cancel appointment"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))
