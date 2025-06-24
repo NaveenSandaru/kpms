@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef, useContext } from 'react'
-import { Search, User, FileText, Calendar, Phone, Mail, Download, Upload, AlertCircle, Activity, X, ArrowLeft, Plus } from 'lucide-react'
+import { Search, User, FileText, Phone, Mail, Download, Upload, AlertCircle, Activity, X, ArrowLeft, Plus } from 'lucide-react'
 import { Input } from '@/Components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card'
 import { Badge } from '@/Components/ui/badge'
@@ -12,7 +12,7 @@ import { Textarea } from '@/Components/ui/textarea'
 import { Label } from '@/Components/ui/label'
 import axios from 'axios'
 import { AuthContext } from '@/context/auth-context'
-import { useRouter } from 'next/navigation'
+
 import { toast } from 'sonner';
 
 interface Patient {
@@ -144,6 +144,9 @@ export default function DentistDashboard({ params }: DashboardProps) {
   const [reportName, setReportName] = useState('');
   const [isSubmittingNote, setIsSubmittingNote] = useState(false);
   const [isUploadingReport, setIsUploadingReport] = useState(false);
+  const [editingNote, setEditingNote] = useState<SOAPNote | null>(null);
+  const [deletingNoteId, setDeletingNoteId] = useState<number | null>(null);
+  const [deletingReportId, setDeletingReportId] = useState<number | null>(null);
 
   const fetchPatients = async () => {
     setLoadingPatients(true);
@@ -221,8 +224,51 @@ export default function DentistDashboard({ params }: DashboardProps) {
     }
   }
 
-  // Add SOAP Note function
-  const handleAddNote = async () => {
+  // Add/Edit SOAP Note function
+  const [activeTab, setActiveTab] = useState('details');
+
+  // Handle edit SOAP note
+  const handleEditNote = (note: SOAPNote) => {
+    setEditingNote(note);
+    setNewNoteText(note.note);
+    setIsAddNoteDialogOpen(true);
+  };
+
+  // Handle delete SOAP note
+  const handleDeleteNote = async (noteId: number) => {
+    if (!selectedPatient || !confirm('Are you sure you want to delete this note?')) return;
+    
+    setDeletingNoteId(noteId);
+    try {
+      await axios.delete(`${backendURL}/soap-notes/${noteId}`);
+      await fetchPatientSOAPNotes(selectedPatient.patient_id);
+      toast.success('Note deleted successfully');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete note');
+    } finally {
+      setDeletingNoteId(null);
+    }
+  };
+
+  // Handle delete medical report
+  const handleDeleteReport = async (reportId: number) => {
+    if (!selectedPatient || !confirm('Are you sure you want to delete this report? This action cannot be undone.')) return;
+    
+    setDeletingReportId(reportId);
+    try {
+      await axios.delete(`${backendURL}/medical-reports/${reportId}`);
+      await fetchPatientMedicalReports(selectedPatient.patient_id);
+      toast.success('Report deleted successfully');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete report');
+    } finally {
+      setDeletingReportId(null);
+    }
+  };
+
+  const handleAddNote = async (e: React.FormEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     if (!selectedPatient || !newNoteText.trim()) {
       toast.error('Please select a patient and enter a note');
       return;
@@ -230,24 +276,34 @@ export default function DentistDashboard({ params }: DashboardProps) {
 
     setIsSubmittingNote(true);
     try {
-      const response = await axios.post(`${backendURL}/soap-notes`, {
-        dentist_id: user?.id,
-        patient_id: selectedPatient.patient_id,
-        note: newNoteText.trim(),
-      });
-
-      if (response.status === 200 || response.status === 201) {
-        // Refresh SOAP notes
-        fetchPatientSOAPNotes(selectedPatient.patient_id);
-        setNewNoteText('');
-        setIsAddNoteDialogOpen(false);
+      if (editingNote) {
+        // Update existing note
+        await axios.put(`${backendURL}/soap-notes/${editingNote.note_id}`, {
+          dentist_id: user?.id,
+          patient_id: selectedPatient.patient_id,
+          note: newNoteText.trim(),
+        });
+        toast.success('Note updated successfully');
+      } else {
+        // Create new note
+        await axios.post(`${backendURL}/soap-notes`, {
+          dentist_id: user?.id,
+          patient_id: selectedPatient.patient_id,
+          note: newNoteText.trim(),
+        });
         toast.success('Note added successfully');
       }
+
+      // Refresh SOAP notes and reset form
+      await fetchPatientSOAPNotes(selectedPatient.patient_id);
+      setNewNoteText('');
+      setEditingNote(null);
+      // Close dialog after successful submission
+      setTimeout(() => setIsAddNoteDialogOpen(false), 300);
     } catch (err: any) {
-      toast.error(err.message);
+      toast.error(err.response?.data?.error || err.message || 'Failed to save note');
     } finally {
       setIsSubmittingNote(false);
-      fetchPatientSOAPNotes(selectedPatient.patient_id);
     }
   };
 
@@ -262,7 +318,9 @@ export default function DentistDashboard({ params }: DashboardProps) {
   };
 
   // Upload Report function
-  const handleUploadReport = async () => {
+  const handleUploadReport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     if (!selectedPatient || !selectedFile || !reportName.trim()) {
      toast.error('Please select a patient and enter a report name');
       return;
@@ -297,15 +355,21 @@ export default function DentistDashboard({ params }: DashboardProps) {
         throw new Error("Error Creating Record");
       }
 
+      await fetchPatientMedicalReports(selectedPatient.patient_id);
       toast.success('Report uploaded successfully');
-      fetchPatientMedicalReports(selectedPatient.patient_id);
-
-
+      // Close dialog after successful upload
+      setTimeout(() => {
+        setIsUploadReportDialogOpen(false);
+        setSelectedFile(null);
+        setReportName('');
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      }, 300);
     } catch (err: any) {
       toast.error(err.message);
     } finally {
       setIsUploadingReport(false);
-      setIsUploadReportDialogOpen(false);
     }
   };
 
@@ -331,8 +395,9 @@ export default function DentistDashboard({ params }: DashboardProps) {
   )
 
   const handlePatientSelect = (patient: Patient) => {
-    setSelectedPatient(patient)
-    setIsMobileOverlayOpen(true)
+    setSelectedPatient(patient);
+    setIsMobileOverlayOpen(true);
+    setActiveTab('details');
   }
 
   const closeMobileOverlay = () => {
@@ -388,8 +453,8 @@ export default function DentistDashboard({ params }: DashboardProps) {
 
       {/* Patient Details */}
       <div className="flex-1 overflow-hidden">
-        <Tabs defaultValue="details" className="h-full flex flex-col">
-          <TabsList className="grid w-full grid-cols-4 flex-shrink-0">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
+          <TabsList className="grid w-full grid-cols-4 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
             <TabsTrigger value="details">Details</TabsTrigger>
             <TabsTrigger value="history" className="lg:hidden">History</TabsTrigger>
             <TabsTrigger value="history" className="hidden lg:block">Medical History</TabsTrigger>
@@ -493,14 +558,41 @@ export default function DentistDashboard({ params }: DashboardProps) {
                           </div>
                           <div>
                             <h4 className="font-medium text-gray-900">{report.record_name}</h4>
+                            <p className="text-xs text-gray-500">
+                              {new URL(`${backendURL}${report.record_url}`).pathname.split('/').pop()}
+                            </p>
                           </div>
                         </div>
-                        <Button className=' hover:bg-emerald-100' variant="outline" size="sm" asChild onClick={() => { handleFileDownload(report.record_url) }}>
-                          <div>
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 text-red-500 hover:bg-red-50"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteReport(report.report_id);
+                            }}
+                            disabled={deletingReportId === report.report_id}
+                          >
+                            {deletingReportId === report.report_id ? (
+                              <div className="h-4 w-4 animate-spin rounded-full border-2 border-red-500 border-t-transparent"></div>
+                            ) : (
+                              <X className="h-4 w-4" />
+                            )}
+                          </Button>
+                          <Button 
+                            className='hover:bg-emerald-100' 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleFileDownload(report.record_url);
+                            }}
+                          >
                             <Download className="h-4 w-4 mr-2" />
                             View
-                          </div>
-                        </Button>
+                          </Button>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -545,8 +637,40 @@ export default function DentistDashboard({ params }: DashboardProps) {
                         <span className="text-sm text-gray-500">
                           {note.date}
                         </span>
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-6 w-6 text-blue-500 hover:bg-blue-50"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditNote(note);
+                            }}
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-6 w-6 text-red-500 hover:bg-red-50"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteNote(note.note_id);
+                            }}
+                            disabled={deletingNoteId === note.note_id}
+                          >
+                            {deletingNoteId === note.note_id ? (
+                              <div className="h-4 w-4 animate-spin rounded-full border-2 border-red-500 border-t-transparent"></div>
+                            ) : (
+                              <X className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
                       </div>
-                      <p className="text-gray-900">{note.note}</p>
+                      <p className="text-gray-900 whitespace-pre-wrap">{note.note}</p>
                     </CardContent>
                   </Card>
                 ))}
@@ -691,123 +815,129 @@ export default function DentistDashboard({ params }: DashboardProps) {
 
       {/* Add SOAP Note Dialog */}
       <Dialog open={isAddNoteDialogOpen} onOpenChange={setIsAddNoteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add SOAP Note</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="patient-name">Patient</Label>
-              <p className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
-                {selectedPatient?.name}
-              </p>
+        <form onSubmit={handleAddNote}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{editingNote ? 'Edit' : 'Add'} SOAP Note</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="patient-name">Patient</Label>
+                <p className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
+                  {selectedPatient?.name}
+                </p>
+              </div>
+              <div>
+                <Label htmlFor="note-text">Note {editingNote && <span className="text-xs text-gray-500 ml-1">(editing)</span>}</Label>
+                <Textarea
+                  id="note-text"
+                  placeholder="Enter SOAP note details..."
+                  value={newNoteText}
+                  onChange={(e) => setNewNoteText(e.target.value)}
+                  rows={6}
+                  className="mt-1"
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsAddNoteDialogOpen(false);
+                    setNewNoteText('');
+                  }}
+                  disabled={isSubmittingNote}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isSubmittingNote || !newNoteText.trim()}
+                  className="bg-emerald-500 hover:bg-emerald-600"
+                >
+                  {isSubmittingNote 
+                    ? editingNote ? 'Updating...' : 'Adding...' 
+                    : editingNote ? 'Update Note' : 'Add Note'}
+                </Button>
+              </div>
             </div>
-            <div>
-              <Label htmlFor="note-text">Note</Label>
-              <Textarea
-                id="note-text"
-                placeholder="Enter SOAP note details..."
-                value={newNoteText}
-                onChange={(e) => setNewNoteText(e.target.value)}
-                rows={6}
-                className="mt-1"
-              />
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setIsAddNoteDialogOpen(false);
-                  setNewNoteText('');
-                }}
-                disabled={isSubmittingNote}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleAddNote}
-                disabled={isSubmittingNote || !newNoteText.trim()}
-                className="bg-emerald-500 hover:bg-emerald-600"
-              >
-                {isSubmittingNote ? 'Adding...' : 'Add Note'}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
+          </DialogContent>
+        </form>
       </Dialog>
 
       {/* Upload Report Dialog */}
       <Dialog open={isUploadReportDialogOpen} onOpenChange={setIsUploadReportDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Upload Medical Report</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="patient-name">Patient</Label>
-              <p className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
-                {selectedPatient?.name}
-              </p>
-            </div>
-            <div>
-              <Label htmlFor="report-name">Report Name</Label>
-              <Input
-                id="report-name"
-                type="text"
-                placeholder="Enter report name..."
-                value={reportName}
-                onChange={(e) => setReportName(e.target.value)}
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label htmlFor="file-upload">Select File</Label>
-              <div className="mt-1">
-                <input
-                  ref={fileInputRef}
-                  id="file-upload"
-                  type="file"
-                  onChange={handleFileSelect}
-                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt"
-                  className="block w-full text-sm text-gray-500
-                    file:mr-4 file:py-2 file:px-4
-                    file:rounded-full file:border-0
-                    file:text-sm file:font-semibold
-                    file:bg-emerald-50 file:text-emerald-700
-                    hover:file:bg-emerald-100"
+        <form onSubmit={handleUploadReport}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Upload Medical Report</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="patient-name">Patient</Label>
+                <p className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
+                  {selectedPatient?.name}
+                </p>
+              </div>
+              <div>
+                <Label htmlFor="report-name">Report Name</Label>
+                <Input
+                  id="report-name"
+                  type="text"
+                  placeholder="Enter report name..."
+                  value={reportName}
+                  onChange={(e) => setReportName(e.target.value)}
+                  className="mt-1"
                 />
-                {selectedFile && (
-                  <p className="text-sm text-gray-600 mt-2">
-                    Selected: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
-                  </p>
-                )}
+              </div>
+              <div>
+                <Label htmlFor="file-upload">Select File</Label>
+                <div className="mt-1">
+                  <input
+                    ref={fileInputRef}
+                    id="file-upload"
+                    type="file"
+                    onChange={handleFileSelect}
+                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt"
+                    className="block w-full text-sm text-gray-500
+                      file:mr-4 file:py-2 file:px-4
+                      file:rounded-full file:border-0
+                      file:text-sm file:font-semibold
+                      file:bg-emerald-50 file:text-emerald-700
+                      hover:file:bg-emerald-100"
+                  />
+                  {selectedFile && (
+                    <p className="text-sm text-gray-600 mt-2">
+                      Selected: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsUploadReportDialogOpen(false);
+                    setSelectedFile(null);
+                    setReportName('');
+                    if (fileInputRef.current) {
+                      fileInputRef.current.value = '';
+                    }
+                  }}
+                  disabled={isUploadingReport}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isUploadingReport || !selectedFile || !reportName.trim()}
+                  className="bg-emerald-500 hover:bg-emerald-600"
+                >
+                  {isUploadingReport ? 'Uploading...' : 'Upload Report'}
+                </Button>
               </div>
             </div>
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setIsUploadReportDialogOpen(false);
-                  setSelectedFile(null);
-                  setReportName('');
-                  if (fileInputRef.current) {
-                    fileInputRef.current.value = '';
-                  }
-                }}
-                disabled={isUploadingReport}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleUploadReport}
-                disabled={isUploadingReport || !selectedFile || !reportName.trim()}
-                className="bg-emerald-500 hover:bg-emerald-600"
-              >
-                {isUploadingReport ? 'Uploading...' : 'Upload Report'}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
+          </DialogContent>
+        </form>
       </Dialog>
     </div>
   )

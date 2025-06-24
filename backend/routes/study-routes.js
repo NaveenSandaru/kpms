@@ -83,6 +83,40 @@ router.get('/patient/:patient_id', /* authenticateToken, */ async (req, res) => 
   }
 });
 
+// Get studies by dentist ID
+router.get('/dentist/:dentist_id', /* authenticateToken, */ async (req, res) => {
+  try {
+    const studies = await prisma.study.findMany({
+      where: {
+        dentistAssigns: {
+          some: {
+            dentist_id: req.params.dentist_id
+          }
+        }
+      },
+      include: {
+        patient: true,
+        radiologist: true,
+        report: true,
+        dentistAssigns: {
+          include: {
+            dentist: true
+          }
+        }
+      },
+      orderBy: [
+        { date: 'desc' },
+        { time: 'desc' }
+      ]
+    });
+
+    res.json(studies);
+  } catch (error) {
+    console.error('Error fetching dentist studies:', error);
+    res.status(500).json({ error: 'Failed to fetch dentist studies' });
+  }
+});
+
 // Create a new study
 router.post('/', /* authenticateToken, */ async (req, res) => {
   try {

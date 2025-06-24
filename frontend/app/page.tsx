@@ -28,8 +28,8 @@ export default function LoginPage() {
 
   const { isLoggedIn, user, setUser, setAccessToken, isLoadingAuth } = useContext(AuthContext);
 
-  const handleLogin = async () => {
-    setIsLoading(true);
+  const handleLogin = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     try {
       const response = await axios.post(
         `${backendURL}/auth/login`,
@@ -103,7 +103,8 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-[#003e34] flex items-center justify-center p-4">
-      <Card className="w-full max-w-md shadow-lg">
+      <form onSubmit={handleLogin} className="w-full max-w-md">
+      <Card className="w-full shadow-lg">
         <CardHeader className="text-center pb-6">
           <div className="w-full flex justify-center mb-2">
             <Image
@@ -162,12 +163,13 @@ export default function LoginPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <Checkbox
+                className='cursor-pointer'
                 id="remember"
                 checked={remember}
                 onCheckedChange={(checked) => setRemember(checked === true)}
                 disabled={isLoading}
               />
-              <Label htmlFor="remember" className="text-sm text-[#0eb882] ">
+              <Label htmlFor="remember" className="text-sm text-[#0eb882] cursor-pointer">
                 Remember me
               </Label>
             </div>
@@ -181,7 +183,7 @@ export default function LoginPage() {
           </div>
 
           <LoadingButton
-            className="w-full bg-[#059669] hover:bg-[#0eb882] text-white"
+            className="w-full bg-[#059669] hover:bg-[#0eb882] text-white cursor-pointer transition-colors duration-200 flex items-center justify-center gap-2 py-2 text-sm"
             onClick={handleLogin}
             isLoading={isLoading}
             loadingText="Logging in..."
@@ -203,6 +205,7 @@ export default function LoginPage() {
           </p>
         </CardContent>
       </Card>
+      </form>
     </div>
   )
 }

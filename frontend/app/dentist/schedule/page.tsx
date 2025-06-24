@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useContext } from 'react';
-import { Calendar, Clock, User, Search, Plus, X, Edit } from 'lucide-react';
+import {  User,  Plus, X, Edit } from 'lucide-react';
 import { Button } from '@/Components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Input } from '@/Components/ui/input';
@@ -167,7 +167,10 @@ const BlockTimeForm = ({
   setBlockTimeTo,
   timeSlots,
   handleBlockSlotCreation,
-  creatingBlockSlot
+  creatingBlockSlot,
+  appointments,
+  dentistWorkInfo,
+  isTimeSlotConflicting
 }: {
   blockDate: string;
   setBlockDate: (value: string) => void;
@@ -178,6 +181,9 @@ const BlockTimeForm = ({
   timeSlots: string[];
   handleBlockSlotCreation: () => void;
   creatingBlockSlot: boolean;
+  appointments: Appointment[];
+  dentistWorkInfo: DentistWorkInfo | undefined;
+  isTimeSlotConflicting: (startTime: string, endTime: string) => boolean;
 }) => (
   <DialogContent className="max-w-md">
     <DialogHeader>
@@ -234,9 +240,11 @@ const BlockTimeForm = ({
       <Button
         className="w-full bg-emerald-500 hover:bg-emerald-600"
         onClick={handleBlockSlotCreation}
-        disabled={creatingBlockSlot}
+        disabled={creatingBlockSlot || isTimeSlotConflicting(blockTimeFrom, blockTimeTo)}
       >
-        {creatingBlockSlot ? "Blocking..." : "Block Time"}
+        {creatingBlockSlot ? "Blocking..." :
+          isTimeSlotConflicting(blockTimeFrom, blockTimeTo) ? "Time Conflicts with Appointment" :
+            "Block Time"}
       </Button>
     </div>
   </DialogContent>
@@ -554,7 +562,32 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
     }
   };
 
+  const isTimeSlotConflicting = (startTime: string, endTime: string) => {
+    if (!startTime || !endTime) return false;
+
+    const toMinutes = (time: string) => {
+      const [h, m] = time.split(':').map(n => parseInt(n));
+      return h * 60 + m;
+    };
+
+    const blockStart = toMinutes(startTime);
+    const blockEnd = toMinutes(endTime);
+
+    return filteredAppointments.some(apt => {
+      const aptStart = toMinutes(apt.time_from);
+      const aptEnd = toMinutes(apt.time_to);
+
+      // Check if there's any overlap
+      return blockStart < aptEnd && blockEnd > aptStart;
+    });
+  };
+
   const handleBlockSlotCreation = async () => {
+    if (isTimeSlotConflicting(blockTimeFrom, blockTimeTo)) {
+      toast.error("Cannot block time that conflicts with existing appointments");
+      return;
+    }
+
     setCreatingBlockSlot(true);
     try {
       const response = await axios.post(
@@ -605,12 +638,13 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
         throw new Error("Error cancelling appointment");
       }
       // Optimistically update the local state to avoid full refetch
-      setAppointments(prev => prev.map(apt => 
-        apt.appointment_id === appointment_id 
-          ? { ...apt, status: "cancelled" } 
+      setAppointments(prev => prev.map(apt =>
+        apt.appointment_id === appointment_id
+          ? { ...apt, status: "cancelled" }
           : apt
       ));
       toast.success("Appointment Cancelled Successfully");
+      fetchAppointments();
     }
     catch (err: any) {
       toast.error(err.message);
@@ -684,7 +718,7 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
     if (isLoadingAuth) return;
     if (!isLoggedIn) {
       toast.error("You are not logged in.");
-      router.push("/login");
+      router.push("/");
       return;
     }
     if (user?.id) {
@@ -703,7 +737,7 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
       const timerId = setTimeout(() => {
         generateTimeSlots(dentistWorkInfo);
       }, 0);
-      
+
       return () => clearTimeout(timerId);
     }
   }, [
@@ -856,17 +890,17 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
                       );
                       const isBlocked = isTimeSlotBlocked(time);
                       const isAvailable = !appointment && !isBlocked;
-                      
+
                       // Apply appropriate styling based on availability
-                      const borderClass = isAvailable 
-                        ? "border-gray-200" 
-                        : appointment 
-                          ? "border-blue-200" 
+                      const borderClass = isAvailable
+                        ? "border-gray-200"
+                        : appointment
+                          ? "border-blue-200"
                           : "border-red-200";
 
                       return (
-                        <div 
-                          key={time} 
+                        <div
+                          key={time}
                           className={`flex items-center space-x-3 p-2 rounded-lg border ${borderClass}`}
                         >
                           <div className="text-sm font-medium w-16 text-gray-600">
@@ -911,10 +945,10 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-4">
+          <div className="space-y-4 ">
             {/* Schedule Summary Card */}
-            <Card>
-              <CardHeader className="pb-3">
+            <Card className="h-[calc(100vh-20rem)]"> {/* Fixed height container */}
+              <CardHeader className="pb-3 flex-shrink-0"> {/* Prevent header from shrinking */}
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base font-medium">
                     Schedule for {new Date(selectedDate).toLocaleDateString('en-US', {
@@ -939,6 +973,9 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
                       timeSlots={timeSlots}
                       handleBlockSlotCreation={handleBlockSlotCreation}
                       creatingBlockSlot={creatingBlockSlot}
+                      appointments={filteredAppointments}  // Add this
+                      dentistWorkInfo={dentistWorkInfo}    // Add this
+                      isTimeSlotConflicting={isTimeSlotConflicting}
                     />
                   </Dialog>
                 </div>
@@ -946,15 +983,15 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
                   Appointments for selected date: {filteredAppointments.length}
                 </div>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-3 overflow-y-auto flex-1 min-h-0"> {/* Scrollable content area */}
                 {filteredAppointments.length === 0 ? (
                   <div className="text-center py-4 text-gray-500">
                     No appointments for this date
                   </div>
                 ) : (
                   filteredAppointments.map((appointment) => (
-                    <div key={appointment.appointment_id} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border-l-4 border-blue-400">
-                      <div className="flex items-center space-x-3">
+                    <div key={appointment.appointment_id} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border-l-4 border-blue-400 ">
+                      <div className="flex items-center space-x-3 ">
                         <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
                           <User className="w-4 h-4 text-gray-600" />
                         </div>

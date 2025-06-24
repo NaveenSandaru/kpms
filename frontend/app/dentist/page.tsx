@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useContext } from 'react';
-import { Calendar, Clock, Users, CheckCircle, XCircle, AlertCircle, Plus, ChevronLeft, ChevronRight, Eye, Check, X } from 'lucide-react';
+import { Calendar, CheckCircle, ChevronLeft, ChevronRight, Check, X } from 'lucide-react';
 import axios from 'axios';
 import { AuthContext } from '@/context/auth-context';
 import { toast } from 'sonner';
@@ -297,50 +297,47 @@ const DentalDashboard = () => {
                   className="w-10 h-10 md:w-12 md:h-12 rounded-full mr-3 md:mr-4"
                 />
                 <div className="flex-1 min-w-0">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                    <div className="mb-1 sm:mb-0">
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center space-x-3">
                       <h3 className="font-medium text-gray-900 truncate">{appointment.patient?.name || "deleted patient"}</h3>
-                      <p className="text-sm text-gray-600 truncate">{appointment.note}</p>
+                      {!['Completed', 'Cancelled'].includes(appointment.status) && (
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleStatusChange(appointment.appointment_id, 'Completed');
+                            }}
+                            className="p-1.5 rounded-full bg-green-100 text-green-700 hover:bg-green-200 transition-colors"
+                            title="Mark as Completed"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleStatusChange(appointment.appointment_id, 'Cancelled');
+                            }}
+                            className="p-1.5 rounded-full bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
+                            title="Mark as Cancelled"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center space-x-3">
                       <span className="text-sm font-medium text-gray-700">
                         {appointment.time_from}
                       </span>
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(appointment.status)}`}>
-                        {getStatusIcon(appointment.status)}
-                        <span className="ml-1 hidden sm:inline">{appointment.status}</span>
-                      </span>
+                      {appointment.status && (
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(appointment.status)}`}>
+                          {getStatusIcon(appointment.status)}
+                          <span className="ml-1">{appointment.status}</span>
+                        </span>
+                      )}
                     </div>
                   </div>
-                  
-                  {/* Action Buttons */}
-                  <div className="mt-3 flex gap-6">
-                    <button
-                      onClick={() => handleStatusChange(appointment.appointment_id, 'Completed')}
-                      className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        appointment.status === 'Completed'
-                          ? 'bg-green-500 text-white'
-                          : 'bg-green-100 text-green-700 hover:bg-green-200'
-                      }`}
-                      disabled={appointment.status === 'Completed'}
-                    >
-                      <Check className="w-4 h-4 " />
-                      
-                    </button>
-                    
-                    <button
-                      onClick={() => handleStatusChange(appointment.appointment_id, 'Cancelled')}
-                      className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        appointment.status === 'Cancelled'
-                          ? 'bg-red-500 text-white'
-                          : 'bg-red-100 text-red-700 hover:bg-red-200'
-                      }`}
-                      disabled={appointment.status === 'Cancelled'}
-                    >
-                      <X className="w-4 h-4" />
-                      
-                    </button>
-                  </div>
+                  <p className="text-sm text-gray-600 truncate mt-1">{appointment.note}</p>
                 </div>
               </div>
             ))}

@@ -18,7 +18,7 @@ import {
 import { Button } from "@/Components/ui/button";
 import {
   LayoutGrid,
-  FileText,
+  
   LogOut,
   Menu,
   X,
@@ -133,7 +133,7 @@ const RadiologistSidebar = () => {
 
         <SidebarFooter className="p-4 border-t border-gray-100">
           <Button
-            className="w-full bg-emerald-600 text-white hover:bg-emerald-500 flex items-center justify-center gap-2 py-2.5"
+            className="cursor-pointer w-full bg-emerald-600 text-white hover:bg-emerald-500 flex items-center justify-center gap-2 py-2.5"
             onClick={handleLogout}
             disabled={isLoading}
           >
@@ -176,7 +176,7 @@ const RadiologistSidebar = () => {
 
         <div className="p-3 border-t border-gray-100">
           <Button
-            className="w-full bg-emerald-600 text-white hover:bg-emerald-500 flex items-center justify-center gap-2 py-2 text-sm"
+            className="cursor-pointer w-full bg-emerald-600 text-white hover:bg-emerald-500 flex items-center justify-center gap-2 py-2 text-sm"
             onClick={handleLogout}
             disabled={isLoading}
           >

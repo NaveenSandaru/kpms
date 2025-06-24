@@ -1,7 +1,9 @@
 "use client";
-import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, Plus, Search, MoreHorizontal, X, Upload, FileText, Edit, Trash2, UserPlus, User, Users, ChevronDown, ChevronRight, Eye, File } from 'lucide-react';
+import React, { useState, useEffect , useContext} from 'react';
+import { Calendar, Clock, Plus, Search, X, Upload, FileText, Edit, Trash2, UserPlus, User, Users, ChevronDown, ChevronRight, Eye, File } from 'lucide-react';
 import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
+import { AuthContext } from '@/context/auth-context';
 
 // Types based on the database structure
 interface Doctor {
@@ -128,6 +130,17 @@ const MedicalStudyInterface: React.FC = () => {
   const [radiologists, setRadiologists] = useState<Radiologist[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
 
+  // Get current user from auth context
+  const { user, isLoggedIn, isLoadingAuth } = useContext(AuthContext);
+  const router = useRouter();
+
+  // Redirect if not logged in or not a dentist
+  useEffect(() => {
+    if (!isLoadingAuth && (!isLoggedIn || user?.role !== 'dentist')) {
+      router.push('/');
+    }
+  }, [isLoadingAuth, isLoggedIn, user, router]);
+
   // Helper to convert API study payload into UI-friendly shape
   const normalizeStudy = (raw: any): Study => {
     const doctorsList: Doctor[] = (raw.dentistAssigns ?? []).map((da: any) => ({
@@ -161,20 +174,35 @@ const MedicalStudyInterface: React.FC = () => {
     fetchTodayCount();
   }, []);
 
-  // Fetch studies from the backend
+  // Fetch studies assigned to the current dentist
   useEffect(() => {
     const fetchStudies = async () => {
+      if (!user?.id || isLoadingAuth) return;
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(`${backendUrl}/studies`);
+        // Fetch studies assigned to this dentist
+        const response = await fetch(`${backendUrl}/studies/dentist/${user.id}`, {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include' // Include cookies for authentication
+        });
+
         if (!response.ok) {
           throw new Error(`Error: ${response.status}`);
         }
         const data = await response.json();
         const normalized = data.map((s: any) => normalizeStudy(s));
         setStudies(normalized);
-        console.log(normalized);
+
+        // Update today's count
+        const today = new Date().toISOString().split('T')[0];
+        const todaysStudies = normalized.filter((study: Study) =>
+          study.date.startsWith(today)
+        );
+        setTodayCount(todaysStudies.length);
+
       } catch (err) {
         console.error('Failed to fetch studies:', err);
         setError('Failed to load studies. Please try again later.');
@@ -184,7 +212,7 @@ const MedicalStudyInterface: React.FC = () => {
     };
 
     fetchStudies();
-  }, []);
+  }, [user?.id, isLoadingAuth]);
 
   useEffect(() => {
     const fetchStaff = async () => {
