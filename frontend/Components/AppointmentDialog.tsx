@@ -318,10 +318,64 @@ export function AppointmentDialog({ open, onOpenChange, onAppointmentCreated }: 
         return
       }
       
-      // Show ALL time slots without filtering for existing appointments
-      setTimeSlots(allSlots)
-      setDebugInfo(`Showing all ${allSlots.length} time slots (including booked ones)`)
-      console.log('✅ Showing all slots:', allSlots)
+      // ---------------- Fetch already reserved intervals ----------------
+      let takenIntervals: { start: string; end: string }[] = []
+      try {
+        const [appointmentsRes, blockedRes] = await Promise.all([
+          axios.get(`${backendURL}/appointments/fordentist/${selectedDentist.dentist_id}`),
+          axios.get(`${backendURL}/blocked-dates/fordentist/${selectedDentist.dentist_id}`)
+        ])
+
+        // Appointments on selected date
+        appointmentsRes.data?.forEach((appt: any) => {
+          const apptDate = new Date(appt.date).toISOString().split('T')[0]
+          if (apptDate === dateString) {
+            takenIntervals.push({ start: appt.time_from, end: appt.time_to })
+          }
+        })
+
+        // Blocked slots on selected date
+        blockedRes.data?.forEach((blk: any) => {
+          if (blk.date === dateString) {
+            if (blk.time_from && blk.time_to) {
+              takenIntervals.push({ start: blk.time_from, end: blk.time_to })
+            } else {
+              // Whole day blocked
+              takenIntervals.push({ start: '00:00', end: '23:59' })
+            }
+          }
+        })
+      } catch (err) {
+        console.error('❌ Error fetching reserved intervals:', err)
+      }
+
+      const toMinutes = (t: string) => {
+        const [h, m] = t.split(':').map((n: string) => parseInt(n))
+        return h * 60 + (m || 0)
+      }
+
+      const isOverlap = (
+        slotStart: string,
+        slotEnd: string,
+        rangeStart: string,
+        rangeEnd: string
+      ) => {
+        return toMinutes(slotStart) < toMinutes(rangeEnd) && toMinutes(slotEnd) > toMinutes(rangeStart)
+      }
+
+      const availableSlots = allSlots.filter(
+        (slot) => !takenIntervals.some((iv) => isOverlap(slot.start, slot.end, iv.start, iv.end))
+      )
+
+      if (availableSlots.length === 0) {
+        setTimeSlots([])
+        setDebugInfo('No available time slots for the selected date')
+        return
+      }
+
+      setTimeSlots(availableSlots)
+      setDebugInfo(`Showing ${availableSlots.length} available time slots`)
+      console.log('✅ Available slots:', availableSlots)
     }
     
     generateAllSlots()
