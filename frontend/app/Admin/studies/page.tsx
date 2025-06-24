@@ -146,7 +146,7 @@ const MedicalStudyInterface: React.FC = () => {
   useEffect(() => {
     const fetchTodayCount = async () => {
       try {
-        const res = await fetch('http://localhost:5000/studies/today/count');
+        const res = await fetch(`${backendUrl}/studies/today/count`);
         if (res.ok) {
           const data = await res.json();
           setTodayCount(data.count);
@@ -166,7 +166,7 @@ const MedicalStudyInterface: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch('http://localhost:5000/studies');
+        const response = await fetch(`${backendUrl}/studies`);
         if (!response.ok) {
           throw new Error(`Error: ${response.status}`);
         }
@@ -189,7 +189,7 @@ const MedicalStudyInterface: React.FC = () => {
     const fetchStaff = async () => {
       try {
         // Radiologists
-        const radRes = await fetch('http://localhost:5000/radiologists');
+        const radRes = await fetch(`${backendUrl}/radiologists`);
         if (radRes.ok) {
           const data = await radRes.json();
           const mapped = data.map((r: any) => ({
@@ -201,7 +201,7 @@ const MedicalStudyInterface: React.FC = () => {
         }
 
         // Doctors (dentists)
-        const docRes = await fetch('http://localhost:5000/dentists');
+        const docRes = await fetch(`${backendUrl}/dentists`);
         if (docRes.ok) {
           const data = await docRes.json();
           const mapped = data.map((d: any) => ({
@@ -251,7 +251,7 @@ const MedicalStudyInterface: React.FC = () => {
         const dicomFormData = new FormData();
         dicomFormData.append('file', newStudy.dicom_files[0]);
 
-        const dicomResponse = await fetch('http://localhost:5000/files', {
+        const dicomResponse = await fetch(`${backendUrl}/files`, {
           method: 'POST',
           body: dicomFormData
         });
@@ -277,7 +277,7 @@ const MedicalStudyInterface: React.FC = () => {
           const reportFormData = new FormData();
           reportFormData.append('file', newStudy.report_files[0]);
 
-          const reportResponse = await fetch('http://localhost:5000/files', {
+          const reportResponse = await fetch(`${backendUrl}/files`, {
             method: 'POST',
             body: reportFormData
           });
@@ -311,7 +311,7 @@ const MedicalStudyInterface: React.FC = () => {
 
       // Step 5: Submit study to backend
       try {
-        const studyResponse = await fetch('http://localhost:5000/studies', {
+        const studyResponse = await fetch(`${backendUrl}/studies`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -342,7 +342,7 @@ const MedicalStudyInterface: React.FC = () => {
         });
 
         // Step 4: Create new report reocrd in reports table
-        const ReportResponse = await fetch('http://localhost:5000/reports', {
+        const ReportResponse = await fetch(`${backendUrl}/reports`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -363,7 +363,7 @@ const MedicalStudyInterface: React.FC = () => {
         console.log('Report created successfully:', reportData);
 
         // Step 5: Update study with report ID
-        const updateStudyResponse = await fetch(`http://localhost:5000/studies/${newStudyData.study_id}`, {
+        const updateStudyResponse = await fetch(`${backendUrl}/studies/${newStudyData.study_id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -398,7 +398,7 @@ const MedicalStudyInterface: React.FC = () => {
         doctor_ids: assignmentForm.doctor_ids
       };
 
-      const res = await fetch(`http://localhost:5000/studies/${selectedStudyId}`, {
+      const res = await fetch(`${backendUrl}/studies/${selectedStudyId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
@@ -436,7 +436,7 @@ const MedicalStudyInterface: React.FC = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:5000/studies/${studyId}`, {
+      const response = await fetch(`${backendUrl}/studies/${studyId}`, {
         method: 'DELETE',
       });
 
@@ -498,7 +498,7 @@ const MedicalStudyInterface: React.FC = () => {
               // Extract the file name from the URL
               const fileName = studyToEdit.dicom_file_url.split('/').pop();
               if (fileName) {
-                const deleteResponse = await fetch(`http://localhost:5000/files/${fileName}`, {
+                const deleteResponse = await fetch(`${backendUrl}/files/${fileName}`, {
                   method: 'DELETE'
                 });
 
@@ -515,7 +515,7 @@ const MedicalStudyInterface: React.FC = () => {
           const dicomFormData = new FormData();
           dicomFormData.append('file', newStudy.dicom_files[0]);
 
-          const dicomResponse = await fetch('http://localhost:5000/files', {
+          const dicomResponse = await fetch(`${backendUrl}/files`, {
             method: 'POST',
             body: dicomFormData
           });
@@ -540,7 +540,7 @@ const MedicalStudyInterface: React.FC = () => {
       // If there's an existing report, get its file URL
       if (studyToEdit.report_id) {
         try {
-          const reportResponse = await fetch(`http://localhost:5000/reports/${studyToEdit.report_id}`);
+          const reportResponse = await fetch(`${backendUrl}/reports/${studyToEdit.report_id}`);
           if (reportResponse.ok) {
             const reportData = await reportResponse.json();
             reportFileUrl = reportData.report_file_url || '';
@@ -557,7 +557,7 @@ const MedicalStudyInterface: React.FC = () => {
             try {
               const fileName = reportFileUrl.split('/').pop();
               if (fileName) {
-                const deleteResponse = await fetch(`http://localhost:5000/files/${fileName}`, {
+                const deleteResponse = await fetch(`${backendUrl}/files/${fileName}`, {
                   method: 'DELETE'
                 });
 
@@ -574,7 +574,7 @@ const MedicalStudyInterface: React.FC = () => {
           const reportFormData = new FormData();
           reportFormData.append('file', newStudy.report_files[0]);
 
-          const reportResponse = await fetch('http://localhost:5000/files', {
+          const reportResponse = await fetch(`${backendUrl}/files`, {
             method: 'POST',
             body: reportFormData
           });
@@ -607,7 +607,7 @@ const MedicalStudyInterface: React.FC = () => {
       };
 
       // Update study via PUT request
-      const studyResponse = await fetch(`http://localhost:5000/studies/${studyToEdit.study_id}`, {
+      const studyResponse = await fetch(`${backendUrl}/studies/${studyToEdit.study_id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -638,8 +638,8 @@ const MedicalStudyInterface: React.FC = () => {
 
         const reportMethod = studyToEdit.report_id ? 'PUT' : 'POST';
         const reportEndpoint = studyToEdit.report_id
-          ? `http://localhost:5000/reports/${studyToEdit.report_id}`
-          : 'http://localhost:5000/reports';
+          ? `${backendUrl}/reports/${studyToEdit.report_id}`
+          : `${backendUrl}/reports`;
 
         const reportResponse = await fetch(reportEndpoint, {
           method: reportMethod,
@@ -772,7 +772,7 @@ const MedicalStudyInterface: React.FC = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-2 gap-4 mb-6">
           <div className="bg-white rounded-lg p-6 shadow-sm">
             <div className="flex justify-between items-start">
               <div>
@@ -859,7 +859,7 @@ const MedicalStudyInterface: React.FC = () => {
                 </button>
                 <button
                   onClick={() => setIsAddStudyOpen(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600"
+                  className="flex items-center gap-2 px-3 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600"
                 >
                   <Plus className="w-4 h-4" />
                   New Study
