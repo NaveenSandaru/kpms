@@ -47,7 +47,7 @@ const DentalDashboard = () => {
   const [todaysAppointments, setTodaysAppointments] = useState <Appointment[]>([]);
   const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([]);
   const [status, setStatus] = useState("");
-  const [appointment_id, setAppointment_id] = useState("");
+  const [appointment_id, setAppointment_id] = useState(0);
 
   const router = useRouter();
 
@@ -128,7 +128,7 @@ const DentalDashboard = () => {
     }
     finally{
       setChangingStatus(false);
-      setAppointment_id('');
+      setAppointment_id(0);
       setStatus('');
     }
   }
@@ -185,7 +185,7 @@ const DentalDashboard = () => {
   };
 
   // Handle status change
-  const handleStatusChange = (appointmentId: any, newStatus: any) => {
+  const handleStatusChange = (appointmentId: number, newStatus: string) => {
     setStatus(newStatus);
     setAppointment_id(appointmentId);
     setTodaysAppointments(prevAppointments =>
