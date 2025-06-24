@@ -611,6 +611,7 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
           : apt
       ));
       toast.success("Appointment Cancelled Successfully");
+      fetchAppointments();
     }
     catch (err: any) {
       toast.error(err.message);
@@ -911,91 +912,91 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-4">
+          <div className="space-y-4 ">
             {/* Schedule Summary Card */}
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base font-medium">
-                    Schedule for {new Date(selectedDate).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    })}
-                  </CardTitle>
-                  <Dialog open={isBlockTimeOpen} onOpenChange={setIsBlockTimeOpen}>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" className="w-auto">
-                        Block Time
-                      </Button>
-                    </DialogTrigger>
-                    <BlockTimeForm
-                      blockDate={blockDate}
-                      setBlockDate={setBlockDate}
-                      blockTimeFrom={blockTimeFrom}
-                      setBlockTimeFrom={setBlockTimeFrom}
-                      blockTimeTo={blockTimeTo}
-                      setBlockTimeTo={setBlockTimeTo}
-                      timeSlots={timeSlots}
-                      handleBlockSlotCreation={handleBlockSlotCreation}
-                      creatingBlockSlot={creatingBlockSlot}
-                    />
-                  </Dialog>
-                </div>
-                <div className="text-sm text-gray-500">
-                  Appointments for selected date: {filteredAppointments.length}
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {filteredAppointments.length === 0 ? (
-                  <div className="text-center py-4 text-gray-500">
-                    No appointments for this date
-                  </div>
-                ) : (
-                  filteredAppointments.map((appointment) => (
-                    <div key={appointment.appointment_id} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border-l-4 border-blue-400">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
-                          <User className="w-4 h-4 text-gray-600" />
-                        </div>
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">
-                            {appointment.patient?.name || 'Unknown Patient'}
-                          </div>
-                          <div className="text-xs text-blue-600">
-                            {appointment.time_from} - {appointment.time_to}
-                          </div>
-                          <div className="text-xs text-gray-500">{appointment.note}</div>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
+           <Card className="h-96"> {/* Fixed height container */}
+  <CardHeader className="pb-3 flex-shrink-0"> {/* Prevent header from shrinking */}
+    <div className="flex items-center justify-between">
+      <CardTitle className="text-base font-medium">
+        Schedule for {new Date(selectedDate).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        })}
+      </CardTitle>
+      <Dialog open={isBlockTimeOpen} onOpenChange={setIsBlockTimeOpen}>
+        <DialogTrigger asChild>
+          <Button variant="outline" className="w-auto">
+            Block Time
+          </Button>
+        </DialogTrigger>
+        <BlockTimeForm
+          blockDate={blockDate}
+          setBlockDate={setBlockDate}
+          blockTimeFrom={blockTimeFrom}
+          setBlockTimeFrom={setBlockTimeFrom}
+          blockTimeTo={blockTimeTo}
+          setBlockTimeTo={setBlockTimeTo}
+          timeSlots={timeSlots}
+          handleBlockSlotCreation={handleBlockSlotCreation}
+          creatingBlockSlot={creatingBlockSlot}
+        />
+      </Dialog>
+    </div>
+    <div className="text-sm text-gray-500">
+      Appointments for selected date: {filteredAppointments.length}
+    </div>
+  </CardHeader>
+  <CardContent className="space-y-3 overflow-y-auto flex-1 min-h-0"> {/* Scrollable content area */}
+    {filteredAppointments.length === 0 ? (
+      <div className="text-center py-4 text-gray-500">
+        No appointments for this date
+      </div>
+    ) : (
+      filteredAppointments.map((appointment) => (
+        <div key={appointment.appointment_id} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border-l-4 border-blue-400 ">
+          <div className="flex items-center space-x-3 ">
+            <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+              <User className="w-4 h-4 text-gray-600" />
+            </div>
+            <div>
+              <div className="text-sm font-medium text-gray-900">
+                {appointment.patient?.name || 'Unknown Patient'}
+              </div>
+              <div className="text-xs text-blue-600">
+                {appointment.time_from} - {appointment.time_to}
+              </div>
+              <div className="text-xs text-gray-500">{appointment.note}</div>
+            </div>
+          </div>
+        </div>
+      ))
+    )}
 
-                {/* Blocked Time Items */}
-                {selectedDateBlockedSlots.map((block) => (
-                  <div key={block.blocked_date_id} className="flex items-center justify-between p-3 bg-red-50 rounded-lg border-l-4 border-red-400">
-                    <div className="flex items-center justify-between w-full">
-                      <div>
-                        <div className="text-sm font-medium text-red-700">
-                          {block.time_from} - {block.time_to}
-                        </div>
-                        <div className="text-xs text-red-600">Blocked</div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-red-600 hover:text-red-700 text-xs"
-                        onClick={() => handleBlockDeletion(block.blocked_date_id)}
-                        disabled={deletingBlock}
-                      >
-                        {deletingBlock ? "Deleting..." : "Cancel Block"}
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
+    {/* Blocked Time Items */}
+    {selectedDateBlockedSlots.map((block) => (
+      <div key={block.blocked_date_id} className="flex items-center justify-between p-3 bg-red-50 rounded-lg border-l-4 border-red-400">
+        <div className="flex items-center justify-between w-full">
+          <div>
+            <div className="text-sm font-medium text-red-700">
+              {block.time_from} - {block.time_to}
+            </div>
+            <div className="text-xs text-red-600">Blocked</div>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-red-600 hover:text-red-700 text-xs"
+            onClick={() => handleBlockDeletion(block.blocked_date_id)}
+            disabled={deletingBlock}
+          >
+            {deletingBlock ? "Deleting..." : "Cancel Block"}
+          </Button>
+        </div>
+      </div>
+    ))}
+  </CardContent>
+</Card>
           </div>
         </div>
 
