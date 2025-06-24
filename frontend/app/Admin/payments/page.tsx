@@ -202,34 +202,42 @@ const PaymentsInterface: React.FC = () => {
                   {filteredPayments.map((payment) => (
                     <tr key={payment.appointment.appointment_id} className="border-b hover:bg-gray-50">
                       <td className="px-6 py-4">
-                        <div className="flex items-center space-x-3">
-                          <Avatar className="h-10 w-10">
-                            <AvatarImage src={payment.patient?.profile_picture} />
-                            <AvatarFallback className="bg-blue-100 text-blue-600">
-                              {getInitials(payment.patient?.name)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className="font-medium text-gray-900">{payment.patient?.name}</div>
-                            <div className="text-sm text-gray-500">{payment.patient?.email}</div>
-                            <div className="text-sm text-gray-500">{payment.patient?.phone_number}</div>
+                        {payment.patient ? (
+                          <div className="flex items-center space-x-3">
+                            <Avatar className="h-10 w-10">
+                              <AvatarImage src={payment.patient?.profile_picture} />
+                              <AvatarFallback className="bg-blue-100 text-blue-600">
+                                {getInitials(payment.patient?.name)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="font-medium text-gray-900">{payment.patient.name}</div>
+                              <div className="text-sm text-gray-500">{payment.patient.email}</div>
+                              <div className="text-sm text-gray-500">{payment.patient.phone_number}</div>
+                            </div>
                           </div>
-                        </div>
+                        ) : (
+                          <div className="text-red-500 italic">Patient deleted from system</div>
+                        )}
                       </td>
                       <td className="px-6 py-4">
-                        <div className="flex items-center space-x-3">
-                          <Avatar className="h-10 w-10">
-                            <AvatarImage src={payment.dentist?.profile_picture} />
-                            <AvatarFallback className="bg-green-100 text-green-600">
-                              {getInitials(payment.dentist?.name)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className="font-medium text-gray-900">{payment.dentist?.name}</div>
-                            <div className="text-sm text-gray-500">{payment.dentist?.email}</div>
-                            <div className="text-sm text-gray-500">{payment.dentist?.phone_number}</div>
+                        {payment.dentist ? (
+                          <div className="flex items-center space-x-3">
+                            <Avatar className="h-10 w-10">
+                              <AvatarImage src={payment.dentist?.profile_picture} />
+                              <AvatarFallback className="bg-green-100 text-green-600">
+                                {getInitials(payment.dentist?.name)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="font-medium text-gray-900">{payment.dentist.name}</div>
+                              <div className="text-sm text-gray-500">{payment.dentist.email}</div>
+                              <div className="text-sm text-gray-500">{payment.dentist.phone_number}</div>
+                            </div>
                           </div>
-                        </div>
+                        ) : (
+                          <div className="text-red-500 italic">Dentist deleted from system</div>
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center space-x-1">
@@ -266,6 +274,7 @@ const PaymentsInterface: React.FC = () => {
             <Card key={payment.appointment.appointment_id} className="overflow-hidden">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
+                  {payment.patient ? (
                   <div className="flex items-center space-x-3">
                     <Avatar className="h-12 w-12">
                       <AvatarImage src={payment.patient?.profile_picture} />
@@ -274,10 +283,13 @@ const PaymentsInterface: React.FC = () => {
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <CardTitle className="text-lg">{payment.patient?.name}</CardTitle>
-                      <CardDescription className="text-sm">{payment.patient?.email}</CardDescription>
+                      <CardTitle className="text-lg">{payment.patient.name}</CardTitle>
+                      <CardDescription className="text-sm">{payment.patient.email}</CardDescription>
                     </div>
                   </div>
+                ) : (
+                  <div className="text-red-500 italic">Patient deleted from system</div>
+                )}
                   <div className="flex items-center space-x-1">
                     <span className="text-gray-500">Rs</span>
                     <span className="font-bold text-lg text-gray-900">{payment.appointment.fee}</span>
@@ -285,18 +297,24 @@ const PaymentsInterface: React.FC = () => {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                  <Avatar className="h-10 w-10">
-                    <AvatarImage src={payment.dentist?.profile_picture} />
-                    <AvatarFallback className="bg-green-100 text-green-600">
-                      {getInitials(payment.dentist?.name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <div className="font-medium text-gray-900">{payment.dentist?.name}</div>
-                    <div className="text-sm text-gray-500">{payment.dentist?.email}</div>
+                {payment.dentist ? (
+                  <div className="flex items-center space-x-3   bg-gray-50 rounded-lg">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={payment.dentist?.profile_picture} />
+                      <AvatarFallback className="bg-green-100 text-green-600">
+                        {getInitials(payment.dentist?.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div >
+                      <div className="font-medium text-gray-900">{payment.dentist.name}</div>
+                      <div className="text-sm text-gray-500">{payment.dentist.email}</div>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className=" bg-gray-50 rounded-lg text-red-500 italic">
+                    Dentist deleted from system
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex items-center space-x-2">

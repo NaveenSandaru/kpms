@@ -56,13 +56,14 @@ router.get('/:study_id', /* authenticateToken, */ async (req, res) => {
 
 // Get studies by patient ID
 router.get('/patient/:patient_id', /* authenticateToken, */ async (req, res) => {
+  console.debug("route called");
+  console.debug(req.params.patient_id);
   try {
     const studies = await prisma.study.findMany({
       where: { patient_id: req.params.patient_id },
       include: {
         radiologist: true,
         report: true,
-        status: true,
         dentistAssigns: {
           include: {
             dentist: true
@@ -74,7 +75,7 @@ router.get('/patient/:patient_id', /* authenticateToken, */ async (req, res) => 
         { time: 'desc' }
       ]
     });
-
+    console.debug(studies);
     res.json(studies);
   } catch (error) {
     console.error('Error fetching patient studies:', error);

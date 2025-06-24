@@ -70,7 +70,10 @@ const DentalDashboard = () => {
       if(response.status == 500){
         throw new Error("Internal Server Error");
       }
-      setTodaysAppointments(response.data);
+      const validAppointments = response.data.filter(
+        (appointment: Appointment) => appointment.patient !== null
+      );
+      setTodaysAppointments(validAppointments);
     }
     catch(err: any){
       toast.error(err.message);
@@ -89,7 +92,10 @@ const DentalDashboard = () => {
       if(response.status == 500){
         throw new Error("Internal Server Error");
       }
-      setUpcomingAppointments(response.data);
+      const validAppointments = response.data.filter(
+        (appointment: Appointment) => appointment.patient !== null
+      );
+      setUpcomingAppointments(validAppointments);
     }
     catch(err: any){
       toast.error(err.message);
@@ -286,14 +292,14 @@ const DentalDashboard = () => {
             {todaysAppointments.map((appointment) => (
               <div key={appointment.appointment_id} className="flex items-center p-3 md:p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                 <img
-                  src={appointment.patient.profile_picture}
-                  alt={appointment.patient.name}
+                  src={appointment.patient?.profile_picture || ''} onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = ''; }}
+                  alt={appointment.patient?.name}
                   className="w-10 h-10 md:w-12 md:h-12 rounded-full mr-3 md:mr-4"
                 />
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                     <div className="mb-1 sm:mb-0">
-                      <h3 className="font-medium text-gray-900 truncate">{appointment.patient.name}</h3>
+                      <h3 className="font-medium text-gray-900 truncate">{appointment.patient?.name || "deleted patient"}</h3>
                       <p className="text-sm text-gray-600 truncate">{appointment.note}</p>
                     </div>
                     <div className="flex items-center space-x-3">
@@ -423,13 +429,13 @@ const DentalDashboard = () => {
                 {upcomingAppointments.map((appointment, index) => (
                   <div key={index} className="flex items-center p-3 bg-gray-50 rounded-lg">
                     <img
-                      src={appointment.patient.profile_picture}
-                      alt={appointment.patient.name}
+                      src={appointment.patient?.profile_picture}
+                      alt={appointment.patient?.name || "deleted patient" }
                       className="w-8 h-8 rounded-full mr-3"
                     />
                     <div className="flex-1 min-w-0">
                       <h3 className="font-medium text-gray-900 text-sm truncate">
-                        {appointment.patient.name}
+                        {appointment.patient?.name || "deleted patient"}
                       </h3>
                       <p className="text-xs text-gray-600 truncate">{appointment.note}</p>
                     </div>

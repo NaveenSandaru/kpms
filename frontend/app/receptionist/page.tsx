@@ -105,15 +105,23 @@ export default function ReceptionistDashboard() {
   
         const filtered = response.data
           .filter((appointment: Appointment) => {
-            const formattedDate = appointment.date.split("T")[0]
+            // Filter out if no patient or dentist
+            if (!appointment.patient || !appointment.dentist) return false;
+  
+            const formattedDate = appointment.date.split("T")[0];
             const appointmentTime = new Date(`${formattedDate}T${appointment.time_from}`);
-            return appointmentTime >= now && appointment.status !== 'cancelled' && appointment.status !== "pending";
+  
+            return appointmentTime >= now &&
+              appointment.status !== 'cancelled' &&
+              appointment.status !== 'pending';
           })
           .sort((a: Appointment, b: Appointment) => {
-            const formattedDate1 = a.date.split("T")[0]; 
+            const formattedDate1 = a.date.split("T")[0];
             const timeA = new Date(`${formattedDate1}T${a.time_from}`).getTime();
-            const formattedDate2 = b.date.split("T")[0]; 
+  
+            const formattedDate2 = b.date.split("T")[0];
             const timeB = new Date(`${formattedDate2}T${b.time_from}`).getTime();
+  
             return timeA - timeB;
           })
           .slice(0, 10);
@@ -126,7 +134,7 @@ export default function ReceptionistDashboard() {
       toast.error(err.message);
     }
   };
-
+  
   const handleCheckIn = async (appointment_id: number) => {
     setCheckingIn(true);
     try{

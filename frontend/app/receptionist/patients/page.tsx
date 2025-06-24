@@ -193,14 +193,20 @@ const PatientManagement = () => {
         if(response.status != 201){
           throw new Error("Error Creating Patient");
         }
+
         else{
           toast.success("Patient Created Successfully");
           setPatients(prev => [...prev, { ...formData, patient_id: newPatientId }]);
         }
       }
       catch (err: any) {
-        toast.error(err.message);
+        if (err.response?.status === 409) {
+          toast.error("User Already Exists");
+        } else {
+          toast.error(err.message);
+        }
       }
+      
       finally {
 
       }
