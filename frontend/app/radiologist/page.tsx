@@ -152,32 +152,40 @@ const MedicalStudyInterface: React.FC = () => {
 
   // Calculate studies assigned today
   const calculateAssignedToday = (studies: Study[]) => {
+    if (!radiologistID) return 0;
     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
     return studies.filter(study => {
       // Convert study date to YYYY-MM-DD format for comparison
       const studyDate = study.date.split('T')[0];
-      return studyDate === today;
+      return studyDate === today && study.radiologist_id?.toString() === radiologistID;
     }).length;
   };
 
   // Update assigned today count, total assigned count, and reported today count when studies change
   useEffect(() => {
-    if (studies.length > 0) {
+    if (studies.length > 0 && radiologistID) {
       const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
       
+      // Calculate assigned today count (only for this radiologist)
       setAssignedTodayCount(calculateAssignedToday(studies));
-      // The total count is simply the length of the filtered studies array
-      setTodayCount(studies.length);
       
-      // Calculate reported today count
+      // Calculate pending review count (only studies assigned to this radiologist AND at least one doctor)
+      const pendingReviewCount = studies.filter(study => 
+        study.radiologist_id?.toString() === radiologistID && 
+        study.doctors && 
+        study.doctors.length > 0
+      ).length;
+      setTodayCount(pendingReviewCount);
+      
+      // Calculate reported today count (studies with reports assigned to this radiologist)
       const reportedToday = studies.filter(study => {
-        // Check if study has a report and was reported today
-        return study.report_id && study.date.startsWith(today);
+        return study.report_id && 
+               study.radiologist_id?.toString() === radiologistID;
       }).length;
       
       setReportedTodayCount(reportedToday);
     }
-  }, [studies]);
+  }, [studies, radiologistID]);
 
   useEffect(()=>{
     if(isLoadingAuth) return;
