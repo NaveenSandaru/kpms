@@ -5,7 +5,7 @@ import { ArrowLeft, User, Mail, Phone, Upload, X, Camera } from 'lucide-react';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
 import { Label } from '@/Components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Progress } from '@/Components/ui/progress';
 import { Alert, AlertDescription } from '@/Components/ui/alert';
 import axios from 'axios';
