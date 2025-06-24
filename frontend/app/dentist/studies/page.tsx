@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, Plus, Search, MoreHorizontal, X, Upload, FileText, Edit, Trash2, UserPlus, User, Users, ChevronDown, ChevronRight, Eye, File } from 'lucide-react';
+import { toast } from 'sonner';
 
 // Types based on the database structure
 interface Doctor {
@@ -426,7 +427,7 @@ const MedicalStudyInterface: React.FC = () => {
       });
     } catch (error) {
       console.error('Error assigning staff:', error);
-      alert('Failed to assign staff. Please try again.');
+      toast.error('Error assigning staff');
     }
   };
 
@@ -448,11 +449,11 @@ const MedicalStudyInterface: React.FC = () => {
       setStudies(prev => prev.filter(study => study.study_id !== studyId));
 
       // Show success message
-      alert('Study deleted successfully');
+      toast.success('Study deleted successfully');
     } catch (error) {
       console.error('Error deleting study:', error);
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-      alert(`Error deleting study: ${errorMessage}`);
+      toast.error(`Error deleting study: ${errorMessage}`);
     }
   };
 
@@ -663,7 +664,7 @@ const MedicalStudyInterface: React.FC = () => {
       ));
 
       // Show success message
-      alert('Study updated successfully!');
+      toast.success('Study updated successfully');
 
       // Step 6: Reset state and close modal
       setIsAddStudyOpen(false);

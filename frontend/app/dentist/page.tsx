@@ -220,13 +220,13 @@ const DentalDashboard = () => {
   useEffect(() => {
     if (isLoadingAuth) return;
     if (!isLoggedIn) {
-      alert("Please log in");
+      toast.error("Authentication Required");
       router.push("/");
       return;
     }
   
     if (user?.role !== "dentist") {
-      alert("Access Denied");
+      toast.error("Access Denied");
       router.push("/");
       return;
     }

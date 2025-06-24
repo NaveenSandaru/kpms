@@ -321,7 +321,7 @@ export default function DentistDashboard({ params }: DashboardProps) {
       document.body.removeChild(link);
     } catch (error) {
       console.error('Error downloading file:', error);
-      alert('Failed to open/download the file.');
+      toast.error('Error downloading file');
     }
   };
 

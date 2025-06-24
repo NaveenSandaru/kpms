@@ -609,7 +609,7 @@ const PatientManagement = () => {
                   </Button>
                   <Button
                     onClick={handleSubmit}
-                    className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
+                    className="bg-emerald-500 hover:bg-emerald-600 w-full sm:w-auto"
                   >
                     {editingPatient ? 'Update Patient' : 'Add Patient'}
                   </Button>

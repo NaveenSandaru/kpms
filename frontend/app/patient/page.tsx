@@ -245,13 +245,17 @@ const HealthcareDashboard: React.FC = () => {
   useEffect(() => {
     if (isLoadingAuth) return;
     if (!isLoggedIn) {
-      alert("Please log in");
+      toast.error("Authentication Required", {
+        description: "Please log in to access patient dashboard"
+      })
      router.push("/");
       return;
     }
 
     if (user?.role !== "patient") {
-      alert("Access Denied");
+      toast.error("Access Denied", {
+        description: "You are not authorized to access this page"
+      })
       router.push("/");
       return;
     }

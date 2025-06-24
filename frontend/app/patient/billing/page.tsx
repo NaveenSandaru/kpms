@@ -285,7 +285,7 @@ const PaymentsInterface: React.FC = () => {
                 Make Payment
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogContent className=" max-h-[80vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle className="text-xl font-semibold">Make Payment</DialogTitle>
               </DialogHeader>
@@ -293,7 +293,7 @@ const PaymentsInterface: React.FC = () => {
               <div className="space-y-6">
                 {/* Appointment Selection */}
                 <div>
-                  <h3 className="text-lg font-medium mb-4">Select Appointment to Pay</h3>
+                  <h3 className="text-lg items-center flex md:justify-start justify-center font-medium mb-4">Select Appointment to Pay</h3>
 
                   {loadingUnpaidAppointments ? (
                     <div className="flex items-center justify-center py-8">

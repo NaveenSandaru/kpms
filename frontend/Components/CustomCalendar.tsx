@@ -113,8 +113,8 @@ export default function CustomCalendar({ selectedDate, onSelect, modifiers = {} 
             className={`
               relative w-12 h-12 flex items-center justify-center mx-auto rounded-full
               ${!isSameMonth(day, monthStart) ? 'text-gray-400' : ''}
-              ${isToday(day) ? 'bg-blue-900 font-semibold' : ''}
-              ${selectedDateState && isSameDay(day, selectedDateState) ? 'bg-blue-900' : ''}
+              ${isToday(day) ? 'bg-blue-500 font-semibold' : ''}
+              ${selectedDateState && isSameDay(day, selectedDateState) ? 'bg-emerald-500' : ''}
               ${isFullyBooked ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-gray-100'}
             `}
             key={day.toString()}
