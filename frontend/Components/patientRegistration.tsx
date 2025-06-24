@@ -15,6 +15,8 @@ import { Upload, User, Shield, CheckCircle, Mail, AlertCircle, Info, ArrowLeft, 
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { LoadingButton } from "@/Components/ui/loading-button"
+import Image from "next/image"
+import Recaptcha from "@/app/recaptcha.png"
 
 type Step = 1 | 2 | 3
 
@@ -950,7 +952,7 @@ export default function ClientRegistration() {
               {"I'm not a robot"}
             </Label>
             <div className="ml-auto">
-              <img src="/placeholder.svg?height=40&width=40" alt="reCAPTCHA" className="w-10 h-10" />
+              <Image src={Recaptcha} alt="reCAPTCHA" className="w-10 h-10" />
             </div>
           </div>
           {!isRecaptchaVerified && (
