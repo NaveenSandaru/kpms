@@ -65,7 +65,7 @@ const DoctorSidebar = () => {
         icon: UserCheck,
       },*/
       {
-        title: "Reports",
+        title: "Patients Studies",
         url: `/dentist/studies`,
         icon: BarChart3,
       },
