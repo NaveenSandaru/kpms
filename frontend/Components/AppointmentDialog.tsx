@@ -628,7 +628,7 @@ export function AppointmentDialog({ open, onOpenChange, onAppointmentCreated }: 
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button className='bg-emerald-500 hover:bg-emerald-600 ' type="submit" disabled={loading}>
               {loading ? 'Creating...' : 'Create Appointment'}
             </Button>
           </DialogFooter>
