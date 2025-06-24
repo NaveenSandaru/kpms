@@ -268,9 +268,9 @@ const PaymentsInterface: React.FC = () => {
     <div className="min-h-screen bg-gray-50 p-6 overflow-auto">
       <div className="mx-auto max-w-7xl">
         {/* Header */}
-        <div className="mb-8 flex justify-between items-start">
+        <div className="mb-8 flex flex-col md:flex-row justify-between items-start">
           <div>
-            <h1 className="text-3xl font-bold mt-7 md:mt-0 text-gray-900 mb-2">Payments</h1>
+            <h1 className="text-3xl font-bold  md:mt-0 text-gray-900 mb-2">Payments</h1>
             <p className="text-gray-600">View Payments database entries</p>
           </div>
 
@@ -278,7 +278,7 @@ const PaymentsInterface: React.FC = () => {
           <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
             <DialogTrigger asChild>
               <Button
-                className="mt-7 md:mt-0 bg-emerald-500 hover:bg-emerald-600 text-white"
+                className="mt-7 w-full md:w-auto md:mt-2 bg-emerald-500 hover:bg-emerald-600 text-white"
                 onClick={fetchUnpaidAppointments}
               >
                 <Plus className="h-4 w-4 mr-2" />

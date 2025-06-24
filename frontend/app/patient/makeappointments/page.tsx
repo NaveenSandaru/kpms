@@ -89,7 +89,11 @@ export default function ServiceProviderPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 md:py-4">
+        <div className="flex flex-col  items-start mb-6  ">
+            <h1 className="text-3xl font-bold mt-7 md:mt-0 text-gray-900 mb-2">Make An Appointment</h1>
+            <p className="text-gray-600">Select a dentist to book an appointment</p>
+          </div>
         {/* Search Bar */}
         <div className="mb-4 sm:mb-6">
           <div className="relative">

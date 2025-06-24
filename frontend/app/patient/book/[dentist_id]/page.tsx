@@ -435,7 +435,7 @@ export default function DentistBookingPage() {
         description: "You must be logged in to book an appointment.",
       });
 
-      router.push("/auth/login");
+      router.push("/");
     }
   }, [user, isLoadingAuth]);
 
