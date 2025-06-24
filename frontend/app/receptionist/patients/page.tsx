@@ -120,7 +120,7 @@ const PatientManagement = () => {
   const handleSubmit = async () => {
     // Basic validation
     if (!formData.name || !formData.email) {
-      alert('Please fill in all required fields');
+      toast.error("Please fill in all required fields");
       return;
     }
 

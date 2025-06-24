@@ -74,7 +74,8 @@ const NewAppointmentForm = ({
   setNote,
   timeSlots,
   handleAppointmentCreation,
-  creatingAppointment
+  creatingAppointment,
+  isTimeSlotAvailable
 }: {
   patient_id: string;
   setPatient_id: (value: string) => void;
@@ -87,6 +88,7 @@ const NewAppointmentForm = ({
   timeSlots: string[];
   handleAppointmentCreation: () => void;
   creatingAppointment: boolean;
+  isTimeSlotAvailable: (time: string) => boolean;
 }) => (
   <DialogContent className=" max-h-screen overflow-y-auto">
     <DialogHeader>
@@ -119,11 +121,19 @@ const NewAppointmentForm = ({
               <SelectValue placeholder="Start time" />
             </SelectTrigger>
             <SelectContent>
-              {timeSlots.map((time) => (
-                <SelectItem key={time} value={time}>
-                  {time}
-                </SelectItem>
-              ))}
+              {timeSlots.map((time) => {
+                const isAvailable = isTimeSlotAvailable(time);
+                return (
+                  <SelectItem
+                    key={time}
+                    value={time}
+                    disabled={!isAvailable}
+                    className={!isAvailable ? "text-gray-400 line-through" : ""}
+                  >
+                    {time} {!isAvailable && "(Unavailable)"}
+                  </SelectItem>
+                );
+              })}
             </SelectContent>
           </Select>
         </div>
@@ -137,8 +147,8 @@ const NewAppointmentForm = ({
           onChange={(e) => setNote(e.target.value)}
         />
       </div>
-      <Button 
-        className="w-full bg-emerald-500 hover:bg-emerald-600" 
+      <Button
+        className="w-full bg-emerald-500 hover:bg-emerald-600"
         onClick={handleAppointmentCreation}
         disabled={creatingAppointment}
       >
@@ -221,8 +231,8 @@ const BlockTimeForm = ({
           </Select>
         </div>
       </div>
-      <Button 
-        className="w-full bg-emerald-500 hover:bg-emerald-600" 
+      <Button
+        className="w-full bg-emerald-500 hover:bg-emerald-600"
         onClick={handleBlockSlotCreation}
         disabled={creatingBlockSlot}
       >
@@ -249,7 +259,8 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
   const [deletingBlock, setDeletingBlock] = useState(false);
   const [cancellingAppointment, setCancellingAppointment] = useState(false);
   const [dentistWorkInfo, setDentistWorkInfo] = useState<DentistWorkInfo>();
-  
+  const [unavailableSlots, setUnavailableSlots] = useState<{ start: string; end: string }[]>([]);
+
   const router = useRouter();
 
   // States for creating new appointment
@@ -263,7 +274,7 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
   const [blockDate, setBlockDate] = useState("");
   const [blockTimeFrom, setBlockTimeFrom] = useState("");
   const [blockTimeTo, setBlockTimeTo] = useState("");
-  
+
 
   const [timeSlots, setTimeSlots] = useState([""]);
 
@@ -331,7 +342,7 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
 
   const handleBlockDeletion = async (blocked_date_id: number) => {
     if (!confirm("Are you sure you want to delete this block slot?")) return;
-    
+
     setDeletingBlock(true);
     try {
       const response = await axios.delete(
@@ -361,13 +372,23 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
       setDentistWorkInfo(response.data);
     }
     catch (err: any) {
-      
+
       toast.error(err.message);
     }
   };
 
-  const generateTimeSlots = (workInfo: DentistWorkInfo) => {
-    const slots: string[] = [];
+  // Memoize time slot generation to prevent unnecessary recalculations
+  const generateTimeSlots = async (workInfo: DentistWorkInfo) => {
+    if (!date || !workInfo) {
+      setTimeSlots([]);
+      setUnavailableSlots([]);
+      return;
+    }
+
+    console.time('generateTimeSlots'); // Performance measurement
+
+    // Generate all possible time slots based on dentist's schedule
+    const allSlots: string[] = [];
 
     const [startHour, startMin] = workInfo.work_time_from.split(":").map(Number);
     const [endHour, endMin] = workInfo.work_time_to.split(":").map(Number);
@@ -380,11 +401,88 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
       const hour = Math.floor(start / 60);
       const min = start % 60;
       const formatted = `${String(hour).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
-      slots.push(formatted);
+      allSlots.push(formatted);
       start += duration;
     }
 
-    setTimeSlots(slots);
+    if (allSlots.length === 0) {
+      setTimeSlots([]);
+      setUnavailableSlots([]);
+      return;
+    }
+
+    // ---------------- Process already reserved intervals ----------------
+    let takenIntervals: { start: string; end: string }[] = [];
+    try {
+      // Get appointments for this dentist on the selected date - optimize by filtering once
+      const currentDate = date; // Capture current date to avoid closure issues
+      const appointmentsForDate = appointments.filter(appt => formatDate(appt.date) === currentDate);
+      const blockedSlotsForDate = blockedDates.filter(block => block.date === currentDate);
+
+      // Pre-allocate array size for better performance
+      takenIntervals = new Array(appointmentsForDate.length + blockedSlotsForDate.length);
+      let index = 0;
+
+      // Add appointments to taken intervals
+      for (let i = 0; i < appointmentsForDate.length; i++) {
+        takenIntervals[index++] = {
+          start: appointmentsForDate[i].time_from,
+          end: appointmentsForDate[i].time_to
+        };
+      }
+
+      // Add blocked slots to taken intervals
+      for (let i = 0; i < blockedSlotsForDate.length; i++) {
+        const block = blockedSlotsForDate[i];
+        if (block.time_from && block.time_to) {
+          takenIntervals[index++] = { start: block.time_from, end: block.time_to };
+        } else {
+          // Whole day blocked
+          takenIntervals[index++] = { start: '00:00', end: '23:59' };
+        }
+      }
+
+      // Trim array if needed
+      if (index < takenIntervals.length) {
+        takenIntervals = takenIntervals.slice(0, index);
+      }
+    } catch (err) {
+      console.error('❌ Error processing reserved intervals:', err);
+    }
+
+    // Keep track of unavailable slots for the form selector
+    // but show ALL slots in the daily schedule
+    setUnavailableSlots(takenIntervals);
+    setTimeSlots(allSlots);
+
+    console.timeEnd('generateTimeSlots'); // Performance measurement
+    console.log(`✅ All time slots: ${allSlots.length}, with ${takenIntervals.length} unavailable intervals`);
+  };
+
+  // Helper function to check if a time slot is available
+  const isTimeSlotAvailable = (slotTime: string): boolean => {
+    if (!dentistWorkInfo) return false;
+
+    const duration = parseInt(dentistWorkInfo.appointment_duration, 10);
+    const toMinutes = (t: string) => {
+      const [h, m] = t.split(':').map((n: string) => parseInt(n));
+      return h * 60 + (m || 0);
+    };
+
+    // Check if this slot overlaps with any unavailable interval
+    const slotMinutes = toMinutes(slotTime);
+    const endSlotMinutes = slotMinutes + duration;
+
+    for (const interval of unavailableSlots) {
+      const startRangeMinutes = toMinutes(interval.start);
+      const endRangeMinutes = toMinutes(interval.end);
+
+      if (slotMinutes < endRangeMinutes && endSlotMinutes > startRangeMinutes) {
+        return false; // There is an overlap
+      }
+    }
+
+    return true;
   };
 
   const handleAppointmentCreation = async () => {
@@ -392,6 +490,12 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
     try {
       const timeTo = addMinutesToTime(time_from, dentistWorkInfo?.appointment_duration || "0");
 
+      // Check if the time slot is available before making the API call
+      if (!isTimeSlotAvailable(time_from)) {
+        throw new Error("This time slot is no longer available");
+      }
+
+      // 1. Create the appointment
       const response = await axios.post(
         `${backendURL}/appointments/`,
         {
@@ -410,8 +514,32 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
       if (response.status !== 201) {
         throw new Error("Error Creating Appointment");
       } else {
-        toast.success("Appointment Created Successfully");
+        // 2. Fetch patient details to include in the appointment
+        try {
+          const patientResponse = await axios.get(`${backendURL}/patients/${patient_id}`);
+          const patientData = patientResponse.data;
+
+          // 3. Create a complete appointment object with patient details
+          const newAppointment = {
+            ...response.data,
+            patient: patientData
+          };
+
+          // 4. Update the appointments state with the complete data
+          setAppointments(prev => [...prev, newAppointment]);
+
+          toast.success("Appointment Created Successfully");
+        } catch (patientErr) {
+          console.error("Could not fetch patient details:", patientErr);
+          // If patient fetch fails, still add appointment but mark for refresh
+          setAppointments(prev => [...prev, response.data]);
+          toast.success("Appointment Created Successfully, refreshing data...");
+          // Fetch all appointments to ensure data consistency
+          fetchAppointments();
+        }
+
         setIsNewAppointmentOpen(false);
+
         fetchAppointments();
         // Reset form
         setPatient_id("");
@@ -441,13 +569,20 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
       if (response.status != 201) {
         throw new Error("Internal Server Error");
       }
-     toast.success("Block Slot Created Successfully");
+      // Optimistically update local state
+      const newBlockedDate = response.data;
+      setBlockedDates(prev => [...prev, newBlockedDate]);
+      toast.success("Block Slot Created Successfully");
       setIsBlockTimeOpen(false);
-      fetchBlockedSlots();
       // Reset form
       setBlockDate("");
       setBlockTimeFrom("");
       setBlockTimeTo("");
+
+      // Only fetch if optimistic update fails
+      if (!newBlockedDate || !newBlockedDate.blocked_date_id) {
+        fetchBlockedSlots();
+      }
     }
     catch (err: any) {
       toast.error(err.message);
@@ -459,26 +594,32 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
 
   const handleAppointmentCancellation = async (appointment_id: number) => {
     setCancellingAppointment(true);
-    try{
+    try {
       const response = await axios.put(
         `${backendURL}/appointments/${appointment_id}`,
         {
           status: "cancelled"
         }
       );
-      if(response.status != 202){
+      if (response.status != 202) {
         throw new Error("Error cancelling appointment");
       }
+      // Optimistically update the local state to avoid full refetch
+      setAppointments(prev => prev.map(apt => 
+        apt.appointment_id === appointment_id 
+          ? { ...apt, status: "cancelled" } 
+          : apt
+      ));
       toast.success("Appointment Cancelled Successfully");
-      
     }
-    catch(err: any){
+    catch (err: any) {
       toast.error(err.message);
+      fetchAppointments();
     }
-    finally{
+    finally {
       setCancellingAppointment(false);
     }
-  }
+  };
 
   // Filter appointments based on selected date and search term
   const filteredAppointments = appointments.filter(apt => {
@@ -547,17 +688,40 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
       return;
     }
     if (user?.id) {
-      fetchAppointments();
-      fetchBlockedSlots();
-      fetchDentistWorkInfo();
+      Promise.all([
+        fetchAppointments(),
+        fetchBlockedSlots(),
+        fetchDentistWorkInfo()
+      ]);
     }
-  }, [user, isLoadingAuth, isLoggedIn]);
+  }, [user?.id, isLoadingAuth, isLoggedIn]);
 
   useEffect(() => {
-    if (dentistWorkInfo) {
-      generateTimeSlots(dentistWorkInfo);
+    // Only regenerate time slots if we have the necessary data
+    if (dentistWorkInfo && date) {
+      // Use a small timeout to prevent blocking the UI thread
+      const timerId = setTimeout(() => {
+        generateTimeSlots(dentistWorkInfo);
+      }, 0);
+      
+      return () => clearTimeout(timerId);
     }
-  }, [dentistWorkInfo]);
+  }, [
+    // Only these specific changes should trigger regeneration
+    dentistWorkInfo?.work_time_from,
+    dentistWorkInfo?.work_time_to,
+    dentistWorkInfo?.appointment_duration,
+    date,
+    // Use string representation of appointments and blocked dates to avoid
+    // unnecessary regeneration when the objects haven't actually changed
+    JSON.stringify(appointments.map(a => ({ id: a.appointment_id, date: formatDate(a.date), from: a.time_from, to: a.time_to }))),
+    JSON.stringify(blockedDates.map(b => ({ id: b.blocked_date_id, date: b.date, from: b.time_from, to: b.time_to })))
+  ]);
+
+  // Update date in new appointment dialog when selected date changes
+  useEffect(() => {
+    setDate(selectedDate);
+  }, [selectedDate]);
 
   const renderAppointmentTable = (appointmentList: Appointment[], showActions: boolean = true) => (
     <div className="overflow-x-auto">
@@ -613,9 +777,9 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
                 </td>
                 {showActions && (
                   <td className="p-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => handleAppointmentCancellation(appointment.appointment_id)}
                       disabled={cancellingAppointment || appointment.status === "cancelled"}
                     >
@@ -660,6 +824,7 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
                 timeSlots={timeSlots}
                 handleAppointmentCreation={handleAppointmentCreation}
                 creatingAppointment={creatingAppointment}
+                isTimeSlotAvailable={isTimeSlotAvailable}
               />
             </Dialog>
           </div>
@@ -690,9 +855,20 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
                         apt.time_from <= time && apt.time_to > time
                       );
                       const isBlocked = isTimeSlotBlocked(time);
+                      const isAvailable = !appointment && !isBlocked;
+                      
+                      // Apply appropriate styling based on availability
+                      const borderClass = isAvailable 
+                        ? "border-gray-200" 
+                        : appointment 
+                          ? "border-blue-200" 
+                          : "border-red-200";
 
                       return (
-                        <div key={time} className="flex items-center space-x-3 p-2 rounded-lg border">
+                        <div 
+                          key={time} 
+                          className={`flex items-center space-x-3 p-2 rounded-lg border ${borderClass}`}
+                        >
                           <div className="text-sm font-medium w-16 text-gray-600">
                             {time}
                           </div>
@@ -806,10 +982,10 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
                         </div>
                         <div className="text-xs text-red-600">Blocked</div>
                       </div>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="text-red-600 hover:text-red-700 text-xs" 
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-600 hover:text-red-700 text-xs"
                         onClick={() => handleBlockDeletion(block.blocked_date_id)}
                         disabled={deletingBlock}
                       >

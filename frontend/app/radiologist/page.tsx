@@ -3,6 +3,8 @@ import React, { useState, useEffect, useContext } from 'react';
 import { Calendar, Clock, Plus, Search, MoreHorizontal, CheckCircle, X, Upload, FileText, Edit, Trash2, UserPlus, User, Users, Check, FileUp, ChevronDown, ChevronRight, Eye, File } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import { AuthContext } from '@/context/auth-context';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 // Types based on the database structure
 interface Doctor {
@@ -65,6 +67,7 @@ const MedicalStudyInterface: React.FC = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [studyToEdit, setStudyToEdit] = useState<Study | null>(null);
   const [expandedStudyId, setExpandedStudyId] = useState<number | null>(null);
+  
   
 
   const {user, isLoadingAuth, isLoggedIn} = useContext(AuthContext);
@@ -134,6 +137,7 @@ const MedicalStudyInterface: React.FC = () => {
   const [reportedTodayCount, setReportedTodayCount] = useState<number>(0);
   const [radiologists, setRadiologists] = useState<Radiologist[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const router = useRouter();
 
   // Helper to convert API study payload into UI-friendly shape
   const normalizeStudy = (raw: any): Study => {
@@ -152,42 +156,50 @@ const MedicalStudyInterface: React.FC = () => {
 
   // Calculate studies assigned today
   const calculateAssignedToday = (studies: Study[]) => {
+    if (!radiologistID) return 0;
     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
     return studies.filter(study => {
       // Convert study date to YYYY-MM-DD format for comparison
       const studyDate = study.date.split('T')[0];
-      return studyDate === today;
+      return studyDate === today && study.radiologist_id?.toString() === radiologistID;
     }).length;
   };
 
   // Update assigned today count, total assigned count, and reported today count when studies change
   useEffect(() => {
-    if (studies.length > 0) {
+    if (studies.length > 0 && radiologistID) {
       const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
       
+      // Calculate assigned today count (only for this radiologist)
       setAssignedTodayCount(calculateAssignedToday(studies));
-      // The total count is simply the length of the filtered studies array
-      setTodayCount(studies.length);
       
-      // Calculate reported today count
+      // Calculate pending review count (only studies assigned to this radiologist AND at least one doctor)
+      const pendingReviewCount = studies.filter(study => 
+        study.radiologist_id?.toString() === radiologistID && 
+        study.doctors && 
+        study.doctors.length > 0
+      ).length;
+      setTodayCount(pendingReviewCount);
+      
+      // Calculate reported today count (studies with reports assigned to this radiologist)
       const reportedToday = studies.filter(study => {
-        // Check if study has a report and was reported today
-        return study.report_id && study.date.startsWith(today);
+        return study.report_id && 
+               study.radiologist_id?.toString() === radiologistID;
       }).length;
       
       setReportedTodayCount(reportedToday);
     }
-  }, [studies]);
+  }, [studies, radiologistID]);
 
   useEffect(()=>{
     if(isLoadingAuth) return;
     if(!isLoggedIn){
-      window.alert("Please Log in");
-      window.location.href = "/";
+      toast.error("You are not logged in");
+      router.push("/")
     }
     else if(user.role != "radiologist"){
-      window.alert("Access Denied");
-      window.location.href = "/"
+      toast.error("Access Denied");
+      router.push("/")
     }
     setRadiologistID(user.id)
   },[isLoadingAuth]);
@@ -337,7 +349,7 @@ const MedicalStudyInterface: React.FC = () => {
       });
     } catch (error) {
       console.error('Error assigning staff:', error);
-      alert('Failed to assign staff. Please try again.');
+      toast.error('Error assigning staff');
     }
   };
 
@@ -480,7 +492,7 @@ const MedicalStudyInterface: React.FC = () => {
       }
 
       // Show success message
-      alert('Report updated successfully!');
+      toast.success('Study updated successfully');
 
       // Reset state and close modal
       setIsAddStudyOpen(false);

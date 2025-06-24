@@ -385,7 +385,7 @@ export function AppointmentDialog({ open, onOpenChange, onAppointmentCreated }: 
     e.preventDefault()
     
     if (!formData.patientId || !formData.dentistId || !formData.timeSlot || !dateString) {
-      alert('Please fill in all required fields')
+      toast.error('Please fill in all required fields')
       return
     }
 
