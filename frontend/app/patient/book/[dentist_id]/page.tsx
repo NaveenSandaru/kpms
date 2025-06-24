@@ -4,7 +4,6 @@ import { useParams, useRouter } from "next/navigation";
 import { useContext, useEffect, useMemo, useState } from "react";
 import { Button } from "@/Components/ui/button";
 import { Card } from "@/Components/ui/card";
-import { Calendar } from "@/Components/ui/calendar";
 import { AuthContext } from '@/context/auth-context';
 import { toast } from "sonner";
 import axios from "axios";
@@ -74,7 +73,7 @@ export default function DentistBookingPage() {
   const router = useRouter();
   const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
-
+  console.log(isLoading);
 
   const bookedDates = useMemo(() => {
     return currentAppointments.map(app => new Date(app.date));
