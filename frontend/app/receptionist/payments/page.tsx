@@ -90,8 +90,8 @@ const PaymentsInterface: React.FC = () => {
           status: item.appointment.status,
           payment_status: item.appointment.payment_status
         },
-        patient: item.appointment.patient,
-        dentist: item.appointment.dentist
+        patient: item.appointment?.patient,
+        dentist: item.appointment?.dentist
       }));
 
       setPayments(formatted);
@@ -106,8 +106,8 @@ const PaymentsInterface: React.FC = () => {
 
   useEffect(() => {
     const filtered = payments.filter(payment =>
-      payment.patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      payment.dentist.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      payment.patient?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      payment.dentist?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       payment.payment.reference_number.includes(searchTerm)
     );
     setFilteredPayments(filtered);
@@ -182,30 +182,30 @@ const PaymentsInterface: React.FC = () => {
                       <td className="px-6 py-4">
                         <div className="flex items-center space-x-3">
                           <Avatar className="h-10 w-10">
-                            <AvatarImage src={payment.patient.profile_picture} />
+                            <AvatarImage src={payment.patient?.profile_picture} />
                             <AvatarFallback className="bg-blue-100 text-blue-600">
-                              {getInitials(payment.patient.name)}
+                              {getInitials(payment.patient?.name|| "deleted patient")}
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <div className="font-medium text-gray-900">{payment.patient?.name || "" }</div>
-                            <div className="text-sm text-gray-500">{payment.patient.email}</div>
-                            <div className="text-sm text-gray-500">{payment.patient.phone_number}</div>
+                            <div className="font-medium text-gray-900">{payment.patient?.name || "deleted patient" }</div>
+                            <div className="text-sm text-gray-500">{payment.patient?.email || "N/A"}</div>
+                            <div className="text-sm text-gray-500">{payment.patient?.phone_number || "N/A"}</div>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center space-x-3">
                           <Avatar className="h-10 w-10">
-                            <AvatarImage src={payment.dentist.profile_picture} />
+                            <AvatarImage src={payment.dentist?.profile_picture || "deleted dentist"} />
                             <AvatarFallback className="bg-green-100 text-green-600">
-                              {getInitials(payment.dentist.name)}
+                              {getInitials(payment.dentist?.name || "deleted dentist")}
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <div className="font-medium text-gray-900">{payment.dentist.name}</div>
-                            <div className="text-sm text-gray-500">{payment.dentist.email}</div>
-                            <div className="text-sm text-gray-500">{payment.dentist.phone_number}</div>
+                            <div className="font-medium text-gray-900">{payment.dentist?.name || "deleted dentist"}</div>
+                            <div className="text-sm text-gray-500">{payment.dentist?.email || "N/A"}</div>
+                            <div className="text-sm text-gray-500">{payment.dentist?.phone_number || "N/A"}</div>
                           </div>
                         </div>
                       </td>
@@ -246,33 +246,33 @@ const PaymentsInterface: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <Avatar className="h-12 w-12">
-                      <AvatarImage src={payment.patient.profile_picture} />
+                      <AvatarImage src={payment.patient?.profile_picture} />
                       <AvatarFallback className="bg-blue-100 text-blue-600">
-                        {getInitials(payment.patient.name)}
+                        {getInitials(payment?.patient?.name || "deleted patient")}
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <CardTitle className="text-lg">{payment.patient.name}</CardTitle>
-                      <CardDescription className="text-sm">{payment.patient.email}</CardDescription>
+                      <CardTitle className="text-lg">{payment.patient?.name || "deleted patient"}</CardTitle>
+                      <CardDescription className="text-sm">{payment.patient?.email || "N/A"}</CardDescription>
                     </div>
                   </div>
                   <div className="flex items-center space-x-1">
                     <span className="text-gray-500">Rs</span>
-                    <span className="font-bold text-lg text-gray-900">{payment.appointment.fee}</span>
+                    <span className="font-bold text-lg text-gray-900">{payment.appointment?.fee}</span>
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
                   <Avatar className="h-10 w-10">
-                    <AvatarImage src={payment.dentist.profile_picture} />
+                    <AvatarImage src={payment.dentist?.profile_picture} />
                     <AvatarFallback className="bg-green-100 text-green-600">
-                      {getInitials(payment.dentist.name)}
+                      {getInitials(payment.dentist?.name || "deleted dentist")}
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <div className="font-medium text-gray-900">{payment.dentist.name}</div>
-                    <div className="text-sm text-gray-500">{payment.dentist.email}</div>
+                    <div className="font-medium text-gray-900">{payment.dentist?.name || "deleted dentist"}</div>
+                    <div className="text-sm text-gray-500">{payment.dentist?.email || "N/A"}</div>
                   </div>
                 </div>
 

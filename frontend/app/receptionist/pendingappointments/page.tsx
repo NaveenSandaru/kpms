@@ -47,53 +47,60 @@ export default function AppointmentsPage() {
   const [filteredAppointments, setFilteredAppointments] = useState<Appointment[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [receptionistId, setReceptionistId] = useState<string>('123')
-   const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
 
-   const {user, isLoadingAuth, isLoggedIn} = useContext(AuthContext);
+  const { user, isLoadingAuth, isLoggedIn } = useContext(AuthContext);
 
   const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
   const router = useRouter();
 
-   const fetchPendingAppointments = async () => {
-      try {
-        const response = await axios.get(`${backendURL}/appointments/pending`);
-        setAppointments(response.data);
-        setFilteredAppointments(response.data);
-      } catch (error) {
-        console.error('Error fetching pending appointments:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchPendingAppointments = async () => {
+    try {
+      const response = await axios.get(`${backendURL}/appointments/pending`);
 
-    const handleAcceptance = async (appointment_id: number) => {
-      try{
-        const response = await axios.put(
-          `${backendURL}/appointments/${appointment_id}`,
-          {
-            status: "confirmed"
-          }
-        );
-        if(response.status != 202){
-          throw new Error("Error Updating Status");
-        }
-        fetchPendingAppointments();
-      }
-      catch(err: any){
+      // Filter out appointments where patient or dentist is null/undefined
+      const validAppointments = response.data.filter(
+        (appointment: Appointment) => appointment.patient && appointment.dentist
+      );
 
-      }
+      setAppointments(validAppointments);
+      setFilteredAppointments(validAppointments);
+    } catch (error) {
+      console.error('Error fetching pending appointments:', error);
+    } finally {
+      setLoading(false);
     }
+  };
+
+
+  const handleAcceptance = async (appointment_id: number) => {
+    try {
+      const response = await axios.put(
+        `${backendURL}/appointments/${appointment_id}`,
+        {
+          status: "confirmed"
+        }
+      );
+      if (response.status != 202) {
+        throw new Error("Error Updating Status");
+      }
+      fetchPendingAppointments();
+    }
+    catch (err: any) {
+
+    }
+  }
 
   // Load appointments
   useEffect(() => {
-    if(isLoadingAuth) return;
-    if(!isLoggedIn){
+    if (isLoadingAuth) return;
+    if (!isLoggedIn) {
       tost.error("You are not logged in");
       router.push("/");
       return;
     }
-    else if(user.role != "receptionist"){
+    else if (user.role != "receptionist") {
       toast.error("Access Denied");
       router.push("/");
       return;
@@ -106,7 +113,7 @@ export default function AppointmentsPage() {
     let filtered = appointments
 
     if (searchTerm) {
-      filtered = filtered.filter(appointment => 
+      filtered = filtered.filter(appointment =>
         appointment.patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         appointment.dentist.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         appointment.note.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -155,83 +162,82 @@ export default function AppointmentsPage() {
 
         {/* Desktop Table View */}
         <div className="hidden md:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-           {filteredAppointments.length > 0 && (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-green-50 border-b border-gray-200">
-                <tr>
-                  <th className="text-left py-4 px-6 font-medium text-gray-700 text-sm">Patient</th>
-                  <th className="text-left py-4 px-6 font-medium text-gray-700 text-sm">Dentist</th>
-                  <th className="text-left py-4 px-6 font-medium text-gray-700 text-sm">Note</th>
-                  <th className="text-left py-4 px-6 font-medium text-gray-700 text-sm">Date & Time</th>
-                  <th className="text-left py-4 px-6 font-medium text-gray-700 text-sm">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredAppointments.map((appointment, index) => (
-                  <tr 
-                    key={appointment.appointment_id} 
-                    className={`border-b border-gray-100 hover:bg-gray-50 ${
-                      index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'
-                    }`}
-                  >
-                    <td className="py-4 px-6">
-                      <div>
-                        <div className="font-medium text-gray-900 text-sm">
-                          {appointment.patient.name}
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          {appointment.patient.email}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {appointment.patient.phone_number}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-4 px-6">
-                      <div>
-                        <div className="font-medium text-gray-900 text-sm">
-                          {appointment.dentist.name}
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          {appointment.dentist.email}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {appointment.dentist.phone_number}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-4 px-6">
-                      <div className="text-sm text-gray-600 max-w-xs">
-                        {appointment.note || 'No note'}
-                      </div>
-                    </td>
-                    <td className="py-4 px-6">
-                      <div>
-                        <div className="text-sm text-gray-900">
-                          {formatDate(appointment.date)}
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          {formatTime(appointment.time_from)} - {formatTime(appointment.time_to)}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-4 px-6">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-xs px-3 py-1 h-auto border-green-200 text-green-700 hover:bg-green-50"
-                        onClick={()=>{handleAcceptance(appointment.appointment_id)}}
-                      >
-                        Accept
-                      </Button>
-                    </td>
+          {filteredAppointments.length > 0 && (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-green-50 border-b border-gray-200">
+                  <tr>
+                    <th className="text-left py-4 px-6 font-medium text-gray-700 text-sm">Patient</th>
+                    <th className="text-left py-4 px-6 font-medium text-gray-700 text-sm">Dentist</th>
+                    <th className="text-left py-4 px-6 font-medium text-gray-700 text-sm">Note</th>
+                    <th className="text-left py-4 px-6 font-medium text-gray-700 text-sm">Date & Time</th>
+                    <th className="text-left py-4 px-6 font-medium text-gray-700 text-sm">Action</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                </thead>
+                <tbody>
+                  {filteredAppointments.map((appointment, index) => (
+                    <tr
+                      key={appointment.appointment_id}
+                      className={`border-b border-gray-100 hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'
+                        }`}
+                    >
+                      <td className="py-4 px-6">
+                        <div>
+                          <div className="font-medium text-gray-900 text-sm">
+                            {appointment.patient.name}
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1">
+                            {appointment.patient.email}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {appointment.patient.phone_number}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-6">
+                        <div>
+                          <div className="font-medium text-gray-900 text-sm">
+                            {appointment.dentist.name}
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1">
+                            {appointment.dentist.email}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {appointment.dentist.phone_number}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-6">
+                        <div className="text-sm text-gray-600 max-w-xs">
+                          {appointment.note || 'No note'}
+                        </div>
+                      </td>
+                      <td className="py-4 px-6">
+                        <div>
+                          <div className="text-sm text-gray-900">
+                            {formatDate(appointment.date)}
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1">
+                            {formatTime(appointment.time_from)} - {formatTime(appointment.time_to)}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-6">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-xs px-3 py-1 h-auto border-green-200 text-green-700 hover:bg-green-50"
+                          onClick={() => { handleAcceptance(appointment.appointment_id) }}
+                        >
+                          Accept
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {/* Mobile Card View */}
@@ -309,7 +315,7 @@ export default function AppointmentsPage() {
             <Search className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No appointments found</h3>
             <p className="text-gray-600">
-              {searchTerm 
+              {searchTerm
                 ? `No appointments match "${searchTerm}"`
                 : 'No appointments available'
               }
