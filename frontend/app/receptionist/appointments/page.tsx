@@ -203,11 +203,12 @@ export default function AppointmentsPage() {
 
     if (searchTerm) {
       source = source.filter(appointment =>
-        appointment.patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        appointment.dentist.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        appointment.note.toLowerCase().includes(searchTerm.toLowerCase())
-      )
+        (appointment.patient?.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (appointment.dentist?.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (appointment.note || "").toLowerCase().includes(searchTerm.toLowerCase())
+      );
     }
+    
 
     setFilteredAppointments(source)
   }, [activeTab, searchTerm, todayAppointments, allAppointments, checkedInAppointments])
