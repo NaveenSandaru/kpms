@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useContext } from 'react'
 import { Search, User, FileText, Calendar, Phone, Mail, Download, Upload, AlertCircle, Activity, X, ArrowLeft, Plus } from 'lucide-react'
-import { Input } from '@/components/ui/input'
+import { Input } from '@/Components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card'
 import { Badge } from '@/Components/ui/badge'
 import { Button } from '@/Components/ui/button'
@@ -247,6 +247,7 @@ export default function DentistDashboard({ params }: DashboardProps) {
       toast.error(err.message);
     } finally {
       setIsSubmittingNote(false);
+      fetchPatientSOAPNotes(selectedPatient.patient_id);
     }
   };
 
@@ -297,7 +298,7 @@ export default function DentistDashboard({ params }: DashboardProps) {
       }
 
       toast.success('Report uploaded successfully');
-      
+      fetchPatientMedicalReports(selectedPatient.patient_id);
 
 
     } catch (err: any) {

@@ -5,7 +5,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { Calendar, Clock, User, Search, Plus, X, Edit } from 'lucide-react';
 import { Button } from '@/Components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
-import { Input } from '@/components/ui/input';
+import { Input } from '@/Components/ui/input';
 import { Badge } from '@/Components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/Components/ui/dialog';
 import { Label } from '@/Components/ui/label';
@@ -88,7 +88,7 @@ const NewAppointmentForm = ({
   handleAppointmentCreation: () => void;
   creatingAppointment: boolean;
 }) => (
-  <DialogContent className="max-w-md max-h-screen overflow-y-auto">
+  <DialogContent className=" max-h-screen overflow-y-auto">
     <DialogHeader>
       <DialogTitle>New Appointment</DialogTitle>
     </DialogHeader>
@@ -295,7 +295,10 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
       if (response.status === 500) {
         throw new Error("Internal server error");
       }
-      setAppointments(response.data);
+      const validAppointments = response.data.filter(
+        (appointment: Appointment) => appointment.patient !== null
+      );
+      setAppointments(validAppointments);
     }
     catch (err: any) {
       console.error("Error fetching appointments:", err);

@@ -236,7 +236,7 @@ const PaymentsInterface: React.FC = () => {
                             </div>
                           </div>
                         ) : (
-                          <div className="text-red-500 italic">---------</div>
+                          <div className="text-red-500 italic">Dentist deleted from system</div>
                         )}
                       </td>
                       <td className="px-6 py-4">
@@ -312,6 +312,7 @@ const PaymentsInterface: React.FC = () => {
                   </div>
                 ) : (
                   <div className=" bg-gray-50 rounded-lg text-red-500 italic">
+                    Dentist deleted from system
                   </div>
                 )}
 

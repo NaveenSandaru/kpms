@@ -142,7 +142,8 @@ router.get('/fordentist/patients/:dentist_id', /* authenticateToken, */ async (r
 
     const appointments = await prisma.appointments.findMany({
       where: {
-        dentist_id: dentistId
+        dentist_id: dentistId,
+        patient_id:{not:null}
       },
       include: {
         patient: {

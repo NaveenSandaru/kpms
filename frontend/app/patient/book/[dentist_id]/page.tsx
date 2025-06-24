@@ -8,6 +8,8 @@ import { Calendar } from "@/Components/ui/calendar";
 import { AuthContext } from '@/context/auth-context';
 import { toast } from "sonner";
 import axios from "axios";
+import CustomCalendar from "@/Components/CustomCalendar"
+
 import {
   Dialog,
   DialogContent,
@@ -448,7 +450,7 @@ export default function DentistBookingPage() {
     <>
       <div className="min-h-screen bg-gray-50 py-4 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          <Card className="overflow-hidden bg-white shadow-lg rounded-lg">
+          <Card className="overflow-hidden p-0 m-0 bg-white shadow-lg rounded-lg">
             <div className="flex flex-col lg:flex-row">
               {/* Dentist Profile Section */}
               <div className="w-full lg:w-80 xl:w-96 p-4 sm:p-6 bg-gray-50 border-b lg:border-b-0 lg:border-r">
@@ -533,52 +535,32 @@ export default function DentistBookingPage() {
                 <div className="flex flex-col items-center space-y-6">
                   {/* Calendar - Made larger and centered */}
                   <div className="w-full max-w-lg">
-                    <Calendar
-                      mode="single"
-                      selected={selectedDate}
+                    <CustomCalendar
+                      selectedDate={selectedDate}
                       onSelect={setSelectedDate}
-                      modifiers={{ booked: bookedDates }}
-                      modifiersClassNames={{
-                        booked: "relative after:content-[''] after:block after:w-1.5 after:h-1.5 after:rounded-full after:bg-red-500 after:mx-auto after:mt-0.5"
-                      }}
-                      className="w-full mx-auto"
-                      classNames={{
-                        months: "flex w-full justify-center",
-                        month: "space-y-4 w-full",
-                        caption: "flex justify-center pt-2 relative items-center text-lg font-semibold mb-4",
-                        caption_label: "text-lg font-semibold",
-                        nav: "space-x-2 flex items-center",
-                        nav_button: "h-8 w-8 bg-transparent p-0 opacity-50 hover:opacity-100",
-                        table: "w-full border-collapse",
-                        head_row: "flex w-full mb-2",
-                        head_cell: "text-gray-500 rounded-md w-12 h-12 font-medium text-sm text-center flex-1 flex items-center justify-center",
-                        row: "flex w-full mt-1",
-                        cell: "text-center text-sm p-0 relative flex-1 h-12",
-                        day: "h-12 w-12 p-0 font-normal text-sm hover:bg-gray-100 rounded mx-auto flex items-center justify-center",
-                        day_selected: "bg-gray-100 hover:bg-emerald-700 text-gray-500",
-                        day_today: "bg-gray-50 text-gray-900 font-semibold",
-                        day_outside: "text-gray-400 opacity-50",
+                      modifiers={{
+                        booked: bookedDates
                       }}
                     />
                   </div>
 
                   {/* Time Slots Legend */}
                   <div className="w-full max-w-2xl mb-4">
-                    <div className="flex items-center justify-center space-x-6">
-                      <div className="flex items-center">
-                        <div className="w-4 h-4 rounded border border-gray-300 bg-white mr-2"></div>
+                    <div className="grid grid-cols-2 gap-4 sm:flex sm:items-center sm:justify-center sm:space-x-6">
+                      <div className="flex items-center justify-center sm:justify-start">
+                        <div className="w-4 h-4 rounded border border-gray-300 bg-white mr-2 flex-shrink-0"></div>
                         <span className="text-sm text-gray-600">Available</span>
                       </div>
-                      <div className="flex items-center">
-                        <div className="w-4 h-4 rounded bg-red-100 border border-red-300 mr-2"></div>
+                      <div className="flex items-center justify-center sm:justify-start">
+                        <div className="w-4 h-4 rounded bg-red-100 border border-red-300 mr-2 flex-shrink-0"></div>
                         <span className="text-sm text-gray-600">Booked</span>
                       </div>
-                      <div className="flex items-center">
-                        <div className="w-4 h-4 rounded bg-gray-200 mr-2"></div>
+                      <div className="flex items-center justify-center sm:justify-start">
+                        <div className="w-4 h-4 rounded bg-gray-200 mr-2 flex-shrink-0"></div>
                         <span className="text-sm text-gray-600">Blocked</span>
                       </div>
-                      <div className="flex items-center">
-                        <div className="w-4 h-4 rounded bg-emerald-100 border border-emerald-300 mr-2"></div>
+                      <div className="flex items-center justify-center sm:justify-start">
+                        <div className="w-4 h-4 rounded bg-emerald-100 border border-emerald-300 mr-2 flex-shrink-0"></div>
                         <span className="text-sm text-gray-600">Your Booking</span>
                       </div>
                     </div>
