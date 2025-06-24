@@ -566,7 +566,7 @@ export default function DentistSchedulePage({ params }: DentistScheduleProps) {
           <tr className="border-b">
             <th className="text-left p-2">Patient</th>
             <th className="text-left p-2 hidden sm:table-cell">Service</th>
-            <th className="text-left p-2">Date & Time</th>
+            <th className="text-left p-2 ">Date & Time</th>
             <th className="text-left p-2 hidden md:table-cell">Fee</th>
             <th className="text-left p-2">Status</th>
             {showActions && <th className="text-left p-2">Actions</th>}
