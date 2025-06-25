@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, } from 'react';
-import { Search, Clock, Phone, Mail,  } from 'lucide-react';
+import React, { useState, useEffect, use } from 'react';
+import { Search, Clock, Phone, Mail, MapPin } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';

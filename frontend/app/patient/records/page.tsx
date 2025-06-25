@@ -34,7 +34,6 @@ interface Study {
   dicom_file_url?: string;
   body_part?: string;
   reason?: string;
-  report: any;
 }
 
 interface NewStudyForm {
@@ -54,9 +53,9 @@ interface AssignmentForm {
 }
 
 const MedicalStudyInterface: React.FC = () => {
-  //const [isAddStudyOpen, setIsAddStudyOpen] = useState(false);
-  //const [isEditMode, setIsEditMode] = useState(false);
-  //const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [isAddStudyOpen, setIsAddStudyOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [selectedStudyId, setSelectedStudyId] = useState<number | null>(null);
   const [studyToEdit, setStudyToEdit] = useState<Study | null>(null);
   const [activeTab, setActiveTab] = useState('ALL');
@@ -65,7 +64,7 @@ const MedicalStudyInterface: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [expandedStudyId, setExpandedStudyId] = useState<number | null>(null);
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000';
-  setCurrentPage(1);
+
   // Helper: open DICOM viewer in a new tab using POST (required by backend)
   const openDicomInNewTab = (dicomUrl: string) => {
     if (!dicomUrl) return;
@@ -348,7 +347,7 @@ const MedicalStudyInterface: React.FC = () => {
         setStudies(prev => [normalizeStudy(newStudyData), ...prev]);
 
         // Close modal and reset form
-        //setIsAddStudyOpen(false);
+        setIsAddStudyOpen(false);
         setNewStudy({
           patient_id: '',
           patient_name: '',
@@ -437,7 +436,7 @@ const MedicalStudyInterface: React.FC = () => {
       ));
 
       // Close modal and reset form
-      //setIsAssignModalOpen(false);
+      setIsAssignModalOpen(false);
       setSelectedStudyId(null);
       setAssignmentForm({
         radiologist_id: '',
@@ -480,18 +479,18 @@ const MedicalStudyInterface: React.FC = () => {
     if (!study) return;
 
     setStudyToEdit(study);
-    //setIsEditMode(true);
+    setIsEditMode(true);
     setNewStudy({
       patient_id: study.patient_id,
       patient_name: '', // Assuming we don't have this in the Study type yet
-      modality: study.modality || "",
-      server_type: study.source || "",
-      assertion_number: study?.assertion_number?.toString() || "",
-      description: study.description || "",
+      modality: study.modality,
+      server_type: study.source,
+      assertion_number: study.assertion_number.toString(),
+      description: study.description,
       dicom_files: [], // Cannot pre-fill file inputs due to security restrictions
       report_files: []
     });
-    //setIsAddStudyOpen(true);
+    setIsAddStudyOpen(true);
   };
 
   // Handle the actual update of a study
@@ -646,7 +645,7 @@ const MedicalStudyInterface: React.FC = () => {
         // Safe access to report status with a type assertion if needed
         let reportStatus = 'new';
         if (studyToEdit.report_id && studyToEdit.report) {
-          reportStatus = studyToEdit.report?.status || 'new';
+          reportStatus = studyToEdit.report.status || 'new';
         }
 
         const reportPayload = {
@@ -685,8 +684,8 @@ const MedicalStudyInterface: React.FC = () => {
       toast.success('Study updated successfully');
 
       // Step 6: Reset state and close modal
-      //setIsAddStudyOpen(false);
-      //setIsEditMode(false);
+      setIsAddStudyOpen(false);
+      setIsEditMode(false);
       setStudyToEdit(null);
       setNewStudy({
         patient_id: '',
@@ -709,7 +708,7 @@ const MedicalStudyInterface: React.FC = () => {
 
   const openAssignModal = (studyId: number) => {
     setSelectedStudyId(studyId);
-    //setIsAssignModalOpen(true);
+    setIsAssignModalOpen(true);
 
     // Pre-populate form with existing assignments
     const study = studies.find(s => s.study_id === studyId);

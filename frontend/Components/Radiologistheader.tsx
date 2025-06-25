@@ -7,7 +7,6 @@ import { Button } from "@/Components/ui/button";
 import { useState, useEffect, useContext } from "react";
 import { AuthContext } from "@/context/auth-context";
 import axios from "axios";
-import { toast } from "sonner";
 
 interface RadiologistInfo {
   id: string;
@@ -59,7 +58,7 @@ const RadiologistHeader = () => {
       setRadiologistInfo(response.data);
     }
     catch(err: any){
-      toast.error(err.message);
+      window.alert(err.message);
     }
     finally{
       setIsLoading(false);

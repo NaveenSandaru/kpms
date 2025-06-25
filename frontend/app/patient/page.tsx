@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useContext } from 'react';
-import { Calendar, DollarSign, Clock, X, User, CreditCard, NotebookPen } from 'lucide-react';
+import { Calendar, DollarSign, MessageSquare, Clock, Edit2, X, Check, User, CreditCard, NotebookPen } from 'lucide-react';
 import axios from 'axios';
 import { AuthContext } from '@/context/auth-context';
 import { toast } from 'sonner';
@@ -64,7 +64,7 @@ const HealthcareDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'today' | 'upcoming'>('today');
   const [loadingTodaysAppointments, setLoadingTodaysAppointments] = useState(false);
   const [loadingUpcomingAppointments, setLoadingUpcomingAppointments] = useState(false);
-  //const [loadingMessages, setLoadingMessages] = useState(false);
+  const [loadingMessages, setLoadingMessages] = useState(false);
   const [changingStatus, setChangingStatus] = useState(false);
   const [loadingPaymentSummary, setLoadingPaymentSummary] = useState(false);
 
@@ -76,7 +76,7 @@ const HealthcareDashboard: React.FC = () => {
     total_paid: '0.00',
     total: '0.00'
   });
-  //const [lastVisitDate, setLastVisitDate] = useState<string>('');
+  const [lastVisitDate, setLastVisitDate] = useState<string>('');
 
   const [status, setStatus] = useState("");
   const [appointment_id, setAppointment_id] = useState("");

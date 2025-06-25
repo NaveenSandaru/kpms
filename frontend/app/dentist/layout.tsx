@@ -2,7 +2,7 @@
 
 import DoctorHeader from "@/Components/Doctorheader"
 import DoctorSidebar from "@/Components/Doctorsidebar"
-
+import PatientHeader from "@/Components/patientHeader"
 
 import { SidebarProvider } from "@/Components/ui/sidebar"
 import { usePathname } from "next/navigation"
