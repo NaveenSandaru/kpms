@@ -34,6 +34,7 @@ interface Study {
   dicom_file_url?: string;
   body_part?: string;
   reason?: string;
+  report: any;
 }
 
 interface NewStudyForm {
@@ -483,10 +484,10 @@ const MedicalStudyInterface: React.FC = () => {
     setNewStudy({
       patient_id: study.patient_id,
       patient_name: '', // Assuming we don't have this in the Study type yet
-      modality: study.modality,
-      server_type: study.source,
-      assertion_number: study.assertion_number.toString(),
-      description: study.description,
+      modality: study.modality || "",
+      server_type: study.source || "",
+      assertion_number: study?.assertion_number?.toString() || "",
+      description: study.description || "",
       dicom_files: [], // Cannot pre-fill file inputs due to security restrictions
       report_files: []
     });
@@ -645,7 +646,7 @@ const MedicalStudyInterface: React.FC = () => {
         // Safe access to report status with a type assertion if needed
         let reportStatus = 'new';
         if (studyToEdit.report_id && studyToEdit.report) {
-          reportStatus = studyToEdit.report.status || 'new';
+          reportStatus = studyToEdit.report?.status || 'new';
         }
 
         const reportPayload = {
