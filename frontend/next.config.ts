@@ -1,26 +1,19 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  //output: 'export',
-
   images: {
     unoptimized: true,
   },
   eslint: {
-    ignoreDuringBuilds: true, // Disable ESLint during build
+    ignoreDuringBuilds: true,
   },
   typescript: {
-    ignoreBuildErrors: true, // Disable TypeScript errors during build
+    ignoreBuildErrors: true,
   },
   webpack: (config, { isServer }) => {
-    // Add custom Webpack configuration to ignore case sensitivity warnings
     config.ignoreWarnings = [
       {
-        module: /node_modules/, // Ignore node_modules warnings
-      },
-      {
-        file: /.*/, // Ignore all files
-        message: /There are multiple modules with names that only differ in casing/,
+        module: /node_modules/
       },
     ];
     return config;
